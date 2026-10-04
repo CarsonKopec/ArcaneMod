@@ -10,10 +10,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * End-to-end check in a real client: charge light renders, a server-fired bolt destroys a wall,
- * and every temporary light is cleaned up.
+ * End-to-end check in a real client: charge light renders, a bolt cast in Adventure mode leaves terrain alone,
+ * a normal bolt destroys a wall, and every temporary light is cleaned up.
  */
 public final class LightingGameTest implements FabricClientGameTest {
+    private static final BlockPos WALL = new BlockPos(0, -59, 6);
+
     @Override public void runTest(ClientGameTestContext context) {
         try (var game = context.worldBuilder().create()) {
             var server = game.getServer();
@@ -37,11 +39,19 @@ public final class LightingGameTest implements FabricClientGameTest {
             });
             context.takeScreenshot("arcane-charge-lighting");
 
+            server.runCommand("gamemode adventure @a");
+            server.runOnServer(s -> SpellBolts.cast(s.overworld(), s.getPlayerList().getPlayers().getFirst(), 1));
+            context.waitTicks(8);
+            server.runOnServer(s -> {
+                if (s.overworld().getBlockState(WALL).isAir()) throw new AssertionError("Adventure-mode blast broke terrain");
+            });
+            server.runCommand("gamemode creative @a");
+
             server.runOnServer(s -> SpellBolts.cast(s.overworld(), s.getPlayerList().getPlayers().getFirst(), 1));
             context.waitTicks(8);
             context.takeScreenshot("arcane-impact-lighting");
             server.runOnServer(s -> {
-                if (!s.overworld().getBlockState(new BlockPos(0, -59, 6)).isAir()) throw new AssertionError("Blast did not destroy the target wall");
+                if (!s.overworld().getBlockState(WALL).isAir()) throw new AssertionError("Blast did not destroy the target wall");
             });
 
             context.waitTicks(45);

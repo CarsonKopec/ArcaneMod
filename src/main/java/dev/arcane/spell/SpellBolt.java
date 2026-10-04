@@ -8,10 +8,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -19,17 +21,6 @@ import net.minecraft.world.phys.Vec3;
 
 /** One server-simulated projectile. Collision is swept per tick; the client only ever sees effect messages. */
 final class SpellBolt {
-    // Entity damage and knockback are handled by the spell, avoiding a second blast hit.
-    private static final ExplosionDamageCalculator TERRAIN_ONLY = new ExplosionDamageCalculator() {
-        @Override public boolean shouldDamageEntity(Explosion explosion, Entity entity) {
-            return false;
-        }
-
-        @Override public float getKnockbackMultiplier(Entity entity) {
-            return 0;
-        }
-    };
-
     private final ServerLevel level;
     private final ServerPlayer owner;
     private final Vec3 direction;
@@ -59,9 +50,10 @@ final class SpellBolt {
         Vec3 nearest = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
         double nearestDistance = position.distanceToSqr(nearest);
         LivingEntity target = null;
-        // Sweep the entire movement segment so fast bolts cannot tunnel through targets.
+        // Sweep the entire movement segment so fast bolts cannot tunnel through targets. Like vanilla
+        // projectiles, the bolt passes through the caster's mount and anyone riding with them.
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(position, end).inflate(0.4),
-                e -> e != owner && e.isAlive() && !e.isSpectator() && e.isPickable() && canHarm(e))) {
+                e -> e != owner && !owner.isPassengerOfSameVehicle(e) && e.isAlive() && !e.isSpectator() && e.isPickable() && canHarm(e))) {
             AABB box = entity.getBoundingBox().inflate(0.25);
             Vec3 hit = box.contains(position) ? position : box.clip(position, end).orElse(null);
             if (hit != null && position.distanceToSqr(hit) < nearestDistance) {
@@ -98,9 +90,31 @@ final class SpellBolt {
         }
         // Use vanilla block resistance, drops, and TNT chain reactions. Do this after
         // spell damage so cover is evaluated before the terrain is destroyed.
-        level.explode(owner, level.damageSources().indirectMagic(owner, owner), TERRAIN_ONLY,
+        level.explode(owner, level.damageSources().indirectMagic(owner, owner), terrainOnly(),
                 position, SpellTuning.terrainBlastStrength(power), false, Level.ExplosionInteraction.BLOCK);
         SpellEffects.send(level, SpellEffectPayload.Kind.IMPACT, position, direction, power, age, sourceId);
+    }
+
+    /**
+     * The vanilla half of the blast. Entity damage and knockback are handled by the spell, avoiding a second hit.
+     * Blocks only break where the caster could break them by hand: never in Adventure mode, under spawn protection
+     * or beyond the world border. Skipped blocks are not hit at all, so protected TNT is not set off either.
+     */
+    private ExplosionDamageCalculator terrainOnly() {
+        boolean mayBuild = owner.mayBuild();
+        return new ExplosionDamageCalculator() {
+            @Override public boolean shouldBlockExplode(Explosion explosion, BlockGetter blocks, BlockPos pos, BlockState state, float strength) {
+                return mayBuild && level.mayInteract(owner, pos) && super.shouldBlockExplode(explosion, blocks, pos, state, strength);
+            }
+
+            @Override public boolean shouldDamageEntity(Explosion explosion, Entity entity) {
+                return false;
+            }
+
+            @Override public float getKnockbackMultiplier(Entity entity) {
+                return 0;
+            }
+        };
     }
 
     private boolean canHarm(LivingEntity entity) {
