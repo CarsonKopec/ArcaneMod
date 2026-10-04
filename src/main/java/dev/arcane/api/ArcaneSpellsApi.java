@@ -7,7 +7,6 @@ import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModAttachments;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
-import dev.arcane.spell.SpellTuning;
 import java.util.Comparator;
 import java.util.List;
 import net.minecraft.network.chat.Component;
@@ -47,8 +46,14 @@ public final class ArcaneSpellsApi {
         return CasterState.of(player).mana(player.level().getGameTime());
     }
 
+    /** The size of {@code player}'s mana pool. To change it, modify {@link SpellAttributes#MAX_MANA}. */
     public static float maxMana(Player player) {
-        return SpellTuning.MAX_MANA;
+        return CasterState.of(player).maxMana();
+    }
+
+    /** Mana {@code player} regenerates per second. To change it, modify {@link SpellAttributes#MANA_REGEN}. */
+    public static float manaRegen(Player player) {
+        return CasterState.of(player).manaRegen();
     }
 
     /** Adds {@code amount} mana (negative drains it), kept between 0 and the maximum, and syncs it to the player. */

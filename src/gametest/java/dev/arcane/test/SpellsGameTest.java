@@ -92,7 +92,7 @@ public final class SpellsGameTest implements FabricClientGameTest {
                 check(pigs.size() == 3, "Expected 3 pigs, found " + pigs.size());
                 for (var pig : pigs) check(pig.getHealth() < pig.getMaxHealth(), "Chain Lightning missed a pig at " + pig.blockPosition());
                 // Mana as of the cast, before regeneration since: a full pool minus the cost.
-                float spent = SpellTuning.MAX_MANA - CasterState.of(player(s)).manaAt();
+                float spent = SpellTuning.BASE_MAX_MANA - CasterState.of(player(s)).manaAt();
                 check(Math.abs(spent - SpellTuning.CHAIN_MANA) < 0.01, "Chain Lightning spent " + spent + " mana");
             });
 
@@ -145,7 +145,7 @@ public final class SpellsGameTest implements FabricClientGameTest {
             // Out of mana: the cast is refused and says why.
             server.runOnServer(s -> {
                 ServerPlayer player = player(s);
-                player.setAttached(ModAttachments.CASTER, new CasterState(0, s.overworld().getGameTime(), Map.of()));
+                player.setAttached(ModAttachments.CASTER, new CasterState(0, s.overworld().getGameTime(), SpellTuning.BASE_MAX_MANA, SpellTuning.BASE_MANA_REGEN, Map.of()));
                 check(SpellCasting.blocker(player, ModSpells.ARCANE_BOLT) != null, "No reason given for an unaffordable cast");
                 check(!SpellCasting.cast(s.overworld(), player, ModSpells.ARCANE_BOLT, 1), "Cast without mana");
             });

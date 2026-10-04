@@ -4,9 +4,10 @@ package dev.arcane.spell;
 public final class SpellTuning {
     // Mana
 
-    public static final float MAX_MANA = 100;
-    /** 5 per second: an empty pool refills in 20 s. */
-    public static final float MANA_REGEN_PER_TICK = 0.25f;
+    /** Base value of the max mana attribute; gear, effects and other mods may change a player's. */
+    public static final float BASE_MAX_MANA = 100;
+    /** Base value of the mana regeneration attribute, per second: an empty pool refills in 20 s. */
+    public static final float BASE_MANA_REGEN = 5;
 
     // Arcane Bolt
 

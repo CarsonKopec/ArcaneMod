@@ -11,6 +11,7 @@ import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.ArcaneBolt;
 import dev.arcane.spell.ArcaneWard;
+import dev.arcane.spell.ManaLimits;
 import dev.arcane.spell.SpellCasting;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -43,5 +44,6 @@ public final class ArcaneSpells implements ModInitializer {
                 (payload, context) -> SpellCasting.select(context.player(), payload.spell()));
         ArcaneBolt.register();
         ArcaneWard.register();
+        ManaLimits.register();
     }
 }

@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.mojang.serialization.JsonOps;
 import dev.arcane.api.ArcaneSpellsApi;
+import dev.arcane.api.SpellAttributes;
 import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.registry.ModAttachments;
@@ -18,13 +19,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 
 /**
  * The API as another mod sees it, through {@link TestAddon}: its spell on the wheel, cast through the normal checks,
- * its events, its effect reaching a client renderer, the mana and cooldown APIs, and saved data outliving a removed
- * mod.
+ * its events, its effect reaching a client renderer, the mana and cooldown APIs, the mana attributes, and saved data
+ * outliving a removed mod.
  */
 public final class SpellApiGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
@@ -57,7 +60,7 @@ public final class SpellApiGameTest implements FabricClientGameTest {
                 check(Math.abs(TestAddon.lastManaSpent - expected) < 0.01, "AFTER_CAST saw " + TestAddon.lastManaSpent + " mana spent");
                 // Same tick as the cast, so no mana has regenerated yet.
                 float mana = ArcaneSpellsApi.mana(player);
-                check(Math.abs(mana - (SpellTuning.MAX_MANA - expected)) < 0.01, "Ping left " + mana + " mana");
+                check(Math.abs(mana - (SpellTuning.BASE_MAX_MANA - expected)) < 0.01, "Ping left " + mana + " mana");
                 check(ArcaneSpellsApi.cooldownLeft(player, TestAddon.PING) == TestAddon.PING_COOLDOWN_TICKS, "Ping started no cooldown");
                 check(!ArcaneSpellsApi.cast(player, TestAddon.PING, 1), "Ping ignored its cooldown");
             });
@@ -73,7 +76,7 @@ public final class SpellApiGameTest implements FabricClientGameTest {
                     Component reason = ArcaneSpellsApi.castBlocker(player, TestAddon.PING);
                     check(reason != null && reason.getString().equals("Silenced"), "ALLOW_CAST gave reason " + reason);
                     check(!ArcaneSpellsApi.cast(player, TestAddon.PING, 1), "Silenced Ping was cast");
-                    check(ArcaneSpellsApi.mana(player) == SpellTuning.MAX_MANA, "A refused cast spent mana");
+                    check(ArcaneSpellsApi.mana(player) == SpellTuning.BASE_MAX_MANA, "A refused cast spent mana");
                     check(ArcaneSpellsApi.castBlocker(player, ModSpells.BLINK) == null, "Silence refused another spell");
                 } finally {
                     TestAddon.silenced = false;
@@ -94,6 +97,51 @@ public final class SpellApiGameTest implements FabricClientGameTest {
                 float mana = ArcaneSpellsApi.mana(client.player);
                 check(mana >= 30 && mana < 32, "Client sees " + mana + " mana, expected about 30");
             });
+
+            // Attributes: max mana follows the player's attribute, here set by command. Raising it doesn't refill.
+            server.runOnServer(s -> {
+                ServerPlayer player = player(s);
+                check(player.getAttribute(SpellAttributes.MAX_MANA) != null && player.getAttribute(SpellAttributes.MANA_REGEN) != null,
+                        "Players have no mana attributes");
+                player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+            });
+            server.runCommand("attribute @p arcane_spells:max_mana base set 150");
+            context.waitTicks(3);
+            server.runOnServer(s -> {
+                ServerPlayer player = player(s);
+                check(ArcaneSpellsApi.maxMana(player) == 150, "Max mana is " + ArcaneSpellsApi.maxMana(player) + ", expected 150");
+                float mana = ArcaneSpellsApi.mana(player);
+                check(mana >= 100 && mana < 102, "Raising max mana left " + mana + " mana, expected 100 and regenerating");
+            });
+            context.runOnClient(client -> check(ArcaneSpellsApi.maxMana(client.player) == 150,
+                    "Client sees max mana " + ArcaneSpellsApi.maxMana(client.player)));
+
+            // Regeneration, here from a modifier as gear would add, is settled at each change: never back-dated.
+            Identifier noRegen = Identifier.fromNamespaceAndPath("arcane_spells_test", "no_regen");
+            server.runOnServer(s -> player(s).getAttribute(SpellAttributes.MANA_REGEN)
+                    .addTransientModifier(new AttributeModifier(noRegen, -1, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)));
+            context.waitTicks(2);
+            server.runOnServer(s -> {
+                check(ArcaneSpellsApi.manaRegen(player(s)) == 0, "Mana regen is " + ArcaneSpellsApi.manaRegen(player(s)) + ", expected 0");
+                ArcaneSpellsApi.addMana(player(s), -1000);
+            });
+            context.waitTicks(20);
+            server.runOnServer(s -> {
+                ServerPlayer player = player(s);
+                check(ArcaneSpellsApi.mana(player) == 0, "Mana regenerated to " + ArcaneSpellsApi.mana(player) + " with no regeneration");
+                player.getAttribute(SpellAttributes.MANA_REGEN).removeModifier(noRegen);
+            });
+            context.waitTicks(2);
+            server.runOnServer(s -> {
+                // A tick or two at the restored 5 per second, not the second spent at zero.
+                float mana = ArcaneSpellsApi.mana(player(s));
+                check(mana > 0 && mana < 1, "Restoring regeneration gave " + mana + " mana, expected a fraction of one");
+                // Lowering the maximum trims mana above it.
+                ArcaneSpellsApi.addMana(player(s), 1000);
+            });
+            server.runCommand("attribute @p arcane_spells:max_mana base set 100");
+            context.waitTicks(2);
+            server.runOnServer(s -> check(ArcaneSpellsApi.mana(player(s)) == 100, "Lowering max mana left " + ArcaneSpellsApi.mana(player(s))));
 
             // Cooldown modifiers apply to every spell, at cast time; 0 means none at all.
             server.runOnServer(s -> {
@@ -156,7 +204,7 @@ public final class SpellApiGameTest implements FabricClientGameTest {
                 check(Spell.CODEC.parse(JsonOps.INSTANCE, new JsonPrimitive("removed_mod:spell")).getOrThrow() == ModSpells.ARCANE_BOLT,
                         "An unknown selected spell did not fall back to Arcane Bolt");
                 Map<Spell, Cooldown> cooldowns = Map.of(TestAddon.PING, new Cooldown(100, 40), ModSpells.BLINK, new Cooldown(120, 60));
-                JsonElement saved = CasterState.CODEC.encodeStart(JsonOps.INSTANCE, new CasterState(50, 0, cooldowns)).getOrThrow();
+                JsonElement saved = CasterState.CODEC.encodeStart(JsonOps.INSTANCE, new CasterState(50, 0, 150, 5, cooldowns)).getOrThrow();
                 JsonObject removed = new JsonObject();
                 removed.addProperty("ready_at", 140L);
                 removed.addProperty("length", 80);

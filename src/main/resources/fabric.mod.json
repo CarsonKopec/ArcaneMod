@@ -18,6 +18,9 @@
 			"dev.arcane.client.ArcaneClient"
 		]
 	},
+	"mixins": [
+		"arcane_spells.mixins.json"
+	],
 	"depends": {
 		"fabricloader": ">=${loader_version}",
 		"minecraft": "~1.21.11",

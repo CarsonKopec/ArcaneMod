@@ -4,7 +4,6 @@ import dev.arcane.ArcaneSpells;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
-import dev.arcane.spell.SpellTuning;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudStatusBarHeightRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -43,20 +42,21 @@ public final class SpellHud {
     private static boolean showsMana(Player player) {
         Minecraft client = Minecraft.getInstance();
         if (client.gameMode == null || !client.gameMode.canHurtPlayer()) return false;
-        return !SpellCasting.heldStaff(player).isEmpty()
-                || CasterState.of(player).mana(player.level().getGameTime()) < SpellTuning.MAX_MANA;
+        CasterState state = CasterState.of(player);
+        return !SpellCasting.heldStaff(player).isEmpty() || state.mana(player.level().getGameTime()) < state.maxMana();
     }
 
     private static void renderManaBar(GuiGraphics graphics, DeltaTracker delta) {
         Player player = Minecraft.getInstance().player;
         if (player == null || !showsMana(player)) return;
-        float mana = CasterState.of(player).mana(player.level().getGameTime());
+        CasterState state = CasterState.of(player);
+        float mana = state.mana(player.level().getGameTime());
         int right = graphics.guiWidth() / 2 + 91, left = right - BAR_WIDTH;
         int top = graphics.guiHeight() - HudStatusBarHeightRegistry.getHeight(MANA_BAR);
         graphics.fill(left, top + 1, right, top + 8, 0xFF2A1745);
         graphics.fill(left + 1, top + 2, right - 1, top + 7, 0xFF0F0819);
         int inner = BAR_WIDTH - 2;
-        int filled = Math.round(inner * mana / SpellTuning.MAX_MANA);
+        int filled = state.maxMana() > 0 ? Math.round(inner * mana / state.maxMana()) : 0;
         if (filled > 0) graphics.fillGradient(left + 1, top + 2, left + 1 + filled, top + 7, 0xFFD3A6FF, 0xFF7B35E0);
         // Notches every fifth of the pool make costs easy to judge at a glance.
         for (int i = 1; i < 5; i++) {

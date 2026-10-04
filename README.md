@@ -17,7 +17,7 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds a crystal staff that casts 
 - Craft it with an amethyst shard (top right), a gold ingot (center) and a stick (bottom left).
 - **Choose a spell:** with the staff in hand, hold **R** (rebindable under Controls → Arcane Spells), point at a spell and release. Clicking also picks; Escape cancels. The staff remembers its spell, and its tooltip shows which.
 - **Cast:** right-click. Arcane Bolt is held to charge and fires on release; the other spells fire on click.
-- **Mana:** 100, refilling at 5 per second. The bar sits above the food bar while you hold the staff or are refilling. The active spell shows in a slot beside the hotbar, dimmed when you can't afford it and with a cooldown sweep. A refused cast (no mana, or still recharging) fizzles and says why above the hotbar. Creative players cast for free; cooldowns still apply.
+- **Mana:** 100, refilling at 5 per second. Both are player attributes, `arcane_spells:max_mana` and `arcane_spells:mana_regen`, so gear, effects, other mods and `/attribute` can change them. Raising the maximum doesn't refill the pool. The bar sits above the food bar while you hold the staff or are refilling. The active spell shows in a slot beside the hotbar, dimmed when you can't afford it and with a cooldown sweep. A refused cast (no mana, or still recharging) fizzles and says why above the hotbar. Creative players cast for free; cooldowns still apply.
 - Every spell has its own sounds, with subtitles (Options → Accessibility → Show Subtitles).
 
 | Spell | Mana | Cooldown | Effect |
@@ -49,7 +49,7 @@ The client game tests run in a real client and save screenshots to `build/run/cl
 
 - `LightingGameTest` fires a real charge and bolt. It checks that a Nebulon light renders, that a bolt cast in Adventure mode leaves a stone wall standing while a normal bolt destroys it, and that no light handles leak afterwards.
 - `SpellsGameTest` checks that every spell sound has a file and every icon loaded, then picks Chain Lightning on the spell wheel with simulated key and mouse input, then casts it with a real right-click. It checks that all five spells affect the world as described above, and that mana, cooldowns and an empty mana pool are enforced.
-- `SpellApiGameTest` uses `TestAddon`, a stand-in for another mod written only against the API, with one spell (Ping), its own effect type and a listener on each event. It checks that Ping joins the wheel after the built-in spells, that the events can refuse a cast, change its cost and cooldown (shorter, longer or none) and see it happen, that setting a running cooldown keeps the HUD's sweep in proportion, that Ping's effect reaches a client renderer even when another renderer throws, that the mana API stays in bounds and syncs, and that saved staffs and cooldowns survive a mod's spells disappearing.
+- `SpellApiGameTest` uses `TestAddon`, a stand-in for another mod written only against the API, with one spell (Ping), its own effect type and a listener on each event. It checks that Ping joins the wheel after the built-in spells, that the events can refuse a cast, change its cost and cooldown (shorter, longer or none) and see it happen, that setting a running cooldown keeps the HUD's sweep in proportion, that Ping's effect reaches a client renderer even when another renderer throws, that the mana API stays in bounds and syncs, that max mana and regeneration follow the attributes (by command and by modifier) without refilling or back-dating regeneration, and that saved staffs and cooldowns survive a mod's spells disappearing.
 
 **Offline/fast builds on this machine:** `.gradle-home/` is a pre-warmed Gradle home (Gradle 9.7.1 plus Loom's Minecraft 1.21.11 files). To reuse it instead of downloading everything into `~/.gradle`, set `GRADLE_USER_HOME` first:
 
@@ -63,6 +63,7 @@ $env:GRADLE_USER_HOME = "$PWD\.gradle-home"; .\gradlew.bat build
 src/main/java/dev/arcane/          common code (runs on server and client)
   ArcaneSpells.java                  entrypoint: wires everything up
   api/                               the API for other mods (see below)
+  mixin/PlayerMixin.java             adds the mana attributes to players
   registry/                          item, particle, data component, attachment, spell and effect registration
   item/ArcaneStaffItem.java          casts the selected spell: charge/release or click
   spell/SpellTuning.java             ALL balance numbers: mana, costs, cooldowns, damage, ranges
@@ -103,7 +104,8 @@ Other mods can add spells, react to casting, use mana and send their own effects
 | `spell.Spell` | Subclass it. `Properties` sets mana cost, cooldown, accent color and whether it's charged; override `cast` (and `onChargeStart`/`onChargeTick` for charged spells). |
 | `spell.SpellContext` | What `cast` gets: the level, the caster and the charge power. |
 | `event.SpellEvents` | `ALLOW_CAST` (refuse a cast, with a reason), `MODIFY_MANA_COST`, `MODIFY_COOLDOWN`, `AFTER_CAST`. |
-| `ArcaneSpellsApi` | Read and add mana, read and set cooldowns, find the held staff and its spell, cast a spell from code, and `sendEffect`. |
+| `SpellAttributes` | `MAX_MANA` and `MANA_REGEN` (per second): add attribute modifiers to change a player's mana. |
+| `ArcaneSpellsApi` | Read and add mana, read max mana and regeneration, read and set cooldowns, find the held staff and its spell, cast a spell from code, and `sendEffect`. |
 | `effect.SpellEffect`, `effect.SpellEffectType` | A visual event, sent once to nearby players and drawn by each client. |
 | `client.SpellEffectRenderers` | Draw your effect types, or add to the built-in ones in `ModSpellEffects`. |
 

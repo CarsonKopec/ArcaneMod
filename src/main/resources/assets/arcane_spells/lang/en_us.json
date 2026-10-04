@@ -3,6 +3,9 @@
 	"item.arcane_spells.arcane_staff.spell": "Spell: %s",
 	"item.arcane_spells.arcane_staff.hint": "Hold %s to choose a spell",
 
+	"attribute.name.arcane_spells.max_mana": "Max Mana",
+	"attribute.name.arcane_spells.mana_regen": "Mana Regeneration",
+
 	"spell.arcane_spells.arcane_bolt": "Arcane Bolt",
 	"spell.arcane_spells.arcane_bolt.description": "Hold to charge, release to fire a bolt that explodes on impact.",
 	"spell.arcane_spells.chain_lightning": "Chain Lightning",
