@@ -1,6 +1,9 @@
 #
 # https://help.github.com/articles/dealing-with-line-endings/
 #
+# LF everywhere, matching .editorconfig, regardless of a machine's core.autocrlf
+* text=auto eol=lf
+
 # Linux start script should use lf
 /gradlew        text eol=lf
 

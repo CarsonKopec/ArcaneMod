@@ -1,10 +1,15 @@
 # Automatically build the project and run any configured tests for every push
-# and submitted pull request. This can help catch issues that only occur on
+# to main and every pull request. This can help catch issues that only occur on
 # certain platforms or Java versions, and provides a first line of defence
 # against bad commits.
 
 name: build
-on: [pull_request, push]
+on:
+  # Branch pushes are covered by their pull request; listing them here too would build every PR twice.
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,6 +24,9 @@ jobs:
         with:
           java-version: '25'
           distribution: 'microsoft'
+      - name: setup gradle
+        # Caches the Gradle home (dependencies, Loom's Minecraft files) between runs.
+        uses: gradle/actions/setup-gradle@v6
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: build

@@ -30,8 +30,12 @@ dependencies {
 
 processResources {
 	def props = [
-		version       : project.version,
-		loader_version: project.loader_version,
+		version           : project.version,
+		loader_version    : project.loader_version,
+		// Minimum versions are the ones we build against. Nebulon is a 0.x beta, so `~` also
+		// rejects its next minor release, which may break the API.
+		fabric_api_version: project.fabric_api_version,
+		nebulon_version   : project.nebulon_version,
 	]
 	inputs.properties props
 
