@@ -31,7 +31,7 @@ public final class ArcaneClient implements ClientModInitializer {
             }
             if (client.isPaused()) return;
             SpellLighting.tick(client);
-            SpellParticles.tick();
+            SpellParticles.tick(client.level);
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clearEffects());
     }
