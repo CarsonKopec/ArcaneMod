@@ -11,8 +11,12 @@ import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.ArcaneBolt;
 import dev.arcane.spell.ArcaneWard;
+import dev.arcane.spell.AstralGate;
 import dev.arcane.spell.CelestialJudgment;
+import dev.arcane.spell.ChronoField;
 import dev.arcane.spell.ManaLimits;
+import dev.arcane.spell.MeteorSwarm;
+import dev.arcane.spell.Singularity;
 import dev.arcane.spell.SpellCasting;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -46,6 +50,10 @@ public final class ArcaneSpells implements ModInitializer {
         ArcaneBolt.register();
         ArcaneWard.register();
         CelestialJudgment.register();
+        MeteorSwarm.register();
+        Singularity.register();
+        ChronoField.register();
+        AstralGate.register();
         ManaLimits.register();
     }
 }

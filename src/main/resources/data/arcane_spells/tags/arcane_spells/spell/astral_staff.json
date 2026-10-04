@@ -1,5 +1,9 @@
 {
 	"values": [
-		"arcane_spells:celestial_judgment"
+		"arcane_spells:celestial_judgment",
+		"arcane_spells:meteor_swarm",
+		"arcane_spells:singularity",
+		"arcane_spells:chrono_field",
+		"arcane_spells:astral_gate"
 	]
 }

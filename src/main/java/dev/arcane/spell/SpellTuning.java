@@ -110,10 +110,100 @@ public final class SpellTuning {
     /** Detonation damage at the centre, falling to nothing at the edge. */
     public static final float JUDGMENT_BLAST_DAMAGE = 40;
     public static final double JUDGMENT_BLAST_KNOCKBACK = 2.4;
-    /** Blocks at least this blast resistant survive, as obsidian (1200) does; so does anything unbreakable. */
-    public static final float JUDGMENT_RESISTANCE_LIMIT = 1200;
     /** Strikes in progress at once, server-wide; more fizzle. */
     public static final int MAX_ACTIVE_JUDGMENTS = 8;
+
+    // Meteor Swarm (Astral Staff)
+
+    public static final float METEOR_MANA = 75;
+    /** 45 s. */
+    public static final int METEOR_COOLDOWN_TICKS = 900;
+    /** 1.5 s. */
+    public static final int METEOR_CHARGE_TICKS = 30;
+    public static final double METEOR_RANGE = 96;
+    public static final double METEOR_MIN_DISTANCE = 16;
+    /** Meteors land anywhere within this radius of the mark. */
+    public static final double METEOR_AREA_RADIUS = 14;
+    public static final int METEOR_COUNT = 18;
+    /** One meteor every this many ticks: 18 over 3.6 s. */
+    public static final int METEOR_INTERVAL_TICKS = 4;
+    /** Height of the burning sigil the meteors fall from, above the mark. */
+    public static final double METEOR_SKY_HEIGHT = 55;
+    /** Blocks per tick. */
+    public static final double METEOR_SPEED = 3.0;
+    /** A meteor that hits nothing burns out after this long. */
+    public static final int METEOR_LIFETIME_TICKS = 60;
+    public static final double METEOR_BLAST_RADIUS = 4.5;
+    /** At the centre of each impact, falling to nothing at its edge; it also sets things alight. */
+    public static final float METEOR_DAMAGE = 14;
+    public static final int METEOR_FIRE_SECONDS = 4;
+    /** Vanilla explosion strength for terrain; TNT is 4. */
+    public static final float METEOR_TERRAIN_STRENGTH = 3.5f;
+    public static final int MAX_ACTIVE_SWARMS = 8;
+
+    // Singularity (Astral Staff)
+
+    public static final float SINGULARITY_MANA = 70;
+    /** 40 s. */
+    public static final int SINGULARITY_COOLDOWN_TICKS = 800;
+    public static final int SINGULARITY_CHARGE_TICKS = 30;
+    public static final double SINGULARITY_RANGE = 64;
+    public static final double SINGULARITY_MIN_DISTANCE = 12;
+    /** How high above the mark the hole hangs. */
+    public static final double SINGULARITY_LIFT = 3;
+    /** 6 s, then it collapses. */
+    public static final int SINGULARITY_DURATION_TICKS = 120;
+    /** Creatures, items and projectiles this close are dragged in. */
+    public static final double SINGULARITY_PULL_RADIUS = 14;
+    /** Speed added towards the hole each tick at the edge of its pull, tripling at its heart. */
+    public static final double SINGULARITY_PULL = 0.07;
+    /** Anything this close to the heart is crushed every {@link #SINGULARITY_CRUSH_INTERVAL} ticks. */
+    public static final double SINGULARITY_CRUSH_RADIUS = 2.5;
+    public static final float SINGULARITY_CRUSH_DAMAGE = 4;
+    public static final int SINGULARITY_CRUSH_INTERVAL = 10;
+    /** The hole eats the ground within this radius, nearest first. */
+    public static final double SINGULARITY_CONSUME_RADIUS = 5;
+    public static final int SINGULARITY_CONSUME_PER_TICK = 3;
+    /** The collapse hurls everything this close outwards. */
+    public static final double SINGULARITY_COLLAPSE_RADIUS = 9;
+    public static final float SINGULARITY_COLLAPSE_DAMAGE = 16;
+    public static final double SINGULARITY_COLLAPSE_KNOCKBACK = 2.0;
+    public static final int MAX_ACTIVE_SINGULARITIES = 4;
+
+    // Chrono Field (Astral Staff)
+
+    public static final float CHRONO_MANA = 60;
+    /** 50 s. */
+    public static final int CHRONO_COOLDOWN_TICKS = 1000;
+    /** 1 s. */
+    public static final int CHRONO_CHARGE_TICKS = 20;
+    /** The dome's radius, around where the caster stood. */
+    public static final double CHRONO_RADIUS = 10;
+    /** 8 s. */
+    public static final int CHRONO_DURATION_TICKS = 160;
+    /** Damage dealt to frozen creatures is held back, then lands this much harder when time resumes. */
+    public static final float CHRONO_DAMAGE_MULTIPLIER = 1.5f;
+    public static final int MAX_ACTIVE_CHRONO_FIELDS = 4;
+
+    // Astral Gate (Astral Staff)
+
+    public static final float GATE_MANA = 50;
+    /** 30 s. */
+    public static final int GATE_COOLDOWN_TICKS = 600;
+    public static final int GATE_CHARGE_TICKS = 20;
+    public static final double GATE_RANGE = 160;
+    /** Nearer than this, Blink does the job. */
+    public static final double GATE_MIN_DISTANCE = 8;
+    /** From the gates opening to the caster stepping through. */
+    public static final int GATE_CROSS_TICKS = 10;
+    /** How long the gates stay open, for others to follow. */
+    public static final int GATE_OPEN_TICKS = 100;
+    /** Anything standing this close to the first gate's centre is carried through. */
+    public static final double GATE_RADIUS = 1.5;
+    public static final int MAX_ACTIVE_GATES = 8;
+
+    /** Blocks at least this blast resistant survive spells that vaporise terrain, as obsidian (1200) does. */
+    public static final float VAPORISE_RESISTANCE_LIMIT = 1200;
 
     /** Players farther than this are not sent effects; also the client's light and rune render distance. */
     public static final double EFFECT_RANGE = 448;

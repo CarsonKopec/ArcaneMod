@@ -6,14 +6,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.level.Explosion;
-import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -23,6 +18,8 @@ import net.minecraft.world.phys.Vec3;
 final class SpellBolt {
     private final ServerLevel level;
     private final ServerPlayer owner;
+    /** Whether the owner could build when they cast it. */
+    private final boolean mayBuild;
     private final Vec3 direction;
     private final float power;
     private final int sourceId;
@@ -32,6 +29,7 @@ final class SpellBolt {
     SpellBolt(ServerLevel level, ServerPlayer owner, Vec3 position, Vec3 direction, float power, int sourceId) {
         this.level = level;
         this.owner = owner;
+        this.mayBuild = owner.mayBuild();
         this.position = position;
         this.direction = direction;
         this.power = power;
@@ -89,31 +87,9 @@ final class SpellBolt {
         }
         // Use vanilla block resistance, drops, and TNT chain reactions. Do this after
         // spell damage so cover is evaluated before the terrain is destroyed.
-        level.explode(owner, level.damageSources().indirectMagic(owner, owner), terrainOnly(),
+        level.explode(owner, level.damageSources().indirectMagic(owner, owner), SpellTerrain.explosion(level, owner, mayBuild),
                 position, SpellTuning.terrainBlastStrength(power), false, Level.ExplosionInteraction.BLOCK);
         SpellEffects.send(level, ModSpellEffects.IMPACT, position, direction, power, age, sourceId);
-    }
-
-    /**
-     * The vanilla half of the blast. Entity damage and knockback are handled by the spell, avoiding a second hit.
-     * Blocks only break where the caster could break them by hand: never in Adventure mode, under spawn protection
-     * or beyond the world border. Skipped blocks are not hit at all, so protected TNT is not set off either.
-     */
-    private ExplosionDamageCalculator terrainOnly() {
-        boolean mayBuild = owner.mayBuild();
-        return new ExplosionDamageCalculator() {
-            @Override public boolean shouldBlockExplode(Explosion explosion, BlockGetter blocks, BlockPos pos, BlockState state, float strength) {
-                return mayBuild && level.mayInteract(owner, pos) && super.shouldBlockExplode(explosion, blocks, pos, state, strength);
-            }
-
-            @Override public boolean shouldDamageEntity(Explosion explosion, Entity entity) {
-                return false;
-            }
-
-            @Override public float getKnockbackMultiplier(Entity entity) {
-                return 0;
-            }
-        };
     }
 
     /** Column-only check: unlike {@link Level#isLoaded}, positions above or below the build limit still count. */

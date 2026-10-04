@@ -24,8 +24,6 @@ public final class ScreenEffects {
     private static final float MAX_SHAKE_DEGREES = 3.0f;
     /** Full trauma settles in two seconds. */
     private static final float TRAUMA_DECAY = 1 / 40f;
-    /** Deep indigo, darkest at the top of the screen where the sky is. */
-    private static final int TINT_RGB = 0x0C0620;
     private static final int FLASH_RGB = 0xFFF4DC;
 
     private static float trauma;
@@ -35,6 +33,9 @@ public final class ScreenEffects {
     private static float tint;
     private static float previousTint;
     private static float tintTarget;
+    /** The darkening's colour: whichever spell asked for the most this tick sets it. */
+    private static int tintRgb;
+    private static int tintTargetRgb;
     private static int ticks;
 
     private ScreenEffects() {
@@ -54,9 +55,16 @@ public final class ScreenEffects {
         flash = Math.max(flash, Mth.clamp(strength, 0, 1));
     }
 
-    /** Darkens the screen towards {@code strength}, 0 to 1, for this tick: call every tick it should last. */
-    public static void tint(float strength) {
-        tintTarget = Math.max(tintTarget, Mth.clamp(strength, 0, 1));
+    /**
+     * Darkens the screen towards {@code strength}, 0 to 1, in colour {@code rgb} (a deep shade), for this tick: call
+     * every tick it should last. It's darkest at the top of the screen, where the sky is.
+     */
+    public static void tint(float strength, int rgb) {
+        strength = Mth.clamp(strength, 0, 1);
+        if (strength > tintTarget) {
+            tintTarget = strength;
+            tintTargetRgb = rgb;
+        }
     }
 
     public static void tick() {
@@ -66,6 +74,8 @@ public final class ScreenEffects {
         previousFlash = flash;
         flash = flash < 0.02f ? 0 : flash * 0.72f;
         previousTint = tint;
+        // A fading tint keeps its colour.
+        if (tintTarget > 0) tintRgb = tintTargetRgb;
         // Eases in and out over about a second.
         tint += (tintTarget - tint) * 0.1f;
         if (tint < 0.002f) tint = 0;
@@ -100,7 +110,7 @@ public final class ScreenEffects {
         int width = graphics.guiWidth(), height = graphics.guiHeight();
         float darkness = Mth.lerp(partialTick, previousTint, tint);
         if (darkness > 0) {
-            graphics.fillGradient(0, 0, width, height, argb(darkness * 0.62f, TINT_RGB), argb(darkness * 0.3f, TINT_RGB));
+            graphics.fillGradient(0, 0, width, height, argb(darkness * 0.62f, tintRgb), argb(darkness * 0.3f, tintRgb));
         }
         float brightness = Mth.lerp(partialTick, previousFlash, flash);
         if (brightness > 0 && !Minecraft.getInstance().options.hideLightningFlash().get()) {

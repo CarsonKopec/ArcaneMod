@@ -39,9 +39,9 @@
 		"subtitle": "subtitles.arcane_spells.spell.frost_nova",
 		"sounds": ["arcane_spells:spell/frost_nova"]
 	},
-	"spell.celestial_judgment.channel": {
-		"subtitle": "subtitles.arcane_spells.spell.celestial_judgment.channel",
-		"sounds": ["arcane_spells:spell/celestial_judgment_channel"]
+	"spell.astral.channel": {
+		"subtitle": "subtitles.arcane_spells.spell.astral.channel",
+		"sounds": ["arcane_spells:spell/astral_channel"]
 	},
 	"spell.celestial_judgment.gather": {
 		"subtitle": "subtitles.arcane_spells.spell.celestial_judgment.gather",
@@ -50,6 +50,38 @@
 	"spell.celestial_judgment.beam": {
 		"subtitle": "subtitles.arcane_spells.spell.celestial_judgment.beam",
 		"sounds": ["arcane_spells:spell/celestial_judgment_beam"]
+	},
+	"spell.meteor_swarm.fall": {
+		"subtitle": "subtitles.arcane_spells.spell.meteor_swarm.fall",
+		"sounds": ["arcane_spells:spell/meteor_swarm_fall"]
+	},
+	"spell.meteor_swarm.impact": {
+		"subtitle": "subtitles.arcane_spells.spell.meteor_swarm.impact",
+		"sounds": ["arcane_spells:spell/meteor_swarm_impact"]
+	},
+	"spell.singularity.open": {
+		"subtitle": "subtitles.arcane_spells.spell.singularity.open",
+		"sounds": ["arcane_spells:spell/singularity_open"]
+	},
+	"spell.singularity.collapse": {
+		"subtitle": "subtitles.arcane_spells.spell.singularity.collapse",
+		"sounds": ["arcane_spells:spell/singularity_collapse"]
+	},
+	"spell.chrono_field.start": {
+		"subtitle": "subtitles.arcane_spells.spell.chrono_field.start",
+		"sounds": ["arcane_spells:spell/chrono_field_start"]
+	},
+	"spell.chrono_field.end": {
+		"subtitle": "subtitles.arcane_spells.spell.chrono_field.end",
+		"sounds": ["arcane_spells:spell/chrono_field_end"]
+	},
+	"spell.astral_gate.open": {
+		"subtitle": "subtitles.arcane_spells.spell.astral_gate.open",
+		"sounds": ["arcane_spells:spell/astral_gate_open"]
+	},
+	"spell.astral_gate.cross": {
+		"subtitle": "subtitles.arcane_spells.spell.astral_gate.cross",
+		"sounds": ["arcane_spells:spell/astral_gate_cross"]
 	},
 	"spell.celestial_judgment.blast": {
 		"subtitle": "subtitles.arcane_spells.spell.celestial_judgment.blast",

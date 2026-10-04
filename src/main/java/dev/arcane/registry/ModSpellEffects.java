@@ -26,10 +26,11 @@ public final class ModSpellEffects {
     /** A frost nova burst from the caster's feet at {@code position}. */
     public static final SpellEffectType NOVA = register("nova");
     /**
-     * Celestial Judgment is being channelled by entity {@code sourceId}, aimed at {@code position}: {@code power} is the
-     * channel so far, 0–1, and {@code age} its ticks. {@code direction} is up if the mark is valid, zero if not.
+     * An Astral Staff spell is being channelled by entity {@code sourceId}, aimed at {@code position}: {@code power} is
+     * the channel so far, 0–1, and {@code age} its ticks. {@code direction.y} is the radius of the mark, negative if
+     * the spell can't land there.
      */
-    public static final SpellEffectType JUDGMENT_CHANNEL = register("judgment_channel");
+    public static final SpellEffectType ASTRAL_CHANNEL = register("astral_channel");
     /**
      * A judgment strike {@code sourceId} began at {@code position}: the sky darkens and the circles form. The sky circle
      * is at {@code position + direction}, and the beam falls in {@code age} ticks.
@@ -39,6 +40,30 @@ public final class ModSpellEffects {
     public static final SpellEffectType JUDGMENT_BEAM = register("judgment_beam");
     /** Strike {@code sourceId} detonated at {@code position}. */
     public static final SpellEffectType JUDGMENT_BLAST = register("judgment_blast");
+    /**
+     * Meteor swarm {@code sourceId} began over {@code position}: its sigil burns at {@code position + direction}, its
+     * meteors land within {@code power} blocks of the mark, and it lasts {@code age} ticks.
+     */
+    public static final SpellEffectType METEOR_SWARM = register("meteor_swarm");
+    /** Meteor {@code sourceId} fell from {@code position}, moving {@code direction} each tick, for at most {@code age} ticks. */
+    public static final SpellEffectType METEOR = register("meteor");
+    /** Meteor {@code sourceId} struck at {@code position}. */
+    public static final SpellEffectType METEOR_IMPACT = register("meteor_impact");
+    /** Singularity {@code sourceId} opened at {@code position}, pulling within {@code power} blocks, for {@code age} ticks. */
+    public static final SpellEffectType SINGULARITY = register("singularity");
+    /** Singularity {@code sourceId} collapsed at {@code position}. */
+    public static final SpellEffectType SINGULARITY_COLLAPSE = register("singularity_collapse");
+    /** Chrono field {@code sourceId} stopped time within {@code power} blocks of {@code position}, for {@code age} ticks. */
+    public static final SpellEffectType CHRONO_FIELD = register("chrono_field");
+    /** Chrono field {@code sourceId} at {@code position} ended, and time resumed. */
+    public static final SpellEffectType CHRONO_END = register("chrono_end");
+    /** Gates {@code sourceId} opened at {@code position} and {@code position + direction}, for {@code age} ticks. */
+    public static final SpellEffectType ASTRAL_GATE = register("astral_gate");
+    /**
+     * Something crossed gate {@code sourceId}, from {@code position} to {@code position + direction}: {@code power} is
+     * 1 for the caster, less for anything following.
+     */
+    public static final SpellEffectType GATE_CROSSING = register("gate_crossing");
 
     private ModSpellEffects() {
     }

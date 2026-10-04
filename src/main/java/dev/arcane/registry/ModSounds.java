@@ -21,10 +21,20 @@ public final class ModSounds {
     public static final SoundEvent WARD_BREAK = register("spell.arcane_ward.break");
     public static final SoundEvent WARD_FADE = register("spell.arcane_ward.fade");
     public static final SoundEvent FROST_NOVA = register("spell.frost_nova");
-    public static final SoundEvent JUDGMENT_CHANNEL = register("spell.celestial_judgment.channel");
+    /** Every Astral Staff spell's channel. */
+    public static final SoundEvent ASTRAL_CHANNEL = register("spell.astral.channel");
     public static final SoundEvent JUDGMENT_GATHER = register("spell.celestial_judgment.gather");
     public static final SoundEvent JUDGMENT_BEAM = register("spell.celestial_judgment.beam");
     public static final SoundEvent JUDGMENT_BLAST = register("spell.celestial_judgment.blast");
+    public static final SoundEvent METEOR_FALL = register("spell.meteor_swarm.fall");
+    public static final SoundEvent METEOR_IMPACT = register("spell.meteor_swarm.impact");
+    /** Six seconds long, as the singularity is. */
+    public static final SoundEvent SINGULARITY_OPEN = register("spell.singularity.open");
+    public static final SoundEvent SINGULARITY_COLLAPSE = register("spell.singularity.collapse");
+    public static final SoundEvent CHRONO_START = register("spell.chrono_field.start");
+    public static final SoundEvent CHRONO_END = register("spell.chrono_field.end");
+    public static final SoundEvent GATE_OPEN = register("spell.astral_gate.open");
+    public static final SoundEvent GATE_CROSS = register("spell.astral_gate.cross");
     /** A refused or failed cast. */
     public static final SoundEvent FIZZLE = register("spell.fizzle");
     public static final SoundEvent WHEEL_SELECT = register("ui.spell_wheel.select");

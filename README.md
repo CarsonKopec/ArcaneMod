@@ -1,6 +1,6 @@
 # Arcane Spells
 
-A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are chosen from a radial spell wheel and paid for with a regenerating mana bar. The Arcane Staff casts five everyday spells: Arcane Bolt, Chain Lightning, Blink, Arcane Ward and Frost Nova. The endgame Astral Staff holds the advanced spells, starting with Celestial Judgment, which darkens the sky and calls down a pillar of starlight that blasts a crater into the earth. [Nebulon](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/) supplies colored dynamic lighting, detailed rune circles and electrical arcs. No shader pack is required.
+A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are chosen from a radial spell wheel and paid for with a regenerating mana bar. The Arcane Staff casts five everyday spells: Arcane Bolt, Chain Lightning, Blink, Arcane Ward and Frost Nova. The endgame Astral Staff holds five devastating advanced spells: Celestial Judgment, Meteor Swarm, Singularity, Chrono Field and Astral Gate. [Nebulon](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/) supplies colored dynamic lighting, detailed rune circles and electrical arcs. No shader pack is required.
 
 ## Install
 
@@ -29,13 +29,23 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
 | Arcane Ward | 40 | 15 s | An 8 s shell that absorbs 16 damage from attacks, projectiles and explosions (not falls, fire or hunger), and turns incoming projectiles back on their shooter. The hit that breaks it is still fully absorbed. |
 | Frost Nova | 35 | 8 s | Everything within 6 blocks takes 4 damage (10 for blazes and other heat-loving mobs), Slowness III for 5 s and is frozen solid, as in powder snow (strays, snow golems and anyone wearing leather don't freeze). |
 
-**Celestial Judgment** (Astral Staff; 90 mana, 60 s cooldown). Hold right-click to channel: a circle marks the ground you aim at, up to 96 blocks away, and grows to the size of the coming crater (red if it can't strike there). After 2 s the circle closes; release to strike. Releasing early, aiming at nothing, or marking ground within 18 blocks of yourself casts nothing and costs nothing. Then:
+**The Astral Staff's spells** are all channelled: hold right-click while a ring, in the spell's colour, marks where it will land (red where it can't), and an arc sweeps round the ring as the channel fills. Once the circle closes, release to cast. Releasing early, aiming at nothing, or marking somewhere too close to yourself casts nothing and costs nothing.
+
+| Spell | Mana | Cooldown | Channel | Effect |
+| --- | --- | --- | --- | --- |
+| Celestial Judgment | 90 | 60 s | 2 s | Calls a pillar of starlight down on ground up to 96 blocks away (at least 18): see below. |
+| Meteor Swarm | 75 | 45 s | 1.5 s | A burning sigil opens 55 blocks over ground up to 96 blocks away (at least 16) and rains 18 meteors across 14 blocks of it over 3.6 s. Each strikes for up to 14 damage in a 4.5-block blast, sets things alight and blasts out a small crater (strength 3.5; TNT is 4). |
+| Singularity | 70 | 40 s | 1.5 s | A black hole hangs 3 blocks over ground up to 64 blocks away (at least 12) for 6 s. It drags in creatures (players under PvP rules), items, experience and projectiles within 14 blocks, crushes anything at its heart (4 damage every half second), and eats the ground within 5 blocks of it. Then it collapses: up to 16 damage within 9 blocks, flinging everything outwards. Nothing caught takes fall damage while it's pulled. |
+| Chrono Field | 60 | 50 s | 1 s | Time stops in a 10-block dome around you for 8 s. Creatures you could hurt, projectiles (yours too) and lit TNT freeze where they are, as does anything that comes in; you move freely. Damage dealt to frozen creatures is held back, then lands all at once, half again as hard, when time resumes. |
+| Astral Gate | 50 | 30 s | 1 s | Opens gates at your feet and on solid ground with room to stand, up to 160 blocks away (at least 8), and you step through. For 5 s, any creature or item stepping into your gate (pets, friends) follows you. |
+
+**Celestial Judgment** in full:
 
 1. **The sky darkens** (2.5 s). A storm cloud gathers over the mark around a vast rune circle in the sky, three circles form on the ground, light streams upwards, lightning strikes around the mark (for show: no fire, no damage) and the view darkens and starts to rumble.
 2. **The beam** (1.5 s). A pillar of light slams down and bores a 7-wide shaft from the surface (through trees and roofs) to 24 blocks below the mark. Anything in it takes 12 damage every half second and is set alight.
 3. **The detonation.** Everything within 16 blocks takes up to 40 explosion damage and is hurled outwards. The ground is blasted into a roughly 24-wide, 9-deep crater, whose floor and walls are left scorched to blackstone, basalt and glowing magma. A shockwave races out, smoke rises, and the crater smoulders for 10 s.
 
-Broken blocks are vaporised rather than dropped (containers still spill what they held). Obsidian and anything as blast resistant, and anything unbreakable, survive. Judgment follows the bolt's rules for terrain, below. Up to 8 strikes can be in progress at once on a server.
+Blocks Celestial Judgment and Singularity break are vaporised rather than dropped (containers still spill what they held), and obsidian, anything as blast resistant, and anything unbreakable survive. Meteors break terrain like the Arcane Bolt, with vanilla drops. Every spell follows the bolt's rules for terrain, below, as they stood when it was cast. A server runs at most 8 Judgments, 8 swarms, 4 singularities, 4 chrono fields and 8 gates at once; more fizzle.
 
 - Spells never hurt the caster, and Chain Lightning, Frost Nova and the bolt's direct hit pass over the caster's mount. PvP follows the server's rules.
 - Arcane Bolt breaks terrain using vanilla explosion resistance and drops (strength 3–6; TNT is 4). It can set off TNT but never starts fires. Blocks only break where the caster could break them by hand: in Adventure mode, under spawn protection and beyond the world border, the blast still hurts entities but leaves terrain (and TNT) alone.
@@ -60,6 +70,7 @@ The client game tests run in a real client and save screenshots to `build/run/cl
 - `LightingGameTest` fires a real charge and bolt. It checks that a Nebulon light renders, that a bolt cast in Adventure mode leaves a stone wall standing while a normal bolt destroys it, and that no light handles leak afterwards.
 - `SpellsGameTest` checks that every spell sound has a file and every icon loaded, then picks Chain Lightning on the spell wheel with simulated key and mouse input, then casts it with a real right-click. It checks that all five spells affect the world as described above, and that mana, cooldowns and an empty mana pool are enforced.
 - `JudgmentGameTest` checks that the Astral Staff holds only Celestial Judgment, that a short channel, a mark too close and no mark at all are refused without cost, and that a strike in Adventure mode leaves terrain alone. It then channels a real two-second right-click on a stone plateau, and checks the crater and shaft, that obsidian survives, that the walls are scorched, and who the strike killed, hurt and spared. Screenshots cover the channel and every phase, from a spectator's vantage point.
+- `AstralSpellsGameTest` checks that the Astral Staff holds all five spells and shows them on the wheel, then casts the other four on a stone plateau: Meteor Swarm cratering it and hitting pigs; Singularity dragging pigs and a dropped diamond in, eating the ground and crushing what it caught; Chrono Field freezing a wandering pig and an incoming arrow, holding back a blow until time resumes (then dealing it 1.5 times over) and letting both move on; and Astral Gate refusing the sky and a spot too close, then carrying the caster, and a pig standing in the gate, 40 blocks away.
 - `SpellApiGameTest` uses `TestAddon`, a stand-in for another mod written only against the API, with one spell (Ping), its own effect type and a listener on each event. It checks that Ping joins the wheel after the built-in spells, that the events can refuse a cast, change its cost and cooldown (shorter, longer or none) and see it happen, that setting a running cooldown keeps the HUD's sweep in proportion, that Ping's effect reaches a client renderer even when another renderer throws, that the mana API stays in bounds and syncs, that max mana and regeneration follow the attributes (by command and by modifier) without refilling or back-dating regeneration, and that saved staffs and cooldowns survive a mod's spells disappearing.
 
 **Offline/fast builds on this machine:** `.gradle-home/` is a pre-warmed Gradle home (Gradle 9.7.1 plus Loom's Minecraft 1.21.11 files). To reuse it instead of downloading everything into `~/.gradle`, set `GRADLE_USER_HOME` first:
@@ -83,8 +94,12 @@ src/main/java/dev/arcane/          common code (runs on server and client)
   spell/ArcaneBolt.java, SpellBolt   Arcane Bolt: charging, server-side simulation, collision and blast
   spell/ChainLightning, Blink,       the other spells
         ArcaneWard, FrostNova
-  spell/CelestialJudgment,           Celestial Judgment: the channel, aiming, and the strike's phases, terrain and damage
+  spell/MarkedSpell.java             every Astral spell's channel and aiming: the ring, full channel, where it lands
+  spell/SpellTerrain.java            the terrain rules every spell shares: explosions, and vaporising
+  spell/CelestialJudgment,           Celestial Judgment: the strike's phases, terrain and damage
         JudgmentStrike
+  spell/MeteorSwarm, Singularity,    the other Astral spells, each owning its swarms, holes, fields or gates
+        ChronoField, AstralGate
   network/                           the effect packet, the spell-wheel pick, and the broadcast helper
 src/client/java/dev/arcane/          client-only code
   api/client/                        client half of the API: effect renderers
@@ -93,7 +108,11 @@ src/client/java/dev/arcane/          client-only code
   client/gui/SpellHud.java           mana bar and active-spell slot
   client/fx/SpellParticles.java      particle choreography for every built-in effect
   client/fx/SpellLighting.java       Nebulon lights, rune circles and arcs
-  client/fx/JudgmentFx.java          everything Celestial Judgment draws: seals, sky, beam, blast, smoke
+  client/fx/AstralFx.java            the Astral spells' visuals, registered and ticked together
+  client/fx/Fx.java                  their shared tools: shapes that update in place, lights, particles, trackers
+  client/fx/ChannelFx.java           every Astral spell's channel ring
+  client/fx/JudgmentFx, MeteorFx,    each Astral spell's visuals
+        SingularityFx, ChronoFx, GateFx
   client/fx/ScreenEffects.java       screen shake, flash and darkening, within the accessibility settings
   client/particle/ArcaneSpark.java   the tinted glow particle
   mixin/client/CameraMixin.java      turns the camera (never the aim) for screen shake
@@ -110,9 +129,9 @@ The server owns casting, mana, damage and collision. Mana and cooldowns are stor
 
 For each visual event the server sends one small `SpellEffectPayload` to players within 448 blocks who have that chunk loaded. Each client then builds its own particles and Nebulon effects from that message, so individual particles never cross the network. Active bolts, shockwaves and lights are capped, and every temporary light, arc and rune circle expires on its own. If Nebulon ever throws, the client logs it once and continues with particles only, rather than letting the error disconnect the player. Your own ward is drawn as rings at your feet in first person, since full-size rings around the camera would fill the screen.
 
-To rebalance, edit `SpellTuning`. To change the visuals, edit `SpellParticles` (particles) or `SpellLighting` (light and runes), or `JudgmentFx` for Celestial Judgment. To add a spell, write it the way another mod would (below), register it in `ModSpells` and list it in a staff's tag; its visual events go in `ModSpellEffects`.
+To rebalance, edit `SpellTuning`. To change the visuals, edit `SpellParticles` (particles) or `SpellLighting` (light and runes), or the Astral spells' own classes in `client/fx` (on the shared tools in `Fx`). To add a spell, write it the way another mod would (below), register it in `ModSpells` and list it in a staff's tag; its visual events go in `ModSpellEffects`.
 
-Celestial Judgment is too big for one message: the server sends one per phase (mark, beam, detonation) and each client animates the rest. Its terrain work is spread over many ticks, a few hundred blocks at most in any one.
+The Astral spells are too big for one message each: the server sends one per phase (Judgment's mark, beam and detonation; each meteor's launch and impact; a gate's opening and each crossing) and each client animates the rest. Its terrain work is spread over many ticks, a few hundred blocks at most in any one.
 
 ## API for other mods
 

@@ -54,7 +54,7 @@ public final class JudgmentGameTest implements FabricClientGameTest {
                 ServerPlayer player = player(s);
                 ItemStack astral = SpellCasting.heldStaff(player);
                 check(astral.is(ModItems.ASTRAL_STAFF), "The Astral Staff isn't in hand");
-                check(SpellCasting.spells(astral).equals(List.of(ModSpells.CELESTIAL_JUDGMENT)), "Astral Staff holds " + SpellCasting.spells(astral));
+                check(SpellCasting.spells(astral).getFirst() == ModSpells.CELESTIAL_JUDGMENT, "Astral Staff holds " + SpellCasting.spells(astral));
                 check(!SpellCasting.spells(new ItemStack(ModItems.ARCANE_STAFF)).contains(ModSpells.CELESTIAL_JUDGMENT),
                         "The Arcane Staff holds Celestial Judgment");
                 SpellCasting.select(player, ModSpells.ARCANE_BOLT);

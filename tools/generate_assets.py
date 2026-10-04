@@ -202,6 +202,79 @@ def icon_celestial_judgment():
     return c
 
 
+def icon_meteor_swarm():
+    """Three meteors diving down to the left, blazing heads trailing tails that cool from orange to red."""
+    c = Canvas()
+    for head, tail in (((4.5, 11.5), (11.0, 5.0)), ((10.6, 13.2), (15.4, 8.4)), ((6.8, 5.4), (11.6, 0.6))):
+        c.stroke([tail, head], 0.4, 1.5, [(0.45, "#FFE3A0"), (0.8, "#FF8A3D"), (1.0, "#C2271B")], alpha=70, alpha_end=255)
+        c.disc(head[0], head[1], 1.6, [(0.45, "#FFFFFF"), (0.8, "#FFD27A"), (1.0, "#FF8A3D")])
+    c.outline("#3B0F06")
+    return c
+
+
+def icon_singularity():
+    """A black hole: a dark core in a full, bright photon ring, a thin accretion disk crossing in front of it and
+    showing either side of it behind."""
+    c = Canvas()
+    cx = cy = 7.5
+    for y in range(16):
+        for x in range(16):
+            px, py = x + 0.5 - cx, y + 0.5 - cy
+            d = math.hypot(px, py)
+            disk = abs(py - px * 0.12) <= 0.75 and abs(px) <= 7.4
+            if disk and (py > 0 or d > 3.5):
+                # In front of the hole, or beside it: hot in the middle, cooler towards the edges.
+                c.put(x, y, hex_rgba("#FFB8F0" if abs(px) < 4.5 else "#E45CFF" if abs(px) < 6.2 else "#A05CFF"))
+            elif d <= 2.6:
+                c.put(x, y, hex_rgba("#0A0612"))
+            elif d <= 3.5:
+                c.put(x, y, hex_rgba("#FFFFFF" if py < 0 else "#EBD8FF"))
+    c.outline("#1E0A33")
+    return c
+
+
+def icon_chrono_field():
+    """A clock stopped at ten past ten."""
+    c = Canvas()
+    cx = cy = 7.5
+    for y in range(16):
+        for x in range(16):
+            d = math.dist((x + 0.5, y + 0.5), (cx, cy))
+            if 5.6 <= d <= 7.1:
+                c.put(x, y, hex_rgba("#7FFFE6"))
+            elif d < 5.6:
+                c.put(x, y, hex_rgba("#0F3B37"))
+    for x, y in ((7, 2), (8, 2), (12, 7), (12, 8), (7, 12), (8, 12), (3, 7), (3, 8)):
+        c.put(x, y, hex_rgba("#DFFFF8"))
+    c.stroke([(cx, cy), (cx - 3.0, cy - 1.8)], 0.7, 0.6, [(1.0, "#FFFFFF")])
+    c.stroke([(cx, cy), (cx + 3.4, cy - 3.4)], 0.6, 0.5, [(1.0, "#FFFFFF")])
+    c.disc(cx, cy, 1.0, [(1.0, "#7FFFE6")])
+    c.outline("#0B3A33")
+    return c
+
+
+def icon_astral_gate():
+    """An upright oval gate with a rose and gold rim, a violet swirl and a star inside, on a glowing ground ring."""
+    c = Canvas()
+    cx, cy = 7.5, 7.0
+    for y in range(16):
+        for x in range(16):
+            px, py = x + 0.5 - cx, y + 0.5 - cy
+            e = math.hypot(px / 4.6, py / 6.3)
+            g = math.hypot(px / 6.8, (y + 0.5 - 13.6) / 1.6)
+            if 0.82 <= e <= 1.08:
+                c.put(x, y, hex_rgba("#FFD27A" if px < 0 else "#FFB8F0"))
+            elif e < 0.82:
+                swirl = math.sin(math.atan2(py, px) * 3 + e * 7)
+                c.put(x, y, hex_rgba("#8A4FD6" if swirl > 0.2 else "#4A2380"))
+            elif 0.75 <= g <= 1.1 and y >= 12:
+                c.put(x, y, hex_rgba("#FFB8F0", 200))
+    for x, y in ((7, 7), (7, 6), (7, 8), (6, 7), (8, 7)):
+        c.put(x, y, hex_rgba("#FFFFFF"))
+    c.outline("#3A1033")
+    return c
+
+
 ICON_MAKERS = {
     "arcane_bolt": icon_arcane_bolt,
     "chain_lightning": icon_chain_lightning,
@@ -209,6 +282,10 @@ ICON_MAKERS = {
     "arcane_ward": icon_arcane_ward,
     "frost_nova": icon_frost_nova,
     "celestial_judgment": icon_celestial_judgment,
+    "meteor_swarm": icon_meteor_swarm,
+    "singularity": icon_singularity,
+    "chrono_field": icon_chrono_field,
+    "astral_gate": icon_astral_gate,
 }
 
 
@@ -464,8 +541,9 @@ def sound_frost_nova():
     return finish(0.5 * s(crack) + 0.35 * s(crystal) + 0.6 * s(whoomp) + 0.3 * s(wind))
 
 
-def sound_judgment_channel():
-    """A choir swelling over the two-second channel, a rising shimmer, and bells as the circle closes."""
+def sound_astral_channel():
+    """Every Astral Staff spell's channel: a choir swelling over two seconds, a rising shimmer, and bells as the circle
+    closes."""
     d = 2.3
     t = times(d)
     voices = np.zeros_like(t)
@@ -522,6 +600,90 @@ def sound_judgment_blast():
     return finish(0.5 * s(crack) + 0.8 * s(boom) + 0.55 * s(body) + 0.6 * s(tail) + 0.25 * s(debris) + 0.12 * s(ring))
 
 
+def sound_meteor_fall():
+    """A meteor screaming down: a falling whistle over a building roar of burning air and crackling."""
+    d = 1.6
+    t = times(d)
+    whistle = np.sin(sweep(2400, 500, d)) * swell(d, 1.2, 0.25)
+    roar = band(noise(d), 200, 2500) * np.linspace(0.2, 1, len(t)) ** 2 * np.clip((d - t) / 0.2, 0, 1)
+    sparks = crackle(d, 80, low=1200) * np.linspace(0, 1, len(t))
+    return finish(0.35 * s(whistle) + 0.6 * s(roar) + 0.25 * s(sparks))
+
+
+def sound_meteor_impact():
+    """A meteor striking: a sharp crack, a deep boom, and rubble raining down."""
+    d = 1.6
+    crack = band(noise(d), low=1200) * decay(d, 0.05)
+    boom = np.sin(sweep(110, 30, d)) * decay(d, 0.35)
+    body = band(noise(d), high=700) * decay(d, 0.4, attack=0.004)
+    rubble = crackle(d, 90, low=600) * decay(d, 0.5)
+    return finish(0.45 * s(crack) + 0.8 * s(boom) + 0.5 * s(body) + 0.25 * s(rubble))
+
+
+def sound_singularity_open():
+    """Six seconds of black hole: a sub-bass throb sinking and quickening, wind rushing in, a whine climbing to the
+    collapse."""
+    d = 6.0
+    t = times(d)
+    rate = 1.5 + 4 * (t / d) ** 2
+    throb = np.sin(sweep(55, 30, d)) * (0.6 + 0.4 * np.sin(2 * math.pi * np.cumsum(rate) / SR))
+    wind = band(noise(d), 300, 1800) * (0.6 + 0.4 * np.sin(2 * math.pi * 0.7 * t))
+    whine = np.sin(sweep(200, 900, d)) * (t / d) ** 2
+    envelope = np.minimum(t / 0.4, 1.0) * np.clip((d - t) / 0.05, 0, 1)
+    return finish((0.7 * s(throb) + 0.45 * s(wind) + 0.2 * s(whine)) * envelope)
+
+
+def sound_singularity_collapse():
+    """The collapse: air sucked in, then a deep boom and blast, the last of it ringing away."""
+    d = 2.5
+    suck = band(noise(0.3), 400, 4000) * (times(0.3) / 0.3) ** 3
+    boom = np.sin(sweep(90, 25, 2.2)) * decay(2.2, 0.6)
+    blast = band(noise(2.2), high=1200) * decay(2.2, 0.5, attack=0.003)
+    ring = sum(soft_bell(f, 2.0, 0.8) for f in (1567.98, 2349.32))
+    return finish(0.5 * s(place(d, suck, 0)) + 0.8 * s(place(d, boom, 0.25)) + 0.5 * s(place(d, blast, 0.25))
+                  + 0.12 * s(place(d, ring, 0.3)))
+
+
+def sound_chrono_start():
+    """Time stopping: a rush sweeping down into silence, one deep tick, and a bell left hanging."""
+    d = 1.8
+    t = times(0.45)
+    rush = band(noise(0.45), 500, 6000) * (1 - t / 0.45) ** 0.5 * np.minimum(t / 0.05, 1)
+    fall = np.sin(sweep(1200, 80, 0.45)) * (1 - t / 0.45)
+    tick = bell(800, 0.15, [(1, 1, 0.03), (2.7, 0.5, 0.02)]) + np.sin(2 * math.pi * 90 * times(0.15)) * decay(0.15, 0.03)
+    chime = soft_bell(523.25, 1.3, 1.0) + 0.5 * soft_bell(783.99, 1.3, 0.8)
+    return finish(0.5 * s(place(d, rush, 0)) + 0.4 * s(place(d, fall, 0)) + 0.5 * s(place(d, tick, 0.47))
+                  + 0.45 * s(place(d, chime, 0.5)))
+
+
+def sound_chrono_end():
+    """Time resuming: a rush swelling up out of silence, and the world snapping back into motion."""
+    d = 1.0
+    t = times(0.6)
+    rush = band(noise(0.6), 500, 6000) * (t / 0.6) ** 2
+    rise = np.sin(sweep(80, 1200, 0.6)) * (t / 0.6)
+    snap = bell(1200, 0.3, [(1, 1, 0.06), (2.4, 0.5, 0.04)]) + band(noise(0.3), low=2000) * decay(0.3, 0.02)
+    return finish(0.55 * s(place(d, rush, 0)) + 0.35 * s(place(d, rise, 0)) + 0.5 * s(place(d, snap, 0.6)))
+
+
+def sound_gate_open():
+    """A gate opening: a shimmering chord gliding upwards, with a sparkle of air."""
+    d = 1.6
+    chord = sum(place(d, soft_bell(f, d - i * 0.05, 0.7), i * 0.05) for i, f in enumerate((392, 493.88, 587.33, 783.99)))
+    glide = np.sin(sweep(300, 1200, d)) * swell(d, 0.5, 0.6)
+    sparkle = band(noise(d), 5000, 10000) * swell(d, 0.3, 0.5)
+    return finish(0.6 * s(chord) + 0.3 * s(glide) + 0.25 * s(sparkle))
+
+
+def sound_gate_cross():
+    """Stepping through a gate: a deep whoosh rising, and a bright chime as you arrive."""
+    d = 0.9
+    whoosh = band(noise(d), 150, 3000) * swell(d, 0.25, 0.2)
+    rise = np.sin(sweep(150, 900, d)) * swell(d, 0.22, 0.15)
+    chime = place(d, bell(1760, 0.6, [(1, 1, 0.2), (2, 0.4, 0.1), (3, 0.2, 0.06)]), 0.25)
+    return finish(0.6 * s(whoosh) + 0.35 * s(rise) + 0.35 * s(chime))
+
+
 def sound_fizzle():
     d = 0.45
     t = times(d)
@@ -552,10 +714,18 @@ SOUND_MAKERS = {
     "spell/fizzle": sound_fizzle,
     "ui/spell_wheel_select": sound_wheel_select,
     # Added later: new sounds go last, so the random stream each earlier sound draws from never changes.
-    "spell/celestial_judgment_channel": sound_judgment_channel,
+    "spell/astral_channel": sound_astral_channel,
     "spell/celestial_judgment_gather": sound_judgment_gather,
     "spell/celestial_judgment_beam": sound_judgment_beam,
     "spell/celestial_judgment_blast": sound_judgment_blast,
+    "spell/meteor_swarm_fall": sound_meteor_fall,
+    "spell/meteor_swarm_impact": sound_meteor_impact,
+    "spell/singularity_open": sound_singularity_open,
+    "spell/singularity_collapse": sound_singularity_collapse,
+    "spell/chrono_field_start": sound_chrono_start,
+    "spell/chrono_field_end": sound_chrono_end,
+    "spell/astral_gate_open": sound_gate_open,
+    "spell/astral_gate_cross": sound_gate_cross,
 }
 
 

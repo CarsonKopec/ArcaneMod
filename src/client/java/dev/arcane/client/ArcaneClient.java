@@ -3,7 +3,7 @@ package dev.arcane.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.api.client.SpellEffectRenderers;
-import dev.arcane.client.fx.JudgmentFx;
+import dev.arcane.client.fx.AstralFx;
 import dev.arcane.client.fx.ScreenEffects;
 import dev.arcane.client.fx.SpellLighting;
 import dev.arcane.client.fx.SpellParticles;
@@ -42,7 +42,7 @@ public final class ArcaneClient implements ClientModInitializer {
         // Lights first, as they were before the particles.
         SpellLighting.register();
         SpellParticles.register();
-        JudgmentFx.register();
+        AstralFx.register();
         ScreenEffects.register();
         ClientPlayNetworking.registerGlobalReceiver(SpellEffectPayload.TYPE, (payload, context) -> {
             if (context.client().level != null) SpellEffectRenderers.render(payload.effect(), context.client().level);
@@ -56,7 +56,7 @@ public final class ArcaneClient implements ClientModInitializer {
             if (client.isPaused()) return;
             SpellLighting.tick(client);
             SpellParticles.tick(client.level);
-            JudgmentFx.tick(client);
+            AstralFx.tick(client);
             ScreenEffects.tick();
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clearEffects());
@@ -82,7 +82,7 @@ public final class ArcaneClient implements ClientModInitializer {
     private static void clearEffects() {
         SpellParticles.clear();
         SpellLighting.clear();
-        JudgmentFx.clear();
+        AstralFx.clear();
         ScreenEffects.clear();
     }
 }

@@ -11,7 +11,8 @@
 			"dev.arcane.test.LightingGameTest",
 			"dev.arcane.test.SpellsGameTest",
 			"dev.arcane.test.SpellApiGameTest",
-			"dev.arcane.test.JudgmentGameTest"
+			"dev.arcane.test.JudgmentGameTest",
+			"dev.arcane.test.AstralSpellsGameTest"
 		]
 	},
 	"depends": {

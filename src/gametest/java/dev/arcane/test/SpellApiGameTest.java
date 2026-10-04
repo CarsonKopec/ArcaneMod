@@ -49,7 +49,7 @@ public final class SpellApiGameTest implements FabricClientGameTest {
 
             // Registration: built-in spells first, then the addon's. The addon's data adds Ping to the Arcane Staff's tag.
             List<Spell> spells = ArcaneSpellsApi.spells();
-            check(spells.size() == 7 && spells.getFirst() == ModSpells.ARCANE_BOLT && spells.getLast() == TestAddon.PING,
+            check(spells.size() == 11 && spells.getFirst() == ModSpells.ARCANE_BOLT && spells.getLast() == TestAddon.PING,
                     "Unexpected spell order " + spells);
             List<Spell> onStaff = ArcaneSpellsApi.spells(new ItemStack(ModItems.ARCANE_STAFF));
             check(onStaff.size() == 6 && onStaff.getLast() == TestAddon.PING && !onStaff.contains(ModSpells.CELESTIAL_JUDGMENT),

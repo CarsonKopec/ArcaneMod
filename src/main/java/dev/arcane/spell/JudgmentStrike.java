@@ -222,7 +222,7 @@ final class JudgmentStrike {
     private void scorch() {
         for (BlockPos pos : shell) {
             BlockState state = level.getBlockState(pos);
-            if (!isGround(state) || !breakable(pos, state) || !exposed(pos)) continue;
+            if (!isGround(state) || !SpellTerrain.mayVaporise(level, caster, mayBuild, pos, state) || !exposed(pos)) continue;
             float roll = random.nextFloat();
             BlockState seared = roll < 0.15f ? Blocks.MAGMA_BLOCK.defaultBlockState()
                     : roll < 0.5f ? Blocks.BLACKSTONE.defaultBlockState()
@@ -245,13 +245,7 @@ final class JudgmentStrike {
     }
 
     private void vaporise(BlockPos pos) {
-        BlockState state = level.getBlockState(pos);
-        if (breakable(pos, state)) level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
-    }
-
-    private boolean breakable(BlockPos pos, BlockState state) {
-        return mayBuild && !state.isAir() && state.getDestroySpeed(level, pos) >= 0
-                && state.getBlock().getExplosionResistance() < SpellTuning.JUDGMENT_RESISTANCE_LIMIT && level.mayInteract(caster, pos);
+        if (SpellTerrain.mayVaporise(level, caster, mayBuild, pos, level.getBlockState(pos))) SpellTerrain.vaporise(level, pos);
     }
 
     /** The block positions in row {@code y} within {@code radius} of the beam's axis. */
