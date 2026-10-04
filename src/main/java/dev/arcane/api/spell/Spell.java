@@ -2,6 +2,7 @@ package dev.arcane.api.spell;
 
 import com.mojang.serialization.Codec;
 import dev.arcane.api.SpellRegistries;
+import dev.arcane.spell.SpellTuning;
 import io.netty.buffer.ByteBuf;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
@@ -10,13 +11,15 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipProvider;
 
 /**
- * A spell the staff can cast. Subclass it, then register one instance in {@link SpellRegistries#SPELLS}; the spell
- * wheel, HUD, mana and cooldowns pick it up from there.
+ * A spell a staff can cast. Subclass it, register one instance in {@link SpellRegistries#SPELLS}, then add it to the
+ * tag of each staff that should hold it (see {@link dev.arcane.api.SpellTags}). The spell wheel, HUD, mana and
+ * cooldowns pick it up from there.
  *
  * <p>Casting runs on the server only. Mana and cooldown are checked before {@link #cast} and charged only if it
  * returns true. To show the cast to players, send a {@linkplain dev.arcane.api.effect.SpellEffect spell effect}.
@@ -36,6 +39,7 @@ public abstract class Spell implements TooltipProvider {
     private final float manaCost;
     private final int cooldownTicks;
     private final boolean charged;
+    private final int fullChargeTicks;
     private final int color;
     private String descriptionId;
 
@@ -43,6 +47,7 @@ public abstract class Spell implements TooltipProvider {
         this.manaCost = properties.manaCost;
         this.cooldownTicks = properties.cooldownTicks;
         this.charged = properties.charged;
+        this.fullChargeTicks = properties.fullChargeTicks;
         this.color = properties.color;
     }
 
@@ -76,6 +81,16 @@ public abstract class Spell implements TooltipProvider {
     /** Charged spells are held to charge and fire on release; the others fire on click. */
     public boolean charged() {
         return charged;
+    }
+
+    /** Charged spells only: how long the caster must hold to reach full power. */
+    public int fullChargeTicks() {
+        return fullChargeTicks;
+    }
+
+    /** Whether the spell is in {@code tag}, such as the list of spells a staff holds. */
+    public boolean is(TagKey<Spell> tag) {
+        return SpellRegistries.SPELLS.wrapAsHolder(this).is(tag);
     }
 
     /** ARGB accent colour for the spell's name and highlight on the wheel. */
@@ -118,6 +133,7 @@ public abstract class Spell implements TooltipProvider {
         private float manaCost;
         private int cooldownTicks;
         private boolean charged;
+        private int fullChargeTicks = SpellTuning.FULL_CHARGE_TICKS;
         private int color = 0xFFC9A6FF;
 
         public Properties manaCost(float manaCost) {
@@ -132,9 +148,17 @@ public abstract class Spell implements TooltipProvider {
             return this;
         }
 
-        /** Held to charge, firing on release with a power from 0 to 1. */
+        /** Held to charge, firing on release with a power from 0 to 1, full after the usual 1.2 s. */
         public Properties charged() {
             this.charged = true;
+            return this;
+        }
+
+        /** Held to charge, firing on release with a power from 0 to 1, full after {@code fullChargeTicks}. */
+        public Properties charged(int fullChargeTicks) {
+            if (fullChargeTicks < 1) throw new IllegalArgumentException("Full charge needs at least a tick, not " + fullChargeTicks);
+            this.charged = true;
+            this.fullChargeTicks = fullChargeTicks;
             return this;
         }
 

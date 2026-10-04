@@ -19,7 +19,11 @@
 		]
 	},
 	"mixins": [
-		"arcane_spells.mixins.json"
+		"arcane_spells.mixins.json",
+		{
+			"config": "arcane_spells.client.mixins.json",
+			"environment": "client"
+		}
 	],
 	"depends": {
 		"fabricloader": ">=${loader_version}",

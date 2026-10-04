@@ -1,13 +1,11 @@
 package dev.arcane.api;
 
-import dev.arcane.ArcaneSpells;
 import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModAttachments;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
-import java.util.Comparator;
 import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -26,10 +24,12 @@ public final class ArcaneSpellsApi {
 
     /** Every spell, in wheel order: Arcane Spells' own first, then each other mod's together, in registration order. */
     public static List<Spell> spells() {
-        return SpellRegistries.SPELLS.stream()
-                .sorted(Comparator.comparing((Spell spell) -> !spell.id().getNamespace().equals(ArcaneSpells.ID))
-                        .thenComparing(spell -> spell.id().getNamespace()))
-                .toList();
+        return SpellCasting.spells();
+    }
+
+    /** The spells {@code staff} holds (those in its {@link SpellTags tag}), in wheel order; none if it isn't a staff. */
+    public static List<Spell> spells(ItemStack staff) {
+        return SpellCasting.spells(staff);
     }
 
     /** The staff in the player's main hand, else their offhand, else {@link ItemStack#EMPTY}. */

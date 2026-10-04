@@ -39,6 +39,22 @@
 		"subtitle": "subtitles.arcane_spells.spell.frost_nova",
 		"sounds": ["arcane_spells:spell/frost_nova"]
 	},
+	"spell.celestial_judgment.channel": {
+		"subtitle": "subtitles.arcane_spells.spell.celestial_judgment.channel",
+		"sounds": ["arcane_spells:spell/celestial_judgment_channel"]
+	},
+	"spell.celestial_judgment.gather": {
+		"subtitle": "subtitles.arcane_spells.spell.celestial_judgment.gather",
+		"sounds": ["arcane_spells:spell/celestial_judgment_gather"]
+	},
+	"spell.celestial_judgment.beam": {
+		"subtitle": "subtitles.arcane_spells.spell.celestial_judgment.beam",
+		"sounds": ["arcane_spells:spell/celestial_judgment_beam"]
+	},
+	"spell.celestial_judgment.blast": {
+		"subtitle": "subtitles.arcane_spells.spell.celestial_judgment.blast",
+		"sounds": ["arcane_spells:spell/celestial_judgment_blast"]
+	},
 	"spell.fizzle": {
 		"subtitle": "subtitles.arcane_spells.spell.fizzle",
 		"sounds": ["arcane_spells:spell/fizzle"]

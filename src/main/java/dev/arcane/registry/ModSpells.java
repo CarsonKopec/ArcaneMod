@@ -6,6 +6,7 @@ import dev.arcane.api.spell.Spell;
 import dev.arcane.spell.ArcaneBolt;
 import dev.arcane.spell.ArcaneWard;
 import dev.arcane.spell.Blink;
+import dev.arcane.spell.CelestialJudgment;
 import dev.arcane.spell.ChainLightning;
 import dev.arcane.spell.FrostNova;
 import net.minecraft.core.Registry;
@@ -17,6 +18,8 @@ public final class ModSpells {
     public static final Spell BLINK = register("blink", new Blink());
     public static final Spell ARCANE_WARD = register("arcane_ward", new ArcaneWard());
     public static final Spell FROST_NOVA = register("frost_nova", new FrostNova());
+    /** The first of the Astral Staff's advanced spells. */
+    public static final Spell CELESTIAL_JUDGMENT = register("celestial_judgment", new CelestialJudgment());
 
     private ModSpells() {
     }

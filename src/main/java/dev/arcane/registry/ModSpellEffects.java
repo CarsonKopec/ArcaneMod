@@ -25,6 +25,20 @@ public final class ModSpellEffects {
     public static final SpellEffectType WARD_END = register("ward_end");
     /** A frost nova burst from the caster's feet at {@code position}. */
     public static final SpellEffectType NOVA = register("nova");
+    /**
+     * Celestial Judgment is being channelled by entity {@code sourceId}, aimed at {@code position}: {@code power} is the
+     * channel so far, 0–1, and {@code age} its ticks. {@code direction} is up if the mark is valid, zero if not.
+     */
+    public static final SpellEffectType JUDGMENT_CHANNEL = register("judgment_channel");
+    /**
+     * A judgment strike {@code sourceId} began at {@code position}: the sky darkens and the circles form. The sky circle
+     * is at {@code position + direction}, and the beam falls in {@code age} ticks.
+     */
+    public static final SpellEffectType JUDGMENT_MARK = register("judgment_mark");
+    /** Strike {@code sourceId}'s beam fell from {@code position + direction} to {@code position}, for {@code age} ticks. */
+    public static final SpellEffectType JUDGMENT_BEAM = register("judgment_beam");
+    /** Strike {@code sourceId} detonated at {@code position}. */
+    public static final SpellEffectType JUDGMENT_BLAST = register("judgment_blast");
 
     private ModSpellEffects() {
     }

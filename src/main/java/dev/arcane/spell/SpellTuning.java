@@ -74,14 +74,51 @@ public final class SpellTuning {
     public static final int NOVA_SLOW_AMPLIFIER = 2;
     public static final double NOVA_KNOCKBACK = 0.5;
 
+    // Celestial Judgment (Astral Staff)
+
+    /** Nearly a full base pool: one cast at a time, unless gear raises max mana. */
+    public static final float JUDGMENT_MANA = 90;
+    /** One minute. */
+    public static final int JUDGMENT_COOLDOWN_TICKS = 1200;
+    /** The channel (2 s) must be held to the end; releasing early casts nothing and costs nothing. */
+    public static final int JUDGMENT_CHARGE_TICKS = 40;
+    /** How far away the caster can mark the ground. */
+    public static final double JUDGMENT_RANGE = 96;
+    /** The mark must be at least this far away horizontally, so the caster is never inside the crater. */
+    public static final double JUDGMENT_MIN_DISTANCE = 18;
+    /** From the mark to the beam: the sky darkens and the circles form (2.5 s). */
+    public static final int JUDGMENT_GATHER_TICKS = 50;
+    /** How long the beam burns before it detonates (1.5 s). */
+    public static final int JUDGMENT_BEAM_TICKS = 30;
+    /** The crater is carved outwards over this many ticks after the detonation, spreading the work. */
+    public static final int JUDGMENT_CARVE_TICKS = 8;
+    /** Height of the sky circle above the mark. */
+    public static final double JUDGMENT_SKY_HEIGHT = 64;
+    /** The beam's radius, and the shaft it bores. */
+    public static final double JUDGMENT_BEAM_RADIUS = 3.5;
+    /** How far below the mark the shaft goes. */
+    public static final int JUDGMENT_SHAFT_DEPTH = 24;
+    /** Damage to anything in the beam, every {@link #JUDGMENT_BEAM_HIT_INTERVAL} ticks; it also sets them alight. */
+    public static final float JUDGMENT_BEAM_DAMAGE = 12;
+    public static final int JUDGMENT_BEAM_HIT_INTERVAL = 10;
+    /** The crater's horizontal radius, give or take 15% to roughen the rim. */
+    public static final double JUDGMENT_CRATER_RADIUS = 12;
+    /** How far the crater reaches below the mark; above it, it reaches as far as it does sideways. */
+    public static final double JUDGMENT_CRATER_DEPTH = 9;
+    /** Entities this close to the mark are caught by the detonation. */
+    public static final double JUDGMENT_BLAST_RADIUS = 16;
+    /** Detonation damage at the centre, falling to nothing at the edge. */
+    public static final float JUDGMENT_BLAST_DAMAGE = 40;
+    public static final double JUDGMENT_BLAST_KNOCKBACK = 2.4;
+    /** Blocks at least this blast resistant survive, as obsidian (1200) does; so does anything unbreakable. */
+    public static final float JUDGMENT_RESISTANCE_LIMIT = 1200;
+    /** Strikes in progress at once, server-wide; more fizzle. */
+    public static final int MAX_ACTIVE_JUDGMENTS = 8;
+
     /** Players farther than this are not sent effects; also the client's light and rune render distance. */
     public static final double EFFECT_RANGE = 448;
 
     private SpellTuning() {
-    }
-
-    public static float power(int chargedTicks) {
-        return Math.min(chargedTicks / (float) FULL_CHARGE_TICKS, 1f);
     }
 
     /** Blocks per tick. */

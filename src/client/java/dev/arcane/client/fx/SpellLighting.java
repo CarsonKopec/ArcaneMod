@@ -12,6 +12,7 @@ import dev.arcane.api.SpellRegistries;
 import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.api.effect.SpellEffectType;
+import dev.arcane.item.ArcaneStaffItem;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
@@ -93,8 +94,9 @@ public final class SpellLighting {
         ensureWorld(client.level);
         ++ticks;
         LocalPlayer player = client.player;
-        if (player != null && !SpellCasting.heldStaff(player).isEmpty()) {
-            glow(STAFF_GLOW_KEY, player.getEyePosition().add(player.getLookAngle().scale(0.5)), 3.5f, 0.55f, VIOLET, 2, false);
+        if (player != null && SpellCasting.heldStaff(player).getItem() instanceof ArcaneStaffItem staff) {
+            ColorRgba color = ColorRgba.rgb(staff.glowColor());
+            glow(STAFF_GLOW_KEY, player.getEyePosition().add(player.getLookAngle().scale(0.5)), 3.5f, 0.55f, color, 2, false);
         }
         Iterator<Glow> iterator = GLOWS.values().iterator();
         while (iterator.hasNext()) {
@@ -290,8 +292,11 @@ public final class SpellLighting {
         GLOWS.clear();
     }
 
-    /** Runs Nebulon work. The first failure is logged once and turns lighting off for the rest of the session. */
-    private static void guarded(Runnable action) {
+    /**
+     * Runs Nebulon work. The first failure is logged once and turns Nebulon off for the rest of the session, for every
+     * spell; other owners of Nebulon handles check {@link #disabled()} and let theirs go.
+     */
+    static void guarded(Runnable action) {
         if (disabled) return;
         try {
             action.run();
@@ -307,6 +312,10 @@ public final class SpellLighting {
             }
             GLOWS.clear();
         }
+    }
+
+    static boolean disabled() {
+        return disabled;
     }
 
     private static final class Glow {

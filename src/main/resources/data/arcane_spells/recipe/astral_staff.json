@@ -1,0 +1,7 @@
+{
+  "type":"minecraft:crafting_shaped",
+  "category":"equipment",
+  "pattern":[" EN"," SE","I  "],
+  "key":{"E":"minecraft:echo_shard","N":"minecraft:nether_star","S":"arcane_spells:arcane_staff","I":"minecraft:netherite_ingot"},
+  "result":{"id":"arcane_spells:astral_staff","count":1}
+}

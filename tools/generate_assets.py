@@ -1,4 +1,4 @@
-"""Generates the spell icons and spell sounds into src/main/resources.
+"""Generates the spell icons, the Astral Staff and beam textures, and the spell sounds into src/main/resources.
 
 Every asset is drawn or synthesized here from code, so there is nothing to license and any of it can be tweaked
 and regenerated. Output is deterministic (fixed random seed).
@@ -17,11 +17,13 @@ from scipy import signal
 
 ASSETS = Path(__file__).resolve().parent.parent / "src/main/resources/assets/arcane_spells"
 ICONS = ASSETS / "textures/gui/sprites/spell"
+TEXTURES = ASSETS / "textures"
 SOUNDS = ASSETS / "sounds"
 SR = 44100
 
 
-# Icons: 16x16 pixel art, drawn as tapered strokes and discs with tiered colours, then outlined.
+# Icons: 16x16 pixel art (32x32 for the Astral Staff), drawn as tapered strokes and discs with tiered colours,
+# then outlined.
 
 def hex_rgba(color, alpha=255):
     color = color.lstrip("#")
@@ -29,11 +31,12 @@ def hex_rgba(color, alpha=255):
 
 
 class Canvas:
-    def __init__(self):
-        self.px = [[None] * 16 for _ in range(16)]
+    def __init__(self, size=16):
+        self.size = size
+        self.px = [[None] * size for _ in range(size)]
 
     def put(self, x, y, color):
-        if 0 <= x < 16 and 0 <= y < 16:
+        if 0 <= x < self.size and 0 <= y < self.size:
             self.px[y][x] = color
 
     def stroke(self, points, width_start, width_end, tiers, alpha=255, alpha_end=None):
@@ -42,8 +45,8 @@ class Canvas:
         alpha_end = alpha if alpha_end is None else alpha_end
         lengths = [math.dist(a, b) for a, b in zip(points, points[1:])]
         total = sum(lengths)
-        for y in range(16):
-            for x in range(16):
+        for y in range(self.size):
+            for x in range(self.size):
                 p = (x + 0.5, y + 0.5)
                 best, best_t, walked = 1e9, 0.0, 0.0
                 for (a, b), length in zip(zip(points, points[1:]), lengths):
@@ -61,8 +64,8 @@ class Canvas:
                         break
 
     def disc(self, cx, cy, radius, tiers):
-        for y in range(16):
-            for x in range(16):
+        for y in range(self.size):
+            for x in range(self.size):
                 d = math.dist((x + 0.5, y + 0.5), (cx, cy))
                 for fraction, color in tiers:
                     if d <= radius * fraction:
@@ -79,21 +82,21 @@ class Canvas:
         """Darkens every empty pixel touching a solid one, so icons read on any background. Faded pixels get no
         outline, which would turn them into dark smudges."""
         add = []
-        for y in range(16):
-            for x in range(16):
+        for y in range(self.size):
+            for x in range(self.size):
                 if self.px[y][x] is not None:
                     continue
                 neighbours = [self.px[ny][nx] for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1))
-                              if 0 <= nx < 16 and 0 <= ny < 16 and self.px[ny][nx] is not None]
+                              if 0 <= nx < self.size and 0 <= ny < self.size and self.px[ny][nx] is not None]
                 if any(n[3] >= 200 for n in neighbours):
                     add.append((x, y, hex_rgba(color)))
         for x, y, c in add:
             self.px[y][x] = c
 
     def image(self):
-        img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-        for y in range(16):
-            for x in range(16):
+        img = Image.new("RGBA", (self.size, self.size), (0, 0, 0, 0))
+        for y in range(self.size):
+            for x in range(self.size):
                 if self.px[y][x] is not None:
                     img.putpixel((x, y), self.px[y][x])
         return img
@@ -177,12 +180,102 @@ def icon_frost_nova():
     return c
 
 
+def icon_celestial_judgment():
+    """A pillar of light falling from a star onto a rune circle, with sparks thrown up where it lands."""
+    c = Canvas()
+    cx, cy, rx, ry = 7.5, 12.6, 6.6, 2.3
+    for y in range(16):
+        for x in range(16):
+            d = ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2
+            if 0.6 <= d <= 1.2:
+                # The near half of the circle, below the beam's foot, is the brighter.
+                c.put(x, y, hex_rgba("#FFD27A" if y + 0.5 >= cy else "#C99A2E"))
+            elif d < 0.6:
+                c.put(x, y, hex_rgba("#FFF0C8", 110))
+    c.stroke([(7.5, 1.5), (7.5, 12.4)], 0.95, 1.2, [(0.55, "#FFFFFF"), (1.0, "#FFE08A")])
+    for x, y in ((7, 1), (6, 2), (8, 2), (7, 0)):
+        c.put(x, y, hex_rgba("#FFFFFF"))
+    for x, y, color in ((3, 9, "#FFE08A"), (12, 9, "#FFE08A"), (2, 11, "#BDF3FF"), (13, 11, "#BDF3FF"), (4, 7, "#FFF0C8"),
+                        (11, 6, "#FFF0C8")):
+        c.put(x, y, hex_rgba(color))
+    c.outline("#3B2408")
+    return c
+
+
 ICON_MAKERS = {
     "arcane_bolt": icon_arcane_bolt,
     "chain_lightning": icon_chain_lightning,
     "blink": icon_blink,
     "arcane_ward": icon_arcane_ward,
     "frost_nova": icon_frost_nova,
+    "celestial_judgment": icon_celestial_judgment,
+}
+
+
+# Textures under textures/: the Astral Staff item (32x32, like the Arcane Staff) and the judgment beam.
+
+def texture_astral_staff():
+    """The Arcane Staff's diagonal shaft, in midnight blue banded with gold, crowned by a gold ring holding a star."""
+    c = Canvas(32)
+    head = (24.5, 7.5)
+    # A deep blue orb inside the ring, glowing towards the star at its heart.
+    c.disc(head[0], head[1], 4.7, [(0.55, "#3E5BB8"), (1.0, "#22306E")])
+    for y in range(32):
+        for x in range(32):
+            d = math.dist((x + 0.5, y + 0.5), head)
+            if 4.6 <= d <= 5.9:
+                # Shaded gold: lit from the top left.
+                lit = (x + 0.5 - head[0]) + (y + 0.5 - head[1]) < 0
+                c.put(x, y, hex_rgba("#FFE08A" if lit else "#C99A2E"))
+    star = [(0.45, "#FFFFFF"), (0.8, "#FFF0C8"), (1.0, "#BDF3FF")]
+    for dx, dy in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+        c.stroke([head, (head[0] + dx * 3.6, head[1] + dy * 3.6)], 1.3, 0.5, star)
+    for dx, dy in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+        c.put(int(head[0] + dx * 2), int(head[1] + dy * 2), hex_rgba("#FFE08A"))
+    c.disc(head[0], head[1], 1.3, [(1.0, "#FFFFFF")])
+    c.outline("#1E1236")
+    # The shaft goes on after the outline, which belongs to the head alone, as on the Arcane Staff.
+    for i in range(17):
+        x, y = 4 + i, 28 - i
+        band = i % 5 == 2
+        c.put(x, y, hex_rgba("#7A5A16" if band else "#141029"))
+        c.put(x + 1, y, hex_rgba("#FFD27A" if band else "#2D3A8C"))
+        c.put(x + 2, y, hex_rgba("#FFF0C8" if band else "#E8C25A"))
+    for x, y in ((29, 1), (17, 3), (30, 13)):
+        c.put(x, y, hex_rgba("#FFF0C8"))
+    return c.image()
+
+
+BEAM_FRAMES = 8
+
+
+def texture_judgment_beam():
+    """Eight frames side by side, each 32x256: a white-hot core in a wide golden glow, with streaks that flow down
+    one frame-height per frame so the loop is seamless. Drawn additively, so brightness lives in the colour (black is
+    invisible) and alpha stays opaque, whichever additive blend the renderer uses."""
+    width, height = 32, 256
+    shift = height // BEAM_FRAMES
+    u = (np.arange(width) + 0.5) / width * 2 - 1
+    core = np.exp(-(u / 0.14) ** 2)
+    body = np.exp(-(u / 0.55) ** 2) * np.clip(1 - np.abs(u), 0, 1) ** 0.35
+    # Its own generator, so adding textures never shifts the sounds' random stream.
+    phases = np.random.default_rng(BEAM_FRAMES).uniform(0, 2 * math.pi, (3, width))
+    sheet = np.zeros((height, width * BEAM_FRAMES, 4))
+    for frame in range(BEAM_FRAMES):
+        y = (np.arange(height)[:, None] - frame * shift) / height
+        # Whole cycles per texture height, so every frame tiles vertically too.
+        streaks = (0.5 * np.sin(2 * math.pi * 3 * y + phases[0]) + 0.3 * np.sin(2 * math.pi * 7 * y + phases[1])
+                   + 0.2 * np.sin(2 * math.pi * 13 * y + phases[2]))
+        intensity = np.clip(0.95 * core + 0.8 * body * (0.7 + 0.3 * streaks), 0, 1) ** 0.8
+        rgb = np.stack([np.ones_like(intensity), 0.78 + 0.22 * intensity, 0.45 + 0.55 * intensity], axis=-1) * intensity[..., None]
+        sheet[:, frame * width:(frame + 1) * width, :3] = rgb
+        sheet[:, frame * width:(frame + 1) * width, 3] = 1
+    return Image.fromarray(np.round(sheet * 255).astype(np.uint8), "RGBA")
+
+
+TEXTURE_MAKERS = {
+    "item/astral_staff": texture_astral_staff,
+    "effect/judgment_beam": texture_judgment_beam,
 }
 
 
@@ -371,6 +464,64 @@ def sound_frost_nova():
     return finish(0.5 * s(crack) + 0.35 * s(crystal) + 0.6 * s(whoomp) + 0.3 * s(wind))
 
 
+def sound_judgment_channel():
+    """A choir swelling over the two-second channel, a rising shimmer, and bells as the circle closes."""
+    d = 2.3
+    t = times(d)
+    voices = np.zeros_like(t)
+    for f in (220, 277.18, 329.63, 440):
+        for detune in (-0.004, 0.0, 0.005):
+            voices += signal.sawtooth(2 * math.pi * f * (1 + detune) * t + rng.uniform(0, 2 * math.pi))
+    # "Ah" vowel formants turn the saws into voices; a 5 Hz vibrato gives them breath.
+    choir = band(voices, 600, 820) + 0.6 * band(voices, 1100, 1350) + 0.3 * band(voices, 2400, 2800)
+    choir *= 0.85 + 0.15 * np.sin(2 * math.pi * 5 * t)
+    swell_in = np.clip(t / (d - 0.35), 0, 1) ** 1.6 * np.clip((d - t) / 0.3, 0, 1)
+    shimmer = band(noise(d), 5000, 9000) * np.clip(t / d, 0, 1) ** 2
+    bells = place(d, bell(1760, 0.4, [(1, 1, 0.25), (2.0, 0.4, 0.15), (3.0, 0.2, 0.08)]), 1.9)
+    bells += place(d, bell(2637, 0.35, [(1, 1, 0.2), (2.0, 0.3, 0.1)]), 1.98)
+    return finish(0.75 * s(choir * swell_in) + 0.2 * s(shimmer) + 0.35 * s(bells))
+
+
+def sound_judgment_gather():
+    """Distant thunder rolling in under an ethereal chord, and a rush of air rising to the moment the beam falls."""
+    d = 3.0
+    t = times(d)
+    rumble = band(noise(d), high=140) * swell(d, 2.3, 0.5)
+    sub = np.sin(2 * math.pi * 38 * t) * swell(d, 2.4, 0.4)
+    pad = sum(np.sin(2 * math.pi * f * t + rng.uniform(0, 6.3)) for f in (110, 164.81, 220, 277.18, 329.63))
+    pad *= swell(d, 2.0, 0.8) * (0.8 + 0.2 * np.sin(2 * math.pi * 0.7 * t))
+    riser = band(noise(d), 1500, 8000) * np.where(t < 2.5, (t / 2.5) ** 3, np.exp(-(t - 2.5) / 0.05))
+    return finish(0.55 * s(rumble) + 0.5 * s(sub) + 0.35 * s(pad) + 0.4 * s(riser))
+
+
+def sound_judgment_beam():
+    """The beam slamming down and roaring: a heavy impact, a deep hum, a wall of noise and sizzling sparks."""
+    d = 2.0
+    t = times(d)
+    envelope = np.minimum(t / 0.02, 1.0) * np.clip((d - t) / 0.45, 0, 1)
+    impact = np.sin(sweep(130, 40, d)) * decay(d, 0.25)
+    hum = (np.sin(2 * math.pi * 55 * t) + 0.5 * np.sin(2 * math.pi * 110 * t) + 0.3 * np.sin(2 * math.pi * 165.5 * t))
+    hum *= 1 + 0.1 * np.sin(2 * math.pi * 6 * t)
+    roar = band(noise(d), 150, 2500) * (0.7 + 0.3 * np.sin(2 * math.pi * 31 * t))
+    sizzle = crackle(d, 300, low=3000)
+    whine = np.sin(sweep(1800, 2400, d))
+    return finish(0.6 * s(impact) + (0.45 * s(hum) + 0.55 * s(roar) + 0.3 * s(sizzle) + 0.08 * s(whine)) * envelope)
+
+
+def sound_judgment_blast():
+    """A cataclysm: a sharp crack, a sub-bass boom sweeping down, a long rolling rumble with falling debris, and the
+    magic ringing out as it dissipates."""
+    d = 5.0
+    t = times(d)
+    crack = place(d, band(noise(0.3), low=1500) * decay(0.3, 0.04), 0)
+    boom = place(d, np.sin(sweep(90, 22, 1.4)) * decay(1.4, 0.5), 0)
+    body = band(noise(d), high=900) * decay(d, 0.6, attack=0.005)
+    tail = band(noise(d), high=150) * decay(d, 1.8, attack=0.05)
+    debris = crackle(d, 60, low=800) * decay(d, 1.2)
+    ring = sum(place(d, soft_bell(f, d - 0.3, 1.4), 0.3) for f in (2093, 2637, 3136))
+    return finish(0.5 * s(crack) + 0.8 * s(boom) + 0.55 * s(body) + 0.6 * s(tail) + 0.25 * s(debris) + 0.12 * s(ring))
+
+
 def sound_fizzle():
     d = 0.45
     t = times(d)
@@ -400,6 +551,11 @@ SOUND_MAKERS = {
     "spell/frost_nova": sound_frost_nova,
     "spell/fizzle": sound_fizzle,
     "ui/spell_wheel_select": sound_wheel_select,
+    # Added later: new sounds go last, so the random stream each earlier sound draws from never changes.
+    "spell/celestial_judgment_channel": sound_judgment_channel,
+    "spell/celestial_judgment_gather": sound_judgment_gather,
+    "spell/celestial_judgment_beam": sound_judgment_beam,
+    "spell/celestial_judgment_blast": sound_judgment_blast,
 }
 
 
@@ -414,6 +570,10 @@ def main():
     icons = {name: make().image() for name, make in ICON_MAKERS.items()}
     for name, img in icons.items():
         img.save(ICONS / f"{name}.png")
+    for name, make in TEXTURE_MAKERS.items():
+        path = TEXTURES / f"{name}.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        make().save(path)
 
     clips = {}
     for name, make in SOUND_MAKERS.items():
@@ -421,7 +581,7 @@ def main():
         path.parent.mkdir(parents=True, exist_ok=True)
         clips[name] = make().astype(np.float32)
         soundfile.write(path, clips[name], SR, format="OGG", subtype="VORBIS")
-    print(f"wrote {len(icons)} icons to {ICONS} and {len(clips)} sounds to {SOUNDS}")
+    print(f"wrote {len(icons)} icons, {len(TEXTURE_MAKERS)} textures and {len(clips)} sounds under {ASSETS}")
 
     if args.preview:
         write_previews(args.preview, icons, clips)

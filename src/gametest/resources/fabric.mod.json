@@ -10,7 +10,8 @@
 		"fabric-client-gametest": [
 			"dev.arcane.test.LightingGameTest",
 			"dev.arcane.test.SpellsGameTest",
-			"dev.arcane.test.SpellApiGameTest"
+			"dev.arcane.test.SpellApiGameTest",
+			"dev.arcane.test.JudgmentGameTest"
 		]
 	},
 	"depends": {

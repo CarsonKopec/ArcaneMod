@@ -9,6 +9,7 @@ import dev.arcane.api.SpellAttributes;
 import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.registry.ModAttachments;
+import dev.arcane.registry.ModItems;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.CasterState.Cooldown;
@@ -23,6 +24,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * The API as another mod sees it, through {@link TestAddon}: its spell on the wheel, cast through the normal checks,
@@ -45,10 +47,13 @@ public final class SpellApiGameTest implements FabricClientGameTest {
             server.runCommand("gamemode survival @a");
             game.getClientWorld().waitForChunksRender();
 
-            // Registration: built-in spells first, then the addon's.
+            // Registration: built-in spells first, then the addon's. The addon's data adds Ping to the Arcane Staff's tag.
             List<Spell> spells = ArcaneSpellsApi.spells();
-            check(spells.size() == 6 && spells.getFirst() == ModSpells.ARCANE_BOLT && spells.getLast() == TestAddon.PING,
-                    "Unexpected wheel order " + spells);
+            check(spells.size() == 7 && spells.getFirst() == ModSpells.ARCANE_BOLT && spells.getLast() == TestAddon.PING,
+                    "Unexpected spell order " + spells);
+            List<Spell> onStaff = ArcaneSpellsApi.spells(new ItemStack(ModItems.ARCANE_STAFF));
+            check(onStaff.size() == 6 && onStaff.getLast() == TestAddon.PING && !onStaff.contains(ModSpells.CELESTIAL_JUDGMENT),
+                    "Unexpected Arcane Staff spells " + onStaff);
 
             // Casting: the cost listener halves the price, and the after-cast listener sees what was charged.
             server.runOnServer(s -> {

@@ -3,6 +3,8 @@ package dev.arcane.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.api.client.SpellEffectRenderers;
+import dev.arcane.client.fx.JudgmentFx;
+import dev.arcane.client.fx.ScreenEffects;
 import dev.arcane.client.fx.SpellLighting;
 import dev.arcane.client.fx.SpellParticles;
 import dev.arcane.client.gui.SpellHud;
@@ -31,6 +33,7 @@ public final class ArcaneClient implements ClientModInitializer {
         registerSpark(ModParticles.VIOLET, 0xA34DFF);
         registerSpark(ModParticles.PINK, 0xF3B5FF);
         registerSpark(ModParticles.CYAN, 0x88F5FF);
+        registerSpark(ModParticles.GOLD, 0xFFD27A);
 
         spellWheel = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.arcane_spells.spell_wheel",
                 InputConstants.Type.KEYSYM, InputConstants.KEY_R, KeyMapping.Category.register(ArcaneSpells.id("spells"))));
@@ -39,6 +42,8 @@ public final class ArcaneClient implements ClientModInitializer {
         // Lights first, as they were before the particles.
         SpellLighting.register();
         SpellParticles.register();
+        JudgmentFx.register();
+        ScreenEffects.register();
         ClientPlayNetworking.registerGlobalReceiver(SpellEffectPayload.TYPE, (payload, context) -> {
             if (context.client().level != null) SpellEffectRenderers.render(payload.effect(), context.client().level);
         });
@@ -51,17 +56,22 @@ public final class ArcaneClient implements ClientModInitializer {
             if (client.isPaused()) return;
             SpellLighting.tick(client);
             SpellParticles.tick(client.level);
+            JudgmentFx.tick(client);
+            ScreenEffects.tick();
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clearEffects());
     }
 
-    /** Opens the wheel on a fresh press, with the staff in hand and not mid-charge (a pick then would be ignored). */
+    /**
+     * Opens the wheel on a fresh press, with a staff holding spells in hand and not mid-charge (a pick then would be
+     * ignored).
+     */
     private static void openSpellWheel(Minecraft client) {
         while (spellWheel.consumeClick()) {
             LocalPlayer player = client.player;
             if (player == null || client.screen != null || player.isUsingItem()) continue;
             ItemStack staff = SpellCasting.heldStaff(player);
-            if (!staff.isEmpty()) client.setScreen(new SpellWheelScreen(spellWheel, SpellCasting.selected(staff)));
+            if (!SpellCasting.spells(staff).isEmpty()) client.setScreen(new SpellWheelScreen(spellWheel, staff));
         }
     }
 
@@ -72,5 +82,7 @@ public final class ArcaneClient implements ClientModInitializer {
     private static void clearEffects() {
         SpellParticles.clear();
         SpellLighting.clear();
+        JudgmentFx.clear();
+        ScreenEffects.clear();
     }
 }

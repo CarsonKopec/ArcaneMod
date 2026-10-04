@@ -21,6 +21,10 @@ public final class ModSounds {
     public static final SoundEvent WARD_BREAK = register("spell.arcane_ward.break");
     public static final SoundEvent WARD_FADE = register("spell.arcane_ward.fade");
     public static final SoundEvent FROST_NOVA = register("spell.frost_nova");
+    public static final SoundEvent JUDGMENT_CHANNEL = register("spell.celestial_judgment.channel");
+    public static final SoundEvent JUDGMENT_GATHER = register("spell.celestial_judgment.gather");
+    public static final SoundEvent JUDGMENT_BEAM = register("spell.celestial_judgment.beam");
+    public static final SoundEvent JUDGMENT_BLAST = register("spell.celestial_judgment.blast");
     /** A refused or failed cast. */
     public static final SoundEvent FIZZLE = register("spell.fizzle");
     public static final SoundEvent WHEEL_SELECT = register("ui.spell_wheel.select");

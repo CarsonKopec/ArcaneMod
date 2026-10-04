@@ -1,6 +1,5 @@
 package dev.arcane.client.gui;
 
-import dev.arcane.api.ArcaneSpellsApi;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.network.SelectSpellPayload;
 import dev.arcane.registry.ModSounds;
@@ -19,12 +18,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Hold the spell key to open, point at a spell, release to pick it. A click also picks, Escape cancels. Opening a
  * screen frees the mouse at the screen centre, so the pointer's direction from the centre chooses the spell.
  *
- * <p>Every registered spell gets a slot, other mods' included; the ring widens past a dozen so slots never overlap.
+ * <p>Every spell the staff holds gets a slot, other mods' included; the ring widens past a dozen so slots never overlap.
  */
 public final class SpellWheelScreen extends Screen {
     private static final int MIN_RADIUS = 62;
@@ -37,15 +37,19 @@ public final class SpellWheelScreen extends Screen {
 
     private final KeyMapping key;
     private final Spell current;
-    private final List<Spell> spells = ArcaneSpellsApi.spells();
-    private final double sector = 2 * Math.PI / spells.size();
-    private final int radius = Math.max(MIN_RADIUS, (int) Math.ceil(SLOT_SPACING / sector));
+    private final List<Spell> spells;
+    private final double sector;
+    private final int radius;
     private Spell hovered;
 
-    public SpellWheelScreen(KeyMapping key, Spell current) {
+    /** {@code staff} must hold at least one spell. */
+    public SpellWheelScreen(KeyMapping key, ItemStack staff) {
         super(Component.translatable("screen.arcane_spells.spell_wheel"));
         this.key = key;
-        this.current = current;
+        this.current = SpellCasting.selected(staff);
+        this.spells = SpellCasting.spells(staff);
+        this.sector = 2 * Math.PI / spells.size();
+        this.radius = Math.max(MIN_RADIUS, (int) Math.ceil(SLOT_SPACING / sector));
     }
 
     @Override public boolean isPauseScreen() {

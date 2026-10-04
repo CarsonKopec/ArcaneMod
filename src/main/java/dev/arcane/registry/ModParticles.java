@@ -11,6 +11,7 @@ public final class ModParticles {
     public static final SimpleParticleType VIOLET = FabricParticleTypes.simple();
     public static final SimpleParticleType PINK = FabricParticleTypes.simple();
     public static final SimpleParticleType CYAN = FabricParticleTypes.simple();
+    public static final SimpleParticleType GOLD = FabricParticleTypes.simple();
 
     private ModParticles() {
     }
@@ -19,6 +20,7 @@ public final class ModParticles {
         register("violet", VIOLET);
         register("pink", PINK);
         register("cyan", CYAN);
+        register("gold", GOLD);
     }
 
     private static void register(String name, SimpleParticleType type) {

@@ -1,5 +1,7 @@
 package dev.arcane.spell;
 
+import dev.arcane.ArcaneSpells;
+import dev.arcane.api.SpellRegistries;
 import dev.arcane.api.event.SpellEvents;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.api.spell.SpellContext;
@@ -7,6 +9,8 @@ import dev.arcane.item.ArcaneStaffItem;
 import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModComponents;
 import dev.arcane.registry.ModSpells;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -20,8 +24,34 @@ public final class SpellCasting {
     private SpellCasting() {
     }
 
+    /** Every spell, in wheel order: Arcane Spells' own first, then each other mod's together, in registration order. */
+    public static List<Spell> spells() {
+        return SpellRegistries.SPELLS.stream()
+                .sorted(Comparator.comparing((Spell spell) -> !spell.id().getNamespace().equals(ArcaneSpells.ID))
+                        .thenComparing(spell -> spell.id().getNamespace()))
+                .toList();
+    }
+
+    /** The spells {@code staff} holds, in wheel order; none if it isn't a staff. */
+    public static List<Spell> spells(ItemStack staff) {
+        if (!(staff.getItem() instanceof ArcaneStaffItem item)) return List.of();
+        return spells().stream().filter(spell -> spell.is(item.spells())).toList();
+    }
+
+    /** Whether {@code staff} holds {@code spell}. */
+    public static boolean holds(ItemStack staff, Spell spell) {
+        return staff.getItem() instanceof ArcaneStaffItem item && spell.is(item.spells());
+    }
+
+    /**
+     * The spell {@code staff} casts: the one picked on it, or if the staff doesn't hold that (a datapack changed its
+     * tag), its first spell.
+     */
     public static Spell selected(ItemStack staff) {
-        return staff.getOrDefault(ModComponents.SELECTED_SPELL, ModSpells.ARCANE_BOLT);
+        Spell picked = staff.getOrDefault(ModComponents.SELECTED_SPELL, ModSpells.ARCANE_BOLT);
+        if (holds(staff, picked)) return picked;
+        List<Spell> held = spells(staff);
+        return held.isEmpty() ? picked : held.getFirst();
     }
 
     /** The staff (or another mod's staff) in the player's main hand, else their offhand, else {@link ItemStack#EMPTY}. */
@@ -77,9 +107,12 @@ public final class SpellCasting {
         return true;
     }
 
-    /** Sets the spell on the staff the player holds. Ignored mid-charge, so a release can't fire a different spell. */
+    /**
+     * Sets the spell on the staff the player holds, if it holds that spell. Ignored mid-charge, so a release can't fire
+     * a different spell.
+     */
     public static void select(ServerPlayer player, Spell spell) {
         ItemStack staff = heldStaff(player);
-        if (!staff.isEmpty() && !player.isUsingItem()) staff.set(ModComponents.SELECTED_SPELL, spell);
+        if (holds(staff, spell) && !player.isUsingItem()) staff.set(ModComponents.SELECTED_SPELL, spell);
     }
 }
