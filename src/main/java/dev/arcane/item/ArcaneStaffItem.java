@@ -1,9 +1,8 @@
 package dev.arcane.item;
 
-import dev.arcane.network.SpellEffectPayload;
-import dev.arcane.network.SpellEffects;
+import dev.arcane.api.spell.Spell;
+import dev.arcane.api.spell.SpellContext;
 import dev.arcane.registry.ModSounds;
-import dev.arcane.spell.Spell;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
 import net.minecraft.network.chat.Component;
@@ -18,13 +17,14 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
 
 /**
  * Casts the staff's selected spell: charged spells are held and fire on release, the rest fire on click. All spell
  * logic runs on the server; the client only predicts whether a cast is allowed.
+ *
+ * <p>Other mods may extend it for staffs of their own: any subclass opens the spell wheel and shows the HUD.
  */
-public final class ArcaneStaffItem extends Item {
+public class ArcaneStaffItem extends Item {
     private static final int USE_DURATION = 72000;
     private static final int FIZZLE_INTERVAL_TICKS = 10;
     /** Client only: when the last refused cast fizzled. */
@@ -52,8 +52,8 @@ public final class ArcaneStaffItem extends Item {
         }
         if (spell.charged()) {
             player.startUsingItem(hand);
-            if (!level.isClientSide()) {
-                level.playSound(null, player.blockPosition(), ModSounds.BOLT_CHARGE, SoundSource.PLAYERS, 0.6f, 1.0f);
+            if (level instanceof ServerLevel server && player instanceof ServerPlayer caster) {
+                spell.onChargeStart(new SpellContext(server, caster, 0));
             }
             return InteractionResult.CONSUME;
         }
@@ -65,10 +65,8 @@ public final class ArcaneStaffItem extends Item {
 
     @Override public void onUseTick(Level level, LivingEntity user, ItemStack stack, int remaining) {
         int charged = getUseDuration(stack, user) - remaining;
-        if (level instanceof ServerLevel server && charged % SpellTuning.CHARGE_EFFECT_INTERVAL == 0) {
-            Vec3 direction = user.getLookAngle();
-            Vec3 center = user.getEyePosition().add(direction.scale(1.4));
-            SpellEffects.send(server, SpellEffectPayload.Kind.CHARGE, center, direction, SpellTuning.power(charged), charged, user.getId());
+        if (level instanceof ServerLevel server && user instanceof ServerPlayer caster) {
+            SpellCasting.selected(stack).onChargeTick(new SpellContext(server, caster, SpellTuning.power(charged)), charged);
         }
     }
 

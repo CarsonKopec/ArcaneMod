@@ -1,8 +1,11 @@
 package dev.arcane.network;
 
 import dev.arcane.ArcaneSpells;
-import io.netty.handler.codec.DecoderException;
+import dev.arcane.api.SpellRegistries;
+import dev.arcane.api.effect.SpellEffect;
+import dev.arcane.api.effect.SpellEffectType;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.phys.Vec3;
@@ -10,59 +13,32 @@ import net.minecraft.world.phys.Vec3;
 /**
  * One compact message per effect; particles are generated locally, never individually networked.
  *
- * <p>{@code effect_v3} since 0.5.0, which added the kinds after {@code IMPACT}. Bump the id whenever the format
- * or the set of kinds changes, so a client from another version is never sent a kind it can't decode.
+ * <p>{@code effect_v3} since 0.5.0. Effect types are sent by registry id, which registry sync keeps in step between
+ * client and server, so the id only needs bumping when the message's layout changes.
  */
-public record SpellEffectPayload(Kind kind, Vec3 position, Vec3 direction, float power, int age, int sourceId)
-        implements CustomPacketPayload {
+public record SpellEffectPayload(SpellEffect effect) implements CustomPacketPayload {
     public static final Type<SpellEffectPayload> TYPE = new Type<>(ArcaneSpells.id("effect_v3"));
+    private static final StreamCodec<RegistryFriendlyByteBuf, SpellEffectType> TYPE_CODEC = ByteBufCodecs.idMapper(
+            SpellRegistries.SPELL_EFFECTS::byIdOrThrow, SpellRegistries.SPELL_EFFECTS::getIdOrThrow).cast();
     public static final StreamCodec<RegistryFriendlyByteBuf, SpellEffectPayload> CODEC = StreamCodec.of(
             (buf, value) -> {
-                buf.writeVarInt(value.kind.ordinal());
-                buf.writeDouble(value.position.x);
-                buf.writeDouble(value.position.y);
-                buf.writeDouble(value.position.z);
-                buf.writeFloat((float) value.direction.x);
-                buf.writeFloat((float) value.direction.y);
-                buf.writeFloat((float) value.direction.z);
-                buf.writeFloat(value.power);
-                buf.writeVarInt(value.age);
-                buf.writeVarInt(value.sourceId);
+                SpellEffect effect = value.effect;
+                TYPE_CODEC.encode(buf, effect.type());
+                buf.writeDouble(effect.position().x);
+                buf.writeDouble(effect.position().y);
+                buf.writeDouble(effect.position().z);
+                buf.writeFloat((float) effect.direction().x);
+                buf.writeFloat((float) effect.direction().y);
+                buf.writeFloat((float) effect.direction().z);
+                buf.writeFloat(effect.power());
+                buf.writeVarInt(effect.age());
+                buf.writeVarInt(effect.sourceId());
             },
-            buf -> new SpellEffectPayload(Kind.byId(buf.readVarInt()),
+            buf -> new SpellEffectPayload(new SpellEffect(TYPE_CODEC.decode(buf),
                     new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()),
                     new Vec3(buf.readFloat(), buf.readFloat(), buf.readFloat()),
-                    buf.readFloat(), buf.readVarInt(), buf.readVarInt())
+                    buf.readFloat(), buf.readVarInt(), buf.readVarInt()))
     );
-
-    /** Ordinals are the wire ids: only ever append new kinds. */
-    public enum Kind {
-        /** The staff is being charged; {@code sourceId} is the caster's entity id. */
-        CHARGE,
-        /** A bolt moved; {@code direction} spans this tick's travel. */
-        BOLT,
-        /** A bolt detonated; {@code direction} is its flight direction. */
-        IMPACT,
-        /** One leap of chain lightning, from {@code position} along {@code direction}; {@code age} counts the leaps. */
-        CHAIN,
-        /** The caster's feet moved from {@code position} by {@code direction}. */
-        BLINK,
-        /** A ward went up around entity {@code sourceId}, at {@code position}, for {@code age} ticks. */
-        WARD,
-        /** A ward absorbed a hit at {@code position}, facing {@code direction}; {@code power} is the strength left, 0–1. */
-        WARD_HIT,
-        /** A ward ended: {@code power} is 1 if it shattered, 0 if it faded. */
-        WARD_END,
-        /** A frost nova burst from the caster's feet at {@code position}. */
-        NOVA;
-
-        private static final Kind[] VALUES = values();
-
-        static Kind byId(int id) {
-            if (id < 0 || id >= VALUES.length) throw new DecoderException("Unknown spell effect kind " + id);
-            return VALUES[id];
-        }
-    }
 
     @Override public Type<? extends CustomPacketPayload> type() {
         return TYPE;

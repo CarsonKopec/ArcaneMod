@@ -1,8 +1,8 @@
 package dev.arcane.client.gui;
 
 import dev.arcane.ArcaneSpells;
+import dev.arcane.api.spell.Spell;
 import dev.arcane.spell.CasterState;
-import dev.arcane.spell.Spell;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;

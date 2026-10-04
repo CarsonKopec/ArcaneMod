@@ -1,8 +1,12 @@
 package dev.arcane.spell;
 
+import dev.arcane.api.event.SpellEvents;
+import dev.arcane.api.spell.Spell;
+import dev.arcane.api.spell.SpellContext;
+import dev.arcane.item.ArcaneStaffItem;
 import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModComponents;
-import dev.arcane.registry.ModItems;
+import dev.arcane.registry.ModSpells;
 import java.util.Locale;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -17,21 +21,22 @@ public final class SpellCasting {
     }
 
     public static Spell selected(ItemStack staff) {
-        return staff.getOrDefault(ModComponents.SELECTED_SPELL, Spell.ARCANE_BOLT);
+        return staff.getOrDefault(ModComponents.SELECTED_SPELL, ModSpells.ARCANE_BOLT);
     }
 
-    /** The staff in the player's main hand, else their offhand, else {@link ItemStack#EMPTY}. */
+    /** The staff (or another mod's staff) in the player's main hand, else their offhand, else {@link ItemStack#EMPTY}. */
     public static ItemStack heldStaff(Player player) {
         for (InteractionHand hand : InteractionHand.values()) {
             ItemStack stack = player.getItemInHand(hand);
-            if (stack.is(ModItems.ARCANE_STAFF)) return stack;
+            if (stack.getItem() instanceof ArcaneStaffItem) return stack;
         }
         return ItemStack.EMPTY;
     }
 
-    /** Creative players cast for free; cooldowns still apply. */
+    /** The spell's cost after other mods' adjustments. Creative players cast for free; cooldowns still apply. */
     public static float manaCost(Player player, Spell spell) {
-        return player.getAbilities().instabuild ? 0 : spell.manaCost();
+        if (player.getAbilities().instabuild) return 0;
+        return Math.max(0, SpellEvents.MODIFY_MANA_COST.invoker().modify(player, spell, spell.manaCost()));
     }
 
     /**
@@ -39,6 +44,8 @@ public final class SpellCasting {
      * client can predict the answer and skip the charge animation for a cast the server would refuse.
      */
     public static Component blocker(Player player, Spell spell) {
+        Component refused = SpellEvents.ALLOW_CAST.invoker().check(player, spell);
+        if (refused != null) return refused;
         CasterState state = CasterState.of(player);
         long now = player.level().getGameTime();
         int cooldown = state.cooldownLeft(spell, now);
@@ -55,18 +62,13 @@ public final class SpellCasting {
     /** Casts {@code spell}; on success spends its mana and starts its cooldown. {@code power} only matters for charged spells. */
     public static boolean cast(ServerLevel level, ServerPlayer caster, Spell spell, float power) {
         if (blocker(caster, spell) != null) return false;
-        boolean cast = switch (spell) {
-            case ARCANE_BOLT -> SpellBolts.cast(level, caster, power);
-            case CHAIN_LIGHTNING -> ChainLightning.cast(level, caster);
-            case BLINK -> Blink.cast(level, caster);
-            case ARCANE_WARD -> ArcaneWards.cast(level, caster);
-            case FROST_NOVA -> FrostNova.cast(level, caster);
-        };
-        if (cast) {
-            CasterState after = CasterState.of(caster).afterCast(spell, manaCost(caster, spell), level.getGameTime());
-            caster.setAttached(ModAttachments.CASTER, after);
-        }
-        return cast;
+        // Priced before casting, so the spell can't change what it costs.
+        float cost = manaCost(caster, spell);
+        SpellContext context = new SpellContext(level, caster, spell.charged() ? power : 1);
+        if (!spell.cast(context)) return false;
+        caster.setAttached(ModAttachments.CASTER, CasterState.of(caster).afterCast(spell, cost, level.getGameTime()));
+        SpellEvents.AFTER_CAST.invoker().afterCast(spell, context, cost);
+        return true;
     }
 
     /** Sets the spell on the staff the player holds. Ignored mid-charge, so a release can't fire a different spell. */

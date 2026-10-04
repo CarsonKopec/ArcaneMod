@@ -49,6 +49,7 @@ The client game tests run in a real client and save screenshots to `build/run/cl
 
 - `LightingGameTest` fires a real charge and bolt. It checks that a Nebulon light renders, that a bolt cast in Adventure mode leaves a stone wall standing while a normal bolt destroys it, and that no light handles leak afterwards.
 - `SpellsGameTest` checks that every spell sound has a file and every icon loaded, then picks Chain Lightning on the spell wheel with simulated key and mouse input, then casts it with a real right-click. It checks that all five spells affect the world as described above, and that mana, cooldowns and an empty mana pool are enforced.
+- `SpellApiGameTest` uses `TestAddon`, a stand-in for another mod written only against the API, with one spell (Ping), its own effect type and a listener on each event. It checks that Ping joins the wheel after the built-in spells, that the events can refuse a cast, change its cost and see it happen, that Ping's effect reaches a client renderer even when another renderer throws, that the mana API stays in bounds and syncs, and that saved staffs and cooldowns survive a mod's spells disappearing.
 
 **Offline/fast builds on this machine:** `.gradle-home/` is a pre-warmed Gradle home (Gradle 9.7.1 plus Loom's Minecraft 1.21.11 files). To reuse it instead of downloading everything into `~/.gradle`, set `GRADLE_USER_HOME` first:
 
@@ -61,25 +62,25 @@ $env:GRADLE_USER_HOME = "$PWD\.gradle-home"; .\gradlew.bat build
 ```
 src/main/java/dev/arcane/          common code (runs on server and client)
   ArcaneSpells.java                  entrypoint: wires everything up
-  registry/                          item, particle, data component and attachment registration
+  api/                               the API for other mods (see below)
+  registry/                          item, particle, data component, attachment, spell and effect registration
   item/ArcaneStaffItem.java          casts the selected spell: charge/release or click
   spell/SpellTuning.java             ALL balance numbers: mana, costs, cooldowns, damage, ranges
-  spell/Spell.java                   the spell list, with each spell's cost and cooldown
   spell/SpellCasting.java            the one entry point: mana and cooldown checks, then the spell
   spell/CasterState.java             a player's mana and cooldowns (saved, synced to that player)
-  spell/SpellBolts.java, SpellBolt   Arcane Bolt: server-side simulation, collision and blast
+  spell/ArcaneBolt.java, SpellBolt   Arcane Bolt: charging, server-side simulation, collision and blast
   spell/ChainLightning, Blink,       the other spells
-        ArcaneWards, FrostNova
+        ArcaneWard, FrostNova
   network/                           the effect packet, the spell-wheel pick, and the broadcast helper
-src/client/java/dev/arcane/client/  client-only code
-  ArcaneClient.java                  entrypoint: key binding, packet receiver and tick hooks
-  gui/SpellWheelScreen.java          the radial spell wheel
-  gui/SpellHud.java                  mana bar and active-spell slot
-  gui/SpellIcons.java                each spell's icon sprite and accent color
-  fx/SpellParticles.java             particle choreography for every spell
-  fx/SpellLighting.java              Nebulon lights, rune circles and arcs
-  particle/ArcaneSpark.java          the tinted glow particle
-src/gametest/                        Fabric client game tests
+src/client/java/dev/arcane/          client-only code
+  api/client/                        client half of the API: effect renderers
+  client/ArcaneClient.java           entrypoint: key binding, packet receiver and tick hooks
+  client/gui/SpellWheelScreen.java   the radial spell wheel
+  client/gui/SpellHud.java           mana bar and active-spell slot
+  client/fx/SpellParticles.java      particle choreography for every built-in effect
+  client/fx/SpellLighting.java       Nebulon lights, rune circles and arcs
+  client/particle/ArcaneSpark.java   the tinted glow particle
+src/gametest/                        Fabric client game tests, and TestAddon, a sample addon they use
 tools/generate_assets.py             draws the spell icons and synthesizes the spell sounds
 reference/                           local-only decompiled/library sources (gitignored)
 ```
@@ -90,7 +91,44 @@ The server owns casting, mana, damage and collision. Mana and cooldowns are stor
 
 For each visual event the server sends one small `SpellEffectPayload` to players within 448 blocks who have that chunk loaded. Each client then builds its own particles and Nebulon effects from that message, so individual particles never cross the network. Active bolts, shockwaves and lights are capped, and every temporary light, arc and rune circle expires on its own. If Nebulon ever throws, the client logs it once and continues with particles only, rather than letting the error disconnect the player. Your own ward is drawn as rings at your feet in first person, since full-size rings around the camera would fill the screen.
 
-To rebalance, edit `SpellTuning`. To change the visuals, edit `SpellParticles` (particles) or `SpellLighting` (light and runes). To add a spell, append it to `Spell`, give it a case in `SpellCasting.cast`, and give its effects new `SpellEffectPayload` kinds (bumping the payload id).
+To rebalance, edit `SpellTuning`. To change the visuals, edit `SpellParticles` (particles) or `SpellLighting` (light and runes). To add a spell, write it the way another mod would (below) and register it in `ModSpells`; its visual events go in `ModSpellEffects`.
+
+## API for other mods
+
+Other mods can add spells, react to casting, use mana and send their own effects. Everything public and stable is in `dev.arcane.api` (and `dev.arcane.api.client`); the rest of the code may change between versions. `src/gametest/java/dev/arcane/test/TestAddon.java` is a complete, working example.
+
+| Class | What it's for |
+| --- | --- |
+| `SpellRegistries` | `SPELLS` and `SPELL_EFFECTS`: register your spells and effect types here, in your mod initializer. |
+| `spell.Spell` | Subclass it. `Properties` sets mana cost, cooldown, accent color and whether it's charged; override `cast` (and `onChargeStart`/`onChargeTick` for charged spells). |
+| `spell.SpellContext` | What `cast` gets: the level, the caster and the charge power. |
+| `event.SpellEvents` | `ALLOW_CAST` (refuse a cast, with a reason), `MODIFY_MANA_COST`, `AFTER_CAST`. |
+| `ArcaneSpellsApi` | Read and add mana, read cooldowns, find the held staff and its spell, cast a spell from code, and `sendEffect`. |
+| `effect.SpellEffect`, `effect.SpellEffectType` | A visual event, sent once to nearby players and drawn by each client. |
+| `client.SpellEffectRenderers` | Draw your effect types, or add to the built-in ones in `ModSpellEffects`. |
+
+```java
+public final class Fireball extends Spell {
+    public Fireball() {
+        super(new Properties().manaCost(30).cooldown(40).color(0xFFFF7A3D));
+    }
+
+    @Override public boolean cast(SpellContext context) {
+        // Server only. Return false if it failed: the caster then pays nothing.
+        ...
+        return true;
+    }
+}
+
+// In your ModInitializer:
+Registry.register(SpellRegistries.SPELLS, Identifier.fromNamespaceAndPath("mymod", "fireball"), new Fireball());
+```
+
+The spell's name is the translation key `spell.mymod.fireball` (plus `spell.mymod.fireball.description` for the wheel), and its icon is the 16×16 sprite `assets/mymod/textures/gui/sprites/spell/fireball.png`. Every registered spell appears on the wheel, after the built-in ones. Other mods' staffs can extend `ArcaneStaffItem`; they then open the wheel and show the HUD too.
+
+Both registries are synced, so a client without the addon can't join a server that has it. If an addon is removed, staffs holding its spells fall back to Arcane Bolt and its cooldowns are dropped.
+
+To build against the mod, publish it with `gradlew.bat publishToMavenLocal` and add `modImplementation "dev.arcane:arcane-spells:0.5.0"` to the addon (with `mavenLocal()` in its repositories), plus a `"arcane_spells": ">=0.5.0"` dependency in its `fabric.mod.json`.
 
 ## Status
 

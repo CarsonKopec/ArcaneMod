@@ -1,0 +1,4 @@
+{
+	"spell.arcane_spells_test.ping": "Ping",
+	"spell.arcane_spells_test.ping.description": "Test spell from the API game test: sends one effect along your aim."
+}

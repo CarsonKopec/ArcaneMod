@@ -1,5 +1,7 @@
 package dev.arcane.network;
 
+import dev.arcane.api.effect.SpellEffect;
+import dev.arcane.api.effect.SpellEffectType;
 import dev.arcane.spell.SpellTuning;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -13,9 +15,14 @@ public final class SpellEffects {
     private SpellEffects() {
     }
 
-    public static void send(ServerLevel level, SpellEffectPayload.Kind kind, Vec3 position, Vec3 direction,
+    public static void send(ServerLevel level, SpellEffectType type, Vec3 position, Vec3 direction,
                             float power, int age, int sourceId) {
-        SpellEffectPayload payload = new SpellEffectPayload(kind, position, direction, power, age, sourceId);
+        send(level, new SpellEffect(type, position, direction, power, age, sourceId));
+    }
+
+    public static void send(ServerLevel level, SpellEffect effect) {
+        SpellEffectPayload payload = new SpellEffectPayload(effect);
+        Vec3 position = effect.position();
         double rangeSqr = SpellTuning.EFFECT_RANGE * SpellTuning.EFFECT_RANGE;
         // Only players with this chunk loaded: anyone else would light up empty, unloaded terrain.
         for (ServerPlayer player : PlayerLookup.tracking(level, BlockPos.containing(position))) {

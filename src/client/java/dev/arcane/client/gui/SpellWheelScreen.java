@@ -1,9 +1,10 @@
 package dev.arcane.client.gui;
 
+import dev.arcane.api.ArcaneSpellsApi;
+import dev.arcane.api.spell.Spell;
 import dev.arcane.network.SelectSpellPayload;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.spell.CasterState;
-import dev.arcane.spell.Spell;
 import dev.arcane.spell.SpellCasting;
 import java.util.List;
 import java.util.Locale;
@@ -22,11 +23,13 @@ import net.minecraft.world.entity.player.Player;
 /**
  * Hold the spell key to open, point at a spell, release to pick it. A click also picks, Escape cancels. Opening a
  * screen frees the mouse at the screen centre, so the pointer's direction from the centre chooses the spell.
+ *
+ * <p>Every registered spell gets a slot, other mods' included; the ring widens past a dozen so slots never overlap.
  */
 public final class SpellWheelScreen extends Screen {
-    private static final Spell[] SPELLS = Spell.values();
-    private static final double SECTOR = 2 * Math.PI / SPELLS.length;
-    private static final int RADIUS = 62;
+    private static final int MIN_RADIUS = 62;
+    /** Centre-to-centre distance between neighbouring slots: a hovered slot is 26 wide. */
+    private static final int SLOT_SPACING = 30;
     /** Pointer this close to the centre picks nothing, so a quick tap keeps the current spell. */
     private static final int DEAD_ZONE = 16;
     /** Wide enough that every description fits in two lines above the wheel, even at small window sizes. */
@@ -34,6 +37,9 @@ public final class SpellWheelScreen extends Screen {
 
     private final KeyMapping key;
     private final Spell current;
+    private final List<Spell> spells = ArcaneSpellsApi.spells();
+    private final double sector = 2 * Math.PI / spells.size();
+    private final int radius = Math.max(MIN_RADIUS, (int) Math.ceil(SLOT_SPACING / sector));
     private Spell hovered;
 
     public SpellWheelScreen(KeyMapping key, Spell current) {
@@ -94,19 +100,20 @@ public final class SpellWheelScreen extends Screen {
         CasterState state = CasterState.of(player);
         long now = player.level().getGameTime();
 
-        dottedCircle(graphics, cx, cy, RADIUS + 20, 0, 2 * Math.PI, 0x50C9A6FF);
-        dottedCircle(graphics, cx, cy, RADIUS - 16, 0, 2 * Math.PI, 0x40C9A6FF);
+        dottedCircle(graphics, cx, cy, radius + 20, 0, 2 * Math.PI, 0x50C9A6FF);
+        dottedCircle(graphics, cx, cy, radius - 16, 0, 2 * Math.PI, 0x40C9A6FF);
         if (hovered != null) {
-            int accent = SpellIcons.color(hovered);
-            double middle = hovered.ordinal() * SECTOR;
-            dottedCircle(graphics, cx, cy, RADIUS + 20, middle - SECTOR / 2, middle + SECTOR / 2, accent);
-            dottedCircle(graphics, cx, cy, RADIUS + 21, middle - SECTOR / 2, middle + SECTOR / 2, accent);
+            int accent = hovered.color();
+            double middle = spells.indexOf(hovered) * sector;
+            dottedCircle(graphics, cx, cy, radius + 20, middle - sector / 2, middle + sector / 2, accent);
+            dottedCircle(graphics, cx, cy, radius + 21, middle - sector / 2, middle + sector / 2, accent);
             pointer(graphics, cx, cy, mouseX, mouseY);
         }
-        for (Spell spell : SPELLS) {
-            double angle = spell.ordinal() * SECTOR;
-            int x = cx + (int) Math.round(Math.sin(angle) * RADIUS);
-            int y = cy - (int) Math.round(Math.cos(angle) * RADIUS);
+        for (int i = 0; i < spells.size(); i++) {
+            Spell spell = spells.get(i);
+            double angle = i * sector;
+            int x = cx + (int) Math.round(Math.sin(angle) * radius);
+            int y = cy - (int) Math.round(Math.cos(angle) * radius);
             float cooldown = state.cooldownLeft(spell, now) / (float) spell.cooldownTicks();
             boolean affordable = state.mana(now) >= SpellCasting.manaCost(player, spell);
             slot(graphics, x, y, spell, cooldown, affordable);
@@ -114,14 +121,14 @@ public final class SpellWheelScreen extends Screen {
 
         Spell shown = hovered != null ? hovered : current;
         summary(graphics, cx, cy, shown);
-        description(graphics, cx, cy - RADIUS - 24, shown);
+        description(graphics, cx, cy - radius - 24, shown);
     }
 
     /** A spell's slot: icon, frame, and the same cooldown sweep vanilla draws over items. */
     private void slot(GuiGraphics graphics, int x, int y, Spell spell, float cooldown, boolean affordable) {
         boolean isHovered = spell == hovered;
         int half = isHovered ? 13 : 11;
-        int border = spell == current ? 0xFFFFFFFF : isHovered ? SpellIcons.color(spell) : 0xFF4A2D6E;
+        int border = spell == current ? 0xFFFFFFFF : isHovered ? spell.color() : 0xFF4A2D6E;
         graphics.fill(x - half, y - half, x + half, y + half, isHovered ? 0xE0281640 : 0xC0140A22);
         frame(graphics, x - half, y - half, x + half, y + half, border);
         SpellIcons.draw(graphics, spell, x - 8, y - 8);
@@ -135,7 +142,7 @@ public final class SpellWheelScreen extends Screen {
     /** Name, mana cost and cooldown, stacked inside the inner ring. */
     private void summary(GuiGraphics graphics, int cx, int cy, Spell spell) {
         String cooldown = String.format(Locale.ROOT, "%.1f", spell.cooldownTicks() / 20f);
-        graphics.drawCenteredString(font, spell.displayName(), cx, cy - 14, SpellIcons.color(spell));
+        graphics.drawCenteredString(font, spell.displayName(), cx, cy - 14, spell.color());
         graphics.drawCenteredString(font, Component.translatable("spell.arcane_spells.mana", Math.round(spell.manaCost())), cx, cy - 2, 0xFFA898C0);
         graphics.drawCenteredString(font, Component.translatable("spell.arcane_spells.cooldown", cooldown), cx, cy + 10, 0xFFA898C0);
     }
@@ -153,10 +160,10 @@ public final class SpellWheelScreen extends Screen {
     }
 
     /** Dots from the centre towards the mouse, ending inside the wheel. */
-    private static void pointer(GuiGraphics graphics, int cx, int cy, int mouseX, int mouseY) {
+    private void pointer(GuiGraphics graphics, int cx, int cy, int mouseX, int mouseY) {
         double dx = mouseX - cx, dy = mouseY - cy;
         double length = Math.sqrt(dx * dx + dy * dy);
-        for (int d = DEAD_ZONE; d < Math.min(length, RADIUS - 22); d += 4) {
+        for (int d = DEAD_ZONE; d < Math.min(length, radius - 22); d += 4) {
             int x = cx + (int) Math.round(dx / length * d), y = cy + (int) Math.round(dy / length * d);
             graphics.fill(x, y, x + 1, y + 1, 0xB0FFFFFF);
         }
@@ -180,10 +187,10 @@ public final class SpellWheelScreen extends Screen {
     }
 
     /** The spell whose sector the offset from the centre points into, or null inside the dead zone. */
-    private static Spell spellAt(double dx, double dy) {
+    private Spell spellAt(double dx, double dy) {
         if (dx * dx + dy * dy < DEAD_ZONE * DEAD_ZONE) return null;
         // Clockwise from straight up; screen y grows downwards.
         double angle = Math.atan2(dx, -dy);
-        return SPELLS[Math.floorMod(Math.round(angle / SECTOR), SPELLS.length)];
+        return spells.get(Math.floorMod(Math.round(angle / sector), spells.size()));
     }
 }

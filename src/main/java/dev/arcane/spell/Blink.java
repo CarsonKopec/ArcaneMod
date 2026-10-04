@@ -1,8 +1,10 @@
 package dev.arcane.spell;
 
-import dev.arcane.network.SpellEffectPayload;
+import dev.arcane.api.spell.Spell;
+import dev.arcane.api.spell.SpellContext;
 import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
+import dev.arcane.registry.ModSpellEffects;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,13 +13,16 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.Vec3;
 
 /** Teleports the caster along their aim, stopping short of whatever they're looking at. */
-final class Blink {
+public final class Blink extends Spell {
     private static final double STEP = 0.25;
 
-    private Blink() {
+    public Blink() {
+        super(new Properties().manaCost(SpellTuning.BLINK_MANA).cooldown(SpellTuning.BLINK_COOLDOWN_TICKS).color(0xFFF3B5FF));
     }
 
-    static boolean cast(ServerLevel level, ServerPlayer caster) {
+    @Override public boolean cast(SpellContext context) {
+        ServerLevel level = context.level();
+        ServerPlayer caster = context.caster();
         Vec3 eye = caster.getEyePosition();
         // A miss reports the end of the ray, so this is where the caster aimed either way.
         Vec3 aim = level.clip(new ClipContext(eye, eye.add(caster.getLookAngle().scale(SpellTuning.BLINK_RANGE)),
@@ -33,7 +38,7 @@ final class Blink {
         caster.resetFallDistance();
         level.playSound(null, origin.x, origin.y, origin.z, ModSounds.BLINK, SoundSource.PLAYERS, 0.7f, 0.9f);
         level.playSound(null, destination.x, destination.y, destination.z, ModSounds.BLINK, SoundSource.PLAYERS, 0.7f, 1.15f);
-        SpellEffects.send(level, SpellEffectPayload.Kind.BLINK, origin, destination.subtract(origin), 1, 0, caster.getId());
+        SpellEffects.send(level, ModSpellEffects.BLINK, origin, destination.subtract(origin), 1, 0, caster.getId());
         return true;
     }
 

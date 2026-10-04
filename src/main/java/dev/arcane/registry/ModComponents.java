@@ -1,7 +1,7 @@
 package dev.arcane.registry;
 
 import dev.arcane.ArcaneSpells;
-import dev.arcane.spell.Spell;
+import dev.arcane.api.spell.Spell;
 import net.fabricmc.fabric.api.item.v1.ComponentTooltipAppenderRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentType;

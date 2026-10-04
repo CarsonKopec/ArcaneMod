@@ -2,12 +2,13 @@ package dev.arcane.test;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.arcane.ArcaneSpells;
-import dev.arcane.client.gui.SpellIcons;
+import dev.arcane.api.SpellRegistries;
+import dev.arcane.api.spell.Spell;
 import dev.arcane.client.gui.SpellWheelScreen;
 import dev.arcane.registry.ModAttachments;
-import dev.arcane.spell.ArcaneWards;
+import dev.arcane.registry.ModSpells;
+import dev.arcane.spell.ArcaneWard;
 import dev.arcane.spell.CasterState;
-import dev.arcane.spell.Spell;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -64,12 +65,13 @@ public final class SpellsGameTest implements FabricClientGameTest {
                 }
                 check(sounds > 0, "No spell sounds registered");
                 TextureAtlas gui = client.getAtlasManager().getAtlasOrThrow(AtlasIds.GUI);
-                for (Spell spell : Spell.values()) {
-                    check(gui.getSprite(SpellIcons.sprite(spell)) != gui.missingSprite(), "Missing icon for " + spell);
+                for (Spell spell : SpellRegistries.SPELLS) {
+                    check(gui.getSprite(spell.icon()) != gui.missingSprite(), "Missing icon for " + spell);
                 }
             });
 
             // Spell wheel: hold the key, point towards Chain Lightning (second slot, up and to the right), release.
+            // The test mod's spell makes six slots, so the second is centred 60° clockwise from straight up.
             context.getInput().holdKey(InputConstants.KEY_R);
             context.waitForScreen(SpellWheelScreen.class);
             context.getInput().moveCursor(190, -60);
@@ -78,7 +80,7 @@ public final class SpellsGameTest implements FabricClientGameTest {
             context.getInput().releaseKey(InputConstants.KEY_R);
             context.waitForScreen(null);
             context.waitTicks(5);
-            server.runOnServer(s -> check(SpellCasting.selected(SpellCasting.heldStaff(player(s))) == Spell.CHAIN_LIGHTNING,
+            server.runOnServer(s -> check(SpellCasting.selected(SpellCasting.heldStaff(player(s))) == ModSpells.CHAIN_LIGHTNING,
                     "Spell wheel did not select Chain Lightning"));
 
             // Chain Lightning through the real item: a right-click strikes all three pigs.
@@ -99,7 +101,7 @@ public final class SpellsGameTest implements FabricClientGameTest {
             server.runCommand("summon minecraft:pig 2 -60 -4 {NoAI:1b}");
             server.runCommand("tp @a 0 -60 -6 0 30");
             context.waitTicks(3);
-            server.runOnServer(s -> check(cast(s, Spell.FROST_NOVA), "Frost Nova was refused"));
+            server.runOnServer(s -> check(cast(s, ModSpells.FROST_NOVA), "Frost Nova was refused"));
             context.waitTicks(4);
             context.takeScreenshot("spells-nova");
             server.runOnServer(s -> {
@@ -114,7 +116,7 @@ public final class SpellsGameTest implements FabricClientGameTest {
             server.runCommand("kill @e[type=minecraft:pig]");
             server.runCommand("tp @a 0 -60 -6 0 0");
             context.waitTicks(3);
-            server.runOnServer(s -> check(cast(s, Spell.BLINK), "Blink was refused"));
+            server.runOnServer(s -> check(cast(s, ModSpells.BLINK), "Blink was refused"));
             context.waitTicks(3);
             context.takeScreenshot("spells-blink");
             server.runOnServer(s -> {
@@ -125,12 +127,12 @@ public final class SpellsGameTest implements FabricClientGameTest {
             // Arcane Ward: absorbs a hit from outside, then can't be recast while on cooldown.
             server.runOnServer(s -> {
                 ServerPlayer player = player(s);
-                check(cast(s, Spell.ARCANE_WARD), "Arcane Ward was refused");
+                check(cast(s, ModSpells.ARCANE_WARD), "Arcane Ward was refused");
                 var generic = s.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DamageTypes.GENERIC);
                 player.hurtServer(s.overworld(), new DamageSource(generic, player.position().add(3, 0, 0)), 4);
                 check(player.getHealth() == player.getMaxHealth(), "Arcane Ward let a hit through");
-                check(Math.abs(ArcaneWards.strength(player) - (SpellTuning.WARD_STRENGTH - 4)) < 0.01, "Arcane Ward did not absorb the hit");
-                check(!SpellCasting.cast(s.overworld(), player, Spell.ARCANE_WARD, 1), "Arcane Ward ignored its cooldown");
+                check(Math.abs(ArcaneWard.strength(player) - (SpellTuning.WARD_STRENGTH - 4)) < 0.01, "Arcane Ward did not absorb the hit");
+                check(!SpellCasting.cast(s.overworld(), player, ModSpells.ARCANE_WARD, 1), "Arcane Ward ignored its cooldown");
             });
             context.waitTicks(10);
             context.takeScreenshot("spells-ward");
@@ -144,8 +146,8 @@ public final class SpellsGameTest implements FabricClientGameTest {
             server.runOnServer(s -> {
                 ServerPlayer player = player(s);
                 player.setAttached(ModAttachments.CASTER, new CasterState(0, s.overworld().getGameTime(), Map.of()));
-                check(SpellCasting.blocker(player, Spell.ARCANE_BOLT) != null, "No reason given for an unaffordable cast");
-                check(!SpellCasting.cast(s.overworld(), player, Spell.ARCANE_BOLT, 1), "Cast without mana");
+                check(SpellCasting.blocker(player, ModSpells.ARCANE_BOLT) != null, "No reason given for an unaffordable cast");
+                check(!SpellCasting.cast(s.overworld(), player, ModSpells.ARCANE_BOLT, 1), "Cast without mana");
             });
             context.waitTicks(40);
             context.takeScreenshot("spells-hud");

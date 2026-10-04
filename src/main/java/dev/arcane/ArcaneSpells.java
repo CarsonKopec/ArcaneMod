@@ -7,8 +7,10 @@ import dev.arcane.registry.ModComponents;
 import dev.arcane.registry.ModItems;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
-import dev.arcane.spell.ArcaneWards;
-import dev.arcane.spell.SpellBolts;
+import dev.arcane.registry.ModSpellEffects;
+import dev.arcane.registry.ModSpells;
+import dev.arcane.spell.ArcaneBolt;
+import dev.arcane.spell.ArcaneWard;
 import dev.arcane.spell.SpellCasting;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -31,13 +33,15 @@ public final class ArcaneSpells implements ModInitializer {
         ModComponents.register();
         ModAttachments.register();
         ModSounds.register();
+        ModSpellEffects.register();
+        ModSpells.register();
         ModItems.register();
         ModParticles.register();
         PayloadTypeRegistry.playS2C().register(SpellEffectPayload.TYPE, SpellEffectPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SelectSpellPayload.TYPE, SelectSpellPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(SelectSpellPayload.TYPE,
                 (payload, context) -> SpellCasting.select(context.player(), payload.spell()));
-        SpellBolts.register();
-        ArcaneWards.register();
+        ArcaneBolt.register();
+        ArcaneWard.register();
     }
 }

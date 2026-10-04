@@ -1,10 +1,14 @@
 package dev.arcane.client.fx;
 
-import dev.arcane.network.SpellEffectPayload;
+import dev.arcane.api.client.SpellEffectRenderers;
+import dev.arcane.api.effect.SpellEffect;
+import dev.arcane.api.effect.SpellEffectType;
 import dev.arcane.registry.ModParticles;
+import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.ColorParticleOption;
@@ -35,21 +39,25 @@ public final class SpellParticles {
     private SpellParticles() {
     }
 
-    public static void play(SpellEffectPayload effect) {
+    public static void register() {
+        on(ModSpellEffects.CHARGE, SpellParticles::charge);
+        on(ModSpellEffects.BOLT, SpellParticles::bolt);
+        on(ModSpellEffects.IMPACT, SpellParticles::impact);
+        on(ModSpellEffects.CHAIN, SpellParticles::chain);
+        on(ModSpellEffects.BLINK, SpellParticles::blink);
+        on(ModSpellEffects.WARD, SpellParticles::ward);
+        on(ModSpellEffects.WARD_HIT, SpellParticles::wardHit);
         // A ward's end must stop its shimmer even when the ward itself is out of particle range.
-        if (effect.kind() == SpellEffectPayload.Kind.WARD_END) stopShimmer(effect.sourceId());
-        if (!visible(effect.position())) return;
-        switch (effect.kind()) {
-            case CHARGE -> charge(effect);
-            case BOLT -> bolt(effect);
-            case IMPACT -> impact(effect);
-            case CHAIN -> chain(effect);
-            case BLINK -> blink(effect);
-            case WARD -> ward(effect);
-            case WARD_HIT -> wardHit(effect);
-            case WARD_END -> wardEnd(effect);
-            case NOVA -> nova(effect);
-        }
+        SpellEffectRenderers.register(ModSpellEffects.WARD_END, (effect, level) -> stopShimmer(effect.sourceId()));
+        on(ModSpellEffects.WARD_END, SpellParticles::wardEnd);
+        on(ModSpellEffects.NOVA, SpellParticles::nova);
+    }
+
+    /** Plays {@code type}'s particles when the effect is close enough to the camera, and particles are on. */
+    private static void on(SpellEffectType type, Consumer<SpellEffect> play) {
+        SpellEffectRenderers.register(type, (effect, level) -> {
+            if (visible(effect.position())) play.accept(effect);
+        });
     }
 
     public static void tick(ClientLevel level) {
@@ -61,7 +69,7 @@ public final class SpellParticles {
         ANIMATIONS.clear();
     }
 
-    private static void charge(SpellEffectPayload effect) {
+    private static void charge(SpellEffect effect) {
         Vec3 n = effect.direction().normalize(), u = perpendicular(n), v = n.cross(u);
         double rotation = effect.age() * 0.10;
         double radius = 0.35 + effect.power() * 0.30;
@@ -80,7 +88,7 @@ public final class SpellParticles {
         if (effect.power() >= 1 && effect.age() % 8 == 0) particle(ParticleTypes.END_ROD, effect.position(), n.scale(0.01));
     }
 
-    private static void bolt(SpellEffectPayload effect) {
+    private static void bolt(SpellEffect effect) {
         Vec3 n = effect.direction().normalize(), u = perpendicular(n), v = n.cross(u);
         double radius = 0.20 + effect.power() * 0.18;
         // A cyan/violet double helix around a pink core, sampled along this tick's travel.
@@ -99,7 +107,7 @@ public final class SpellParticles {
         particle(ParticleTypes.ELECTRIC_SPARK, effect.position().add(effect.direction()), Vec3.ZERO);
     }
 
-    private static void impact(SpellEffectPayload effect) {
+    private static void impact(SpellEffect effect) {
         start(new Shockwave(Minecraft.getInstance().level, effect.position(), effect.direction(), effect.power()));
         int count = scaled(150);
         for (int i = 0; i < count; i++) {
@@ -117,7 +125,7 @@ public final class SpellParticles {
     }
 
     /** A jagged line of sparks along one leap, and a crackle where it lands. */
-    private static void chain(SpellEffectPayload effect) {
+    private static void chain(SpellEffect effect) {
         Vec3 from = effect.position(), path = effect.direction();
         double length = path.length();
         if (length < 1.0e-3) return;
@@ -132,7 +140,7 @@ public final class SpellParticles {
     }
 
     /** A streak along the path at chest height, and a swirl of portal motes at each end. */
-    private static void blink(SpellEffectPayload effect) {
+    private static void blink(SpellEffect effect) {
         Vec3 from = effect.position().add(0, 1, 0), path = effect.direction();
         if (path.lengthSqr() < 1.0e-6) return;
         Vec3 drift = path.normalize().scale(0.02);
@@ -155,13 +163,13 @@ public final class SpellParticles {
         }
     }
 
-    private static void ward(SpellEffectPayload effect) {
+    private static void ward(SpellEffect effect) {
         stopShimmer(effect.sourceId());
         start(new WardShimmer(Minecraft.getInstance().level, effect.sourceId(), effect.age()));
     }
 
     /** A small ripple on the shell where it was struck, with sparks thrown back outwards. */
-    private static void wardHit(SpellEffectPayload effect) {
+    private static void wardHit(SpellEffect effect) {
         Vec3 n = effect.direction().lengthSqr() > 1.0e-6 ? effect.direction().normalize() : Y;
         Vec3 u = perpendicular(n), v = n.cross(u);
         ring(effect.position(), u, v, 0.35, 0, 12, PINK);
@@ -175,7 +183,7 @@ public final class SpellParticles {
     }
 
     /** A shattered ward bursts outwards in shards; one that simply ran out collapses gently inwards. */
-    private static void wardEnd(SpellEffectPayload effect) {
+    private static void wardEnd(SpellEffect effect) {
         boolean shattered = effect.power() >= 1;
         int count = scaled(shattered ? 60 : 30);
         for (int i = 0; i < count; i++) {
@@ -191,7 +199,7 @@ public final class SpellParticles {
      * A ring of frost racing across the ground. Nothing is spawned around the caster's body: the caster's camera is
      * there, and snowflakes that close fill the whole screen.
      */
-    private static void nova(SpellEffectPayload effect) {
+    private static void nova(SpellEffect effect) {
         start(new FrostRing(Minecraft.getInstance().level, effect.position()));
     }
 

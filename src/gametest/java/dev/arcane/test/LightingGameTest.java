@@ -1,9 +1,9 @@
 package dev.arcane.test;
 
 import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
-import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.network.SpellEffects;
-import dev.arcane.spell.SpellBolts;
+import dev.arcane.registry.ModSpellEffects;
+import dev.arcane.spell.ArcaneBolt;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.core.BlockPos;
@@ -30,7 +30,7 @@ public final class LightingGameTest implements FabricClientGameTest {
                 int age = i * 2;
                 server.runOnServer(s -> {
                     var player = s.getPlayerList().getPlayers().getFirst();
-                    SpellEffects.send(s.overworld(), SpellEffectPayload.Kind.CHARGE, new Vec3(0, -58.4, 1), new Vec3(0, 0, 1), 1, age, player.getId());
+                    SpellEffects.send(s.overworld(), ModSpellEffects.CHARGE, new Vec3(0, -58.4, 1), new Vec3(0, 0, 1), 1, age, player.getId());
                 });
                 context.waitTicks(2);
             }
@@ -40,14 +40,14 @@ public final class LightingGameTest implements FabricClientGameTest {
             context.takeScreenshot("arcane-charge-lighting");
 
             server.runCommand("gamemode adventure @a");
-            server.runOnServer(s -> SpellBolts.cast(s.overworld(), s.getPlayerList().getPlayers().getFirst(), 1));
+            server.runOnServer(s -> ArcaneBolt.launch(s.overworld(), s.getPlayerList().getPlayers().getFirst(), 1));
             context.waitTicks(8);
             server.runOnServer(s -> {
                 if (s.overworld().getBlockState(WALL).isAir()) throw new AssertionError("Adventure-mode blast broke terrain");
             });
             server.runCommand("gamemode creative @a");
 
-            server.runOnServer(s -> SpellBolts.cast(s.overworld(), s.getPlayerList().getPlayers().getFirst(), 1));
+            server.runOnServer(s -> ArcaneBolt.launch(s.overworld(), s.getPlayerList().getPlayers().getFirst(), 1));
             context.waitTicks(8);
             context.takeScreenshot("arcane-impact-lighting");
             server.runOnServer(s -> {

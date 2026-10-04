@@ -1,8 +1,10 @@
 package dev.arcane.spell;
 
-import dev.arcane.network.SpellEffectPayload;
+import dev.arcane.api.spell.Spell;
+import dev.arcane.api.spell.SpellContext;
 import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
+import dev.arcane.registry.ModSpellEffects;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
@@ -13,11 +15,14 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 /** A burst of cold from the caster: damages, slows and freezes everything nearby that it can reach. */
-final class FrostNova {
-    private FrostNova() {
+public final class FrostNova extends Spell {
+    public FrostNova() {
+        super(new Properties().manaCost(SpellTuning.NOVA_MANA).cooldown(SpellTuning.NOVA_COOLDOWN_TICKS).color(0xFFCFF6FF));
     }
 
-    static boolean cast(ServerLevel level, ServerPlayer caster) {
+    @Override public boolean cast(SpellContext context) {
+        ServerLevel level = context.level();
+        ServerPlayer caster = context.caster();
         Vec3 center = caster.getBoundingBox().getCenter();
         double radius = SpellTuning.NOVA_RADIUS;
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, caster.getBoundingBox().inflate(radius),
@@ -38,7 +43,7 @@ final class FrostNova {
             victim.push(push.x, 0.15, push.z);
         }
         level.playSound(null, center.x, center.y, center.z, ModSounds.FROST_NOVA, SoundSource.PLAYERS, 1.0f, 1.0f);
-        SpellEffects.send(level, SpellEffectPayload.Kind.NOVA, caster.position(), new Vec3(0, 1, 0), 1, 0, caster.getId());
+        SpellEffects.send(level, ModSpellEffects.NOVA, caster.position(), new Vec3(0, 1, 0), 1, 0, caster.getId());
         return true;
     }
 }

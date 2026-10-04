@@ -8,14 +8,19 @@ import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.ArcaneSpells;
-import dev.arcane.network.SpellEffectPayload;
-import dev.arcane.registry.ModItems;
+import dev.arcane.api.SpellRegistries;
+import dev.arcane.api.client.SpellEffectRenderers;
+import dev.arcane.api.effect.SpellEffect;
+import dev.arcane.api.effect.SpellEffectType;
+import dev.arcane.registry.ModSpellEffects;
+import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -54,24 +59,23 @@ public final class SpellLighting {
     private SpellLighting() {
     }
 
-    public static void play(SpellEffectPayload effect) {
-        ClientLevel level = Minecraft.getInstance().level;
-        if (level == null) return;
-        guarded(() -> {
+    public static void register() {
+        on(ModSpellEffects.CHARGE, SpellLighting::charge);
+        on(ModSpellEffects.BOLT, SpellLighting::bolt);
+        on(ModSpellEffects.IMPACT, SpellLighting::impact);
+        on(ModSpellEffects.CHAIN, SpellLighting::chain);
+        on(ModSpellEffects.BLINK, SpellLighting::blink);
+        on(ModSpellEffects.WARD, SpellLighting::ward);
+        on(ModSpellEffects.WARD_HIT, (level, effect) -> flash(effect.position(), 3.5f, 1.6f, PINK, 8));
+        on(ModSpellEffects.WARD_END, (level, effect) -> wardEnd(effect));
+        on(ModSpellEffects.NOVA, SpellLighting::nova);
+    }
+
+    private static void on(SpellEffectType type, BiConsumer<ClientLevel, SpellEffect> play) {
+        SpellEffectRenderers.register(type, (effect, level) -> guarded(() -> {
             ensureWorld(level);
-            long key = key(effect.kind(), effect.sourceId());
-            switch (effect.kind()) {
-                case CHARGE -> charge(level, key, effect);
-                case BOLT -> bolt(level, key, effect);
-                case IMPACT -> impact(level, key, effect);
-                case CHAIN -> chain(level, effect);
-                case BLINK -> blink(level, effect);
-                case WARD -> ward(level, key, effect);
-                case WARD_HIT -> flash(effect.position(), 3.5f, 1.6f, PINK, 8);
-                case WARD_END -> wardEnd(effect);
-                case NOVA -> nova(level, effect);
-            }
-        });
+            play.accept(level, effect);
+        }));
     }
 
     public static void tick(Minecraft client) {
@@ -89,7 +93,7 @@ public final class SpellLighting {
         ensureWorld(client.level);
         ++ticks;
         LocalPlayer player = client.player;
-        if (player != null && (player.getMainHandItem().is(ModItems.ARCANE_STAFF) || player.getOffhandItem().is(ModItems.ARCANE_STAFF))) {
+        if (player != null && !SpellCasting.heldStaff(player).isEmpty()) {
             glow(STAFF_GLOW_KEY, player.getEyePosition().add(player.getLookAngle().scale(0.5)), 3.5f, 0.55f, VIOLET, 2, false);
         }
         Iterator<Glow> iterator = GLOWS.values().iterator();
@@ -108,28 +112,28 @@ public final class SpellLighting {
         }
     }
 
-    private static void charge(ClientLevel level, long key, SpellEffectPayload effect) {
-        Glow glow = glow(key, effect.position(), 3 + effect.power() * 4, 0.6f + effect.power() * 1.1f, VIOLET, 5, false);
+    private static void charge(ClientLevel level, SpellEffect effect) {
+        Glow glow = glow(key(effect), effect.position(), 3 + effect.power() * 4, 0.6f + effect.power() * 1.1f, VIOLET, 5, false);
         MagicCircle circle = new MagicCircle(effect.position(), effect.direction(), 0.45 + effect.power() * 0.35,
                 0.016f, VIOLET, 3, effect.sourceId(), 0.25f, 128);
         if (glow.circle == null) glow.circle = NebulonRendering.effects().spawn(level, circle);
         else glow.circle.set(circle);
     }
 
-    private static void bolt(ClientLevel level, long key, SpellEffectPayload effect) {
+    private static void bolt(ClientLevel level, SpellEffect effect) {
         Vec3 tip = effect.position().add(effect.direction());
-        glow(key, tip, 5, 1.5f, CYAN, 4, false);
+        glow(key(effect), tip, 5, 1.5f, CYAN, 4, false);
         if (effect.direction().lengthSqr() > 0.001) {
             NebulonRendering.effects().spawn(level, ArcChain.between(effect.position(), tip, CYAN), 3);
         }
     }
 
-    private static void impact(ClientLevel level, long key, SpellEffectPayload effect) {
-        Glow bolt = GLOWS.remove(key(SpellEffectPayload.Kind.BOLT, effect.sourceId()));
+    private static void impact(ClientLevel level, SpellEffect effect) {
+        Glow bolt = GLOWS.remove(key(ModSpellEffects.BOLT, effect.sourceId()));
         if (bolt != null) bolt.close();
         float power = effect.power();
         Vec3 origin = effect.position().subtract(effect.direction().scale(0.35));
-        glow(key, origin.add(0, 0.5, 0), 9 + power * 7, 3.0f, VIOLET, 26, true);
+        glow(key(effect), origin.add(0, 0.5, 0), 9 + power * 7, 3.0f, VIOLET, 26, true);
         NebulonRendering.effects().spawn(level,
                 new MagicCircle(origin, effect.direction(), 2 + power * 3, 0.035f, CYAN, 4, effect.sourceId(), -0.3f, RENDER_DISTANCE), 18);
         // Eight radial arcs, alternating heights so they read as a crackling dome.
@@ -142,7 +146,7 @@ public final class SpellLighting {
     }
 
     /** A cyan arc along one leap, with a fainter violet one flowing the other way, and a flash on the target. */
-    private static void chain(ClientLevel level, SpellEffectPayload effect) {
+    private static void chain(ClientLevel level, SpellEffect effect) {
         Vec3 to = effect.position().add(effect.direction());
         // Nebulon rejects a chain whose ends coincide.
         if (effect.direction().lengthSqr() > 0.001) {
@@ -154,7 +158,7 @@ public final class SpellLighting {
     }
 
     /** Rune circles on the ground where the caster left and where they arrived. */
-    private static void blink(ClientLevel level, SpellEffectPayload effect) {
+    private static void blink(ClientLevel level, SpellEffect effect) {
         Vec3 from = effect.position(), to = from.add(effect.direction());
         NebulonRendering.effects().spawn(level, new MagicCircle(from.add(0, 0.05, 0), UP, 1.0, 0.03f, VIOLET, 3,
                 effect.sourceId(), 0.8f, RENDER_DISTANCE), 16);
@@ -165,7 +169,8 @@ public final class SpellLighting {
     }
 
     /** Three rune rings around the warded entity, kept on it by {@link #followWard}. */
-    private static void ward(ClientLevel level, long key, SpellEffectPayload effect) {
+    private static void ward(ClientLevel level, SpellEffect effect) {
+        long key = key(effect);
         Glow previous = GLOWS.remove(key);
         if (previous != null) previous.close();
         int entityId = effect.sourceId();
@@ -181,8 +186,8 @@ public final class SpellLighting {
         glow.wardRings = rings;
     }
 
-    private static void wardEnd(SpellEffectPayload effect) {
-        Glow ward = GLOWS.remove(key(SpellEffectPayload.Kind.WARD, effect.sourceId()));
+    private static void wardEnd(SpellEffect effect) {
+        Glow ward = GLOWS.remove(key(ModSpellEffects.WARD, effect.sourceId()));
         if (ward != null) ward.close();
         if (effect.power() >= 1) flash(effect.position(), 7, 3.0f, PINK, 14);
     }
@@ -230,7 +235,7 @@ public final class SpellLighting {
      * A rune circle across the ground and a cold flash. (Nebulon's SnowStorm was tried here: from inside it the
      * caster sees a white-out, so the snow is left to particles.)
      */
-    private static void nova(ClientLevel level, SpellEffectPayload effect) {
+    private static void nova(ClientLevel level, SpellEffect effect) {
         Vec3 feet = effect.position();
         NebulonRendering.effects().spawn(level, new MagicCircle(feet.add(0, 0.05, 0), UP, SpellTuning.NOVA_RADIUS, 0.05f, ICE, 4,
                 effect.sourceId(), 0.6f, RENDER_DISTANCE), 20);
@@ -264,8 +269,12 @@ public final class SpellLighting {
         return glow;
     }
 
-    private static long key(SpellEffectPayload.Kind kind, int sourceId) {
-        return ((long) kind.ordinal() << 32) | Integer.toUnsignedLong(sourceId);
+    private static long key(SpellEffect effect) {
+        return key(effect.type(), effect.sourceId());
+    }
+
+    private static long key(SpellEffectType type, int sourceId) {
+        return ((long) SpellRegistries.SPELL_EFFECTS.getId(type) << 32) | Integer.toUnsignedLong(sourceId);
     }
 
     private static void ensureWorld(ClientLevel level) {

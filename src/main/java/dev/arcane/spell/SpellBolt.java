@@ -1,7 +1,7 @@
 package dev.arcane.spell;
 
-import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.network.SpellEffects;
+import dev.arcane.registry.ModSpellEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
@@ -62,7 +62,7 @@ final class SpellBolt {
             }
         }
 
-        SpellEffects.send(level, SpellEffectPayload.Kind.BOLT, position, nearest.subtract(position), power, age, sourceId);
+        SpellEffects.send(level, ModSpellEffects.BOLT, position, nearest.subtract(position), power, age, sourceId);
         position = nearest;
         if (target == null && blockHit.getType() == HitResult.Type.MISS) return false;
         detonate(target);
@@ -91,7 +91,7 @@ final class SpellBolt {
         // spell damage so cover is evaluated before the terrain is destroyed.
         level.explode(owner, level.damageSources().indirectMagic(owner, owner), terrainOnly(),
                 position, SpellTuning.terrainBlastStrength(power), false, Level.ExplosionInteraction.BLOCK);
-        SpellEffects.send(level, SpellEffectPayload.Kind.IMPACT, position, direction, power, age, sourceId);
+        SpellEffects.send(level, ModSpellEffects.IMPACT, position, direction, power, age, sourceId);
     }
 
     /**

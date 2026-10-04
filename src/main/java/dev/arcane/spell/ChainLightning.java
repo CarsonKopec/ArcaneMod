@@ -1,8 +1,10 @@
 package dev.arcane.spell;
 
-import dev.arcane.network.SpellEffectPayload;
+import dev.arcane.api.spell.Spell;
+import dev.arcane.api.spell.SpellContext;
 import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
+import dev.arcane.registry.ModSpellEffects;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -15,11 +17,14 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /** Lightning that strikes the creature under the caster's aim, then leaps to the nearest unstruck one, weakening each time. */
-final class ChainLightning {
-    private ChainLightning() {
+public final class ChainLightning extends Spell {
+    public ChainLightning() {
+        super(new Properties().manaCost(SpellTuning.CHAIN_MANA).cooldown(SpellTuning.CHAIN_COOLDOWN_TICKS).color(0xFF7EE8FF));
     }
 
-    static boolean cast(ServerLevel level, ServerPlayer caster) {
+    @Override public boolean cast(SpellContext context) {
+        ServerLevel level = context.level();
+        ServerPlayer caster = context.caster();
         Vec3 eye = caster.getEyePosition();
         Vec3 look = caster.getLookAngle();
         // A miss reports the end of the ray, so this is where the caster aimed either way.
@@ -32,14 +37,14 @@ final class ChainLightning {
         LivingEntity target = aimed(level, caster, eye, reach);
         if (target == null) {
             // Nothing in reach: the arc still crackles out to the aimed point.
-            SpellEffects.send(level, SpellEffectPayload.Kind.CHAIN, from, reach.subtract(from), 0.5f, 0, caster.getId());
+            SpellEffects.send(level, ModSpellEffects.CHAIN, from, reach.subtract(from), 0.5f, 0, caster.getId());
             return true;
         }
         Set<LivingEntity> struck = new HashSet<>();
         float damage = SpellTuning.CHAIN_DAMAGE;
         for (int jump = 0; target != null && jump < SpellTuning.CHAIN_MAX_TARGETS; jump++) {
             Vec3 at = target.getBoundingBox().getCenter();
-            SpellEffects.send(level, SpellEffectPayload.Kind.CHAIN, from, at.subtract(from), damage / SpellTuning.CHAIN_DAMAGE, jump, caster.getId());
+            SpellEffects.send(level, ModSpellEffects.CHAIN, from, at.subtract(from), damage / SpellTuning.CHAIN_DAMAGE, jump, caster.getId());
             target.hurtServer(level, level.damageSources().indirectMagic(caster, caster), damage);
             level.playSound(null, at.x, at.y, at.z, ModSounds.CHAIN_HIT, SoundSource.PLAYERS, 0.6f, 1.0f + jump * 0.08f);
             struck.add(target);

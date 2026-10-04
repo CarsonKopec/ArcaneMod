@@ -1,7 +1,7 @@
 package dev.arcane.network;
 
 import dev.arcane.ArcaneSpells;
-import dev.arcane.spell.Spell;
+import dev.arcane.api.spell.Spell;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

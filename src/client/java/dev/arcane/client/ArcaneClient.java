@@ -2,6 +2,7 @@ package dev.arcane.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.arcane.ArcaneSpells;
+import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.client.fx.SpellLighting;
 import dev.arcane.client.fx.SpellParticles;
 import dev.arcane.client.gui.SpellHud;
@@ -35,10 +36,11 @@ public final class ArcaneClient implements ClientModInitializer {
                 InputConstants.Type.KEYSYM, InputConstants.KEY_R, KeyMapping.Category.register(ArcaneSpells.id("spells"))));
         SpellHud.register();
 
-        ClientPlayNetworking.registerGlobalReceiver(SpellEffectPayload.TYPE, (effect, context) -> {
-            if (context.client().level == null) return;
-            SpellLighting.play(effect);
-            SpellParticles.play(effect);
+        // Lights first, as they were before the particles.
+        SpellLighting.register();
+        SpellParticles.register();
+        ClientPlayNetworking.registerGlobalReceiver(SpellEffectPayload.TYPE, (payload, context) -> {
+            if (context.client().level != null) SpellEffectRenderers.render(payload.effect(), context.client().level);
         });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.level == null) {
