@@ -7,6 +7,7 @@ import de.nexusrealms.nebulon.api.render.effect.ArcChain;
 import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
+import dev.arcane.ArcaneSpells;
 import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.registry.ModItems;
 import dev.arcane.spell.SpellTuning;
@@ -22,6 +23,10 @@ import net.minecraft.world.phys.Vec3;
  * Nebulon lights, rune circles and arcs for each spell phase.
  *
  * <p>Owns and expires every library handle: no permanent lights are left behind by a spell.
+ *
+ * <p>Nebulon is a beta library driving the GPU directly, so every call into it is {@linkplain #guarded guarded}.
+ * The first failure switches lighting off and spells carry on with particles alone; an exception escaping the
+ * packet handler would otherwise disconnect the player.
  */
 public final class SpellLighting {
     private static final ColorRgba VIOLET = ColorRgba.rgba(0xAD55FFFF);
@@ -34,6 +39,8 @@ public final class SpellLighting {
     private static final Map<Long, Glow> GLOWS = new LinkedHashMap<>();
     private static ClientLevel world;
     private static long ticks;
+    /** Set by the first Nebulon failure; lighting then stays off until the game restarts. */
+    private static boolean disabled;
 
     private SpellLighting() {
     }
@@ -41,16 +48,29 @@ public final class SpellLighting {
     public static void play(SpellEffectPayload effect) {
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) return;
-        ensureWorld(level);
-        long key = key(effect.kind(), effect.sourceId());
-        switch (effect.kind()) {
-            case CHARGE -> charge(level, key, effect);
-            case BOLT -> bolt(level, key, effect);
-            case IMPACT -> impact(level, key, effect);
-        }
+        guarded(() -> {
+            ensureWorld(level);
+            long key = key(effect.kind(), effect.sourceId());
+            switch (effect.kind()) {
+                case CHARGE -> charge(level, key, effect);
+                case BOLT -> bolt(level, key, effect);
+                case IMPACT -> impact(level, key, effect);
+            }
+        });
     }
 
     public static void tick(Minecraft client) {
+        guarded(() -> tickGlows(client));
+    }
+
+    public static void clear() {
+        guarded(SpellLighting::closeAll);
+        GLOWS.clear();
+        world = null;
+        ticks = 0;
+    }
+
+    private static void tickGlows(Minecraft client) {
         ensureWorld(client.level);
         ++ticks;
         LocalPlayer player = client.player;
@@ -68,13 +88,6 @@ public final class SpellLighting {
                 glow.light.update(value -> value.brightness(glow.brightness * fade * fade));
             }
         }
-    }
-
-    public static void clear() {
-        GLOWS.values().forEach(Glow::close);
-        GLOWS.clear();
-        world = null;
-        ticks = 0;
     }
 
     private static void charge(ClientLevel level, long key, SpellEffectPayload effect) {
@@ -138,8 +151,33 @@ public final class SpellLighting {
 
     private static void ensureWorld(ClientLevel level) {
         if (world != level) {
-            clear();
+            closeAll();
             world = level;
+            ticks = 0;
+        }
+    }
+
+    private static void closeAll() {
+        GLOWS.values().forEach(Glow::close);
+        GLOWS.clear();
+    }
+
+    /** Runs Nebulon work. The first failure is logged once and turns lighting off for the rest of the session. */
+    private static void guarded(Runnable action) {
+        if (disabled) return;
+        try {
+            action.run();
+        } catch (RuntimeException | LinkageError e) { // LinkageError: an installed Nebulon with a different API
+            disabled = true;
+            ArcaneSpells.LOGGER.error("Nebulon effects failed; spells will use particles only until the game restarts", e);
+            for (Glow glow : GLOWS.values()) {
+                try {
+                    glow.close();
+                } catch (RuntimeException | LinkageError ignored) {
+                    // Nebulon is already failing: release what still can be released.
+                }
+            }
+            GLOWS.clear();
         }
     }
 

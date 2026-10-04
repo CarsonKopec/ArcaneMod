@@ -7,10 +7,13 @@ import dev.arcane.spell.SpellBolts;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.resources.Identifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Common entrypoint: registers content, networking and the server-side bolt simulation. */
 public final class ArcaneSpells implements ModInitializer {
     public static final String ID = "arcane_spells";
+    public static final Logger LOGGER = LoggerFactory.getLogger(ID);
 
     public static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath(ID, path);
