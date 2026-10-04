@@ -1,0 +1,81 @@
+plugins {
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+	id 'maven-publish'
+}
+
+repositories {
+	// Nebulon (dynamic lights, rune circles, arcs)
+	maven { url = 'https://maven.riftrealms.de/releases' }
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"arcane_spells" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	// Versions live in gradle.properties.
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	modImplementation "de.nexusrealms:nebulon:${project.nebulon_version}"
+}
+
+processResources {
+	def props = [
+		version       : project.version,
+		loader_version: project.loader_version,
+	]
+	inputs.properties props
+
+	filesMatching("fabric.mod.json") {
+		expand props
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+	it.options.compilerArgs += ['-Xlint:deprecation']
+}
+
+java {
+	// Loom attaches the sources JAR to the build task.
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
+	from("LICENSE") {
+		rename { "${it}_$projectName" }
+	}
+}
+
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			from components.java
+		}
+	}
+}
+
+fabricApi {
+	// Client game tests live in src/gametest; run with `gradlew runClientGameTest`.
+	configureTests {
+		createSourceSet = true
+		modId = 'arcane_spells_test'
+		enableGameTests = false
+		enableClientGameTests = true
+	}
+}

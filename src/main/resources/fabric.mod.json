@@ -1,0 +1,28 @@
+{
+	"schemaVersion": 1,
+	"id": "arcane_spells",
+	"version": "${version}",
+	"name": "Arcane Spells",
+	"description": "Charge an arcane staff and unleash violet bolts, spiraling sparks, rune circles and colored dynamic light.",
+	"authors": [
+		"Arcane Spells"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/arcane_spells/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.arcane.ArcaneSpells"
+		],
+		"client": [
+			"dev.arcane.client.ArcaneClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=${loader_version}",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*",
+		"nebulon": ">=0.1.2-beta"
+	}
+}
