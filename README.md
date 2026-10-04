@@ -6,7 +6,7 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds a crystal staff with charge
 
 1. Install Fabric Loader **0.19.5 or later** for Minecraft **1.21.11** (https://fabricmc.net/use/installer/). Minecraft needs Java 21 or newer.
 2. Put these three JARs in the instance's `mods` folder:
-   - `arcane-spells-0.4.1.jar` (from `build/libs/`, not the `-sources` JAR)
+   - `arcane-spells-0.4.2.jar` (from `build/libs/`, not the `-sources` JAR)
    - [Fabric API 0.141.6+1.21.11](https://modrinth.com/mod/fabric-api/versions?g=1.21.11)
    - [Nebulon 0.1.2-beta+mc1.21.11.20260928.19](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/0.1.2-beta+mc1.21.11.20260928.19/nebulon-0.1.2-beta+mc1.21.11.20260928.19.jar)
 3. For multiplayer, install all three on the server **and** every client. 0.4.x versions are network-compatible with each other.
@@ -18,7 +18,8 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds a crystal staff with charge
 - Hold right-click to charge and release to fire. A full charge takes **1.2 s**, and a very quick tap cancels. Cooldown: **0.6 s**.
 - A direct hit deals up to **24 damage**. Splash damage reaches **20** and falls off over a radius of up to **8 blocks**. Walls shield targets from splash damage. The caster is immune to their own spell, but not to falling, collapsing terrain or chained TNT.
 - Bolts fly up to **400 blocks** over 8 s and stop at unloaded chunks. Impacts break terrain using vanilla explosion resistance and drops (strength 3–6; TNT is 4). They can set off TNT but never start fires. PvP follows the server's rules.
-- For the fullest effect, set Video Settings → Particles → **All**.
+- Blocks only break where the caster could break them by hand. In Adventure mode, under spawn protection and beyond the world border, the blast still hurts entities but leaves terrain (and TNT) alone. Bolts pass through the caster's own mount.
+- Spell particles follow Video Settings → Particles: **All** shows everything, Decreased halves them and Minimal turns them off, leaving the lights and arcs. They appear within 64 blocks of the camera.
 
 ## Develop
 
@@ -30,7 +31,7 @@ The build tools need **JDK 25**; the mod itself targets **Java 21**.
 | Launch a dev client | `gradlew.bat runClient` |
 | In-game integration test | `gradlew.bat runClientGameTest` |
 
-The client game test opens a world and fires a real charge and bolt. It checks that a Nebulon light renders, that the bolt destroys a stone wall, and that no light handles leak afterwards.
+The client game test opens a world and fires a real charge and bolt. It checks that a Nebulon light renders, that a bolt cast in Adventure mode leaves a stone wall standing while a normal bolt destroys it, and that no light handles leak afterwards.
 
 **Offline/fast builds on this machine:** `.gradle-home/` is a pre-warmed Gradle home (Gradle 9.7.1 plus Loom's Minecraft 1.21.11 files). To reuse it instead of downloading everything into `~/.gradle`, set `GRADLE_USER_HOME` first:
 
@@ -59,7 +60,7 @@ reference/                           local-only decompiled/library sources (giti
 
 ### How it works
 
-The server owns charging, damage and swept block/entity collision. For each visual event it sends one small `SpellEffectPayload` (`CHARGE`, `BOLT` or `IMPACT`) to players within 448 blocks. Each client then builds its own particles and Nebulon effects from that message, so individual particles never cross the network. Active bolts, shockwaves and lights are all capped, and every temporary light expires on its own.
+The server owns charging, damage and swept block/entity collision. For each visual event it sends one small `SpellEffectPayload` (`CHARGE`, `BOLT` or `IMPACT`) to players within 448 blocks who have that chunk loaded. Each client then builds its own particles and Nebulon effects from that message, so individual particles never cross the network. Active bolts, shockwaves and lights are capped, and every temporary light, arc and rune circle expires on its own within about a second. If Nebulon ever throws, the client logs it once and continues with particles only, rather than letting the error disconnect the player.
 
 To rebalance, edit `SpellTuning`. To change the visuals, edit `SpellParticles` (particles) or `SpellLighting` (light and runes).
 
