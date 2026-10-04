@@ -23,10 +23,15 @@ public final class SpellBolts {
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> ACTIVE.clear());
     }
 
-    public static void cast(ServerLevel level, ServerPlayer caster, float power) {
-        if (ACTIVE.size() >= SpellTuning.MAX_ACTIVE_BOLTS) return;
+    /** Returns false, and the spell audibly fizzles, when too many bolts are already in flight. */
+    public static boolean cast(ServerLevel level, ServerPlayer caster, float power) {
+        if (ACTIVE.size() >= SpellTuning.MAX_ACTIVE_BOLTS) {
+            level.playSound(null, caster.blockPosition(), SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.5f, 1.4f);
+            return false;
+        }
         // Start at the eye: offsetting forward can skip a wall the player is touching.
         ACTIVE.add(new SpellBolt(level, caster, caster.getEyePosition(), caster.getLookAngle().normalize(), power, nextSourceId--));
         level.playSound(null, caster.blockPosition(), SoundEvents.EVOKER_CAST_SPELL, SoundSource.PLAYERS, 0.7f, 1.3f);
+        return true;
     }
 }

@@ -56,7 +56,8 @@ public final class ArcaneStaffItem extends Item {
         if (charged < SpellTuning.MIN_CHARGE_TICKS || !(level instanceof ServerLevel server) || !(user instanceof ServerPlayer player)) {
             return false;
         }
-        SpellBolts.cast(server, player, SpellTuning.power(charged));
+        // A fizzled cast costs no cooldown.
+        if (!SpellBolts.cast(server, player, SpellTuning.power(charged))) return false;
         player.getCooldowns().addCooldown(stack, SpellTuning.COOLDOWN_TICKS);
         return true;
     }
