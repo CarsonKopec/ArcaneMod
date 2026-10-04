@@ -33,6 +33,18 @@ public final class SpellEvents {
                 return cost;
             });
 
+    /**
+     * Adjusts a spell's cooldown for a player, in ticks. Runs on both sides, like {@link #ALLOW_CAST}, since the wheel
+     * shows it. Listeners run in turn, each given the previous one's result; the last is rounded to whole ticks, and 0
+     * or less means no cooldown. It's applied when the spell is cast: a cooldown already running keeps its length. To
+     * change one that's running, use {@link dev.arcane.api.ArcaneSpellsApi#setCooldown}.
+     */
+    public static final Event<ModifyCooldown> MODIFY_COOLDOWN = EventFactory.createArrayBacked(ModifyCooldown.class,
+            listeners -> (caster, spell, ticks) -> {
+                for (ModifyCooldown listener : listeners) ticks = listener.modify(caster, spell, ticks);
+                return ticks;
+            });
+
     /** Server only: a spell was cast, and its mana and cooldown have been charged. */
     public static final Event<AfterCast> AFTER_CAST = EventFactory.createArrayBacked(AfterCast.class, listeners -> (spell, context, manaSpent) -> {
         for (AfterCast listener : listeners) listener.afterCast(spell, context, manaSpent);
@@ -50,6 +62,11 @@ public final class SpellEvents {
     @FunctionalInterface
     public interface ModifyManaCost {
         float modify(Player caster, Spell spell, float cost);
+    }
+
+    @FunctionalInterface
+    public interface ModifyCooldown {
+        float modify(Player caster, Spell spell, float ticks);
     }
 
     @FunctionalInterface

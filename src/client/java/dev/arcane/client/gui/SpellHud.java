@@ -81,7 +81,7 @@ public final class SpellHud {
 
         CasterState state = CasterState.of(player);
         long now = player.level().getGameTime();
-        float cooldown = state.cooldownLeft(spell, now) / (float) spell.cooldownTicks();
+        float cooldown = state.cooldownFraction(spell, now);
         if (cooldown > 0) {
             int top = itemY + Mth.floor(16 * (1 - cooldown));
             graphics.fill(itemX, top, itemX + 16, itemY + 16, 0x7FFFFFFF);

@@ -62,6 +62,23 @@ public final class ArcaneSpellsApi {
         return CasterState.of(player).cooldownLeft(spell, player.level().getGameTime());
     }
 
+    /**
+     * The cooldown, in ticks, that {@code spell} starts when {@code player} casts it, after
+     * {@link dev.arcane.api.event.SpellEvents#MODIFY_COOLDOWN}.
+     */
+    public static int cooldown(Player player, Spell spell) {
+        return SpellCasting.cooldown(player, spell);
+    }
+
+    /**
+     * Sets how many ticks until {@code player} can cast {@code spell} again, and syncs it to the player: 0 makes it
+     * ready now, and less than {@link #cooldownLeft} shortens a running cooldown, which the HUD shows as progress.
+     */
+    public static void setCooldown(ServerPlayer player, Spell spell, int ticks) {
+        long now = player.level().getGameTime();
+        player.setAttached(ModAttachments.CASTER, CasterState.of(player).withCooldown(spell, ticks, now));
+    }
+
     /** What {@code spell} costs {@code player}, after {@link dev.arcane.api.event.SpellEvents#MODIFY_MANA_COST}. */
     public static float manaCost(Player player, Spell spell) {
         return SpellCasting.manaCost(player, spell);

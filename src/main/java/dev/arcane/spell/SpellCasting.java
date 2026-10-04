@@ -39,6 +39,11 @@ public final class SpellCasting {
         return Math.max(0, SpellEvents.MODIFY_MANA_COST.invoker().modify(player, spell, spell.manaCost()));
     }
 
+    /** The cooldown {@code spell} starts when {@code player} casts it, in ticks, after other mods' adjustments. */
+    public static int cooldown(Player player, Spell spell) {
+        return Math.max(0, Math.round(SpellEvents.MODIFY_COOLDOWN.invoker().modify(player, spell, spell.cooldownTicks())));
+    }
+
     /**
      * Why {@code player} can't cast {@code spell} right now, or null if they can. Reads only synced state, so the
      * client can predict the answer and skip the charge animation for a cast the server would refuse.
@@ -64,9 +69,10 @@ public final class SpellCasting {
         if (blocker(caster, spell) != null) return false;
         // Priced before casting, so the spell can't change what it costs.
         float cost = manaCost(caster, spell);
+        int cooldown = cooldown(caster, spell);
         SpellContext context = new SpellContext(level, caster, spell.charged() ? power : 1);
         if (!spell.cast(context)) return false;
-        caster.setAttached(ModAttachments.CASTER, CasterState.of(caster).afterCast(spell, cost, level.getGameTime()));
+        caster.setAttached(ModAttachments.CASTER, CasterState.of(caster).afterCast(spell, cost, cooldown, level.getGameTime()));
         SpellEvents.AFTER_CAST.invoker().afterCast(spell, context, cost);
         return true;
     }

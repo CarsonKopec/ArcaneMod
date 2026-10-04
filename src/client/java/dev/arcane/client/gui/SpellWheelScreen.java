@@ -114,13 +114,13 @@ public final class SpellWheelScreen extends Screen {
             double angle = i * sector;
             int x = cx + (int) Math.round(Math.sin(angle) * radius);
             int y = cy - (int) Math.round(Math.cos(angle) * radius);
-            float cooldown = state.cooldownLeft(spell, now) / (float) spell.cooldownTicks();
+            float cooldown = state.cooldownFraction(spell, now);
             boolean affordable = state.mana(now) >= SpellCasting.manaCost(player, spell);
             slot(graphics, x, y, spell, cooldown, affordable);
         }
 
         Spell shown = hovered != null ? hovered : current;
-        summary(graphics, cx, cy, shown);
+        summary(graphics, cx, cy, player, shown);
         description(graphics, cx, cy - radius - 24, shown);
     }
 
@@ -139,11 +139,15 @@ public final class SpellWheelScreen extends Screen {
         if (!affordable) graphics.fill(x - 8, y - 8, x + 8, y + 8, 0x80200838);
     }
 
-    /** Name, mana cost and cooldown, stacked inside the inner ring. */
-    private void summary(GuiGraphics graphics, int cx, int cy, Spell spell) {
-        String cooldown = String.format(Locale.ROOT, "%.1f", spell.cooldownTicks() / 20f);
+    /**
+     * Name, mana cost and cooldown, stacked inside the inner ring. Cost and cooldown are what this player pays, after
+     * other mods' adjustments (and creative's free casting).
+     */
+    private void summary(GuiGraphics graphics, int cx, int cy, Player player, Spell spell) {
+        int mana = Math.round(SpellCasting.manaCost(player, spell));
+        String cooldown = String.format(Locale.ROOT, "%.1f", SpellCasting.cooldown(player, spell) / 20f);
         graphics.drawCenteredString(font, spell.displayName(), cx, cy - 14, spell.color());
-        graphics.drawCenteredString(font, Component.translatable("spell.arcane_spells.mana", Math.round(spell.manaCost())), cx, cy - 2, 0xFFA898C0);
+        graphics.drawCenteredString(font, Component.translatable("spell.arcane_spells.mana", mana), cx, cy - 2, 0xFFA898C0);
         graphics.drawCenteredString(font, Component.translatable("spell.arcane_spells.cooldown", cooldown), cx, cy + 10, 0xFFA898C0);
     }
 

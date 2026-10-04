@@ -1,6 +1,7 @@
 package dev.arcane.test;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.mojang.serialization.JsonOps;
 import dev.arcane.api.ArcaneSpellsApi;
@@ -9,6 +10,7 @@ import dev.arcane.api.spell.Spell;
 import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
+import dev.arcane.spell.CasterState.Cooldown;
 import dev.arcane.spell.SpellTuning;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +23,8 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * The API as another mod sees it, through {@link TestAddon}: its spell on the wheel, cast through the normal checks,
- * its events, its effect reaching a client renderer, the mana API, and saved data outliving a removed mod.
+ * its events, its effect reaching a client renderer, the mana and cooldown APIs, and saved data outliving a removed
+ * mod.
  */
 public final class SpellApiGameTest implements FabricClientGameTest {
     @Override public void runTest(ClientGameTestContext context) {
@@ -92,15 +95,74 @@ public final class SpellApiGameTest implements FabricClientGameTest {
                 check(mana >= 30 && mana < 32, "Client sees " + mana + " mana, expected about 30");
             });
 
+            // Cooldown modifiers apply to every spell, at cast time; 0 means none at all.
+            server.runOnServer(s -> {
+                ServerPlayer player = player(s);
+                player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                TestAddon.cooldownScale = 0.5f;
+                try {
+                    int halved = TestAddon.PING_COOLDOWN_TICKS / 2;
+                    check(ArcaneSpellsApi.cooldown(player, TestAddon.PING) == halved,
+                            "Ping's cooldown is " + ArcaneSpellsApi.cooldown(player, TestAddon.PING));
+                    check(ArcaneSpellsApi.cooldown(player, ModSpells.FROST_NOVA) == SpellTuning.NOVA_COOLDOWN_TICKS / 2,
+                            "Frost Nova's cooldown is " + ArcaneSpellsApi.cooldown(player, ModSpells.FROST_NOVA));
+                    check(ArcaneSpellsApi.cast(player, TestAddon.PING, 1), "Ping was refused");
+                    check(ArcaneSpellsApi.cooldownLeft(player, TestAddon.PING) == halved,
+                            "Ping started " + ArcaneSpellsApi.cooldownLeft(player, TestAddon.PING));
+                    // The full length is kept for the sweep, longer than the base cooldown or not.
+                    long now = s.overworld().getGameTime();
+                    check(CasterState.of(player).cooldownFraction(TestAddon.PING, now) == 1, "A fresh cooldown's sweep isn't full");
+
+                    TestAddon.cooldownScale = 0;
+                    player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                    check(ArcaneSpellsApi.cast(player, TestAddon.PING, 1), "Ping was refused");
+                    check(ArcaneSpellsApi.cast(player, TestAddon.PING, 1), "A zero cooldown still blocked a recast");
+                    check(!CasterState.of(player).cooldowns().containsKey(TestAddon.PING), "A zero cooldown was stored");
+
+                    // Lengthened past the base: the old clamp would have cut this short.
+                    TestAddon.cooldownScale = 3;
+                    player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                    check(ArcaneSpellsApi.cast(player, TestAddon.PING, 1), "Ping was refused");
+                    int tripled = TestAddon.PING_COOLDOWN_TICKS * 3;
+                    check(ArcaneSpellsApi.cooldownLeft(player, TestAddon.PING) == tripled,
+                            "Ping started " + ArcaneSpellsApi.cooldownLeft(player, TestAddon.PING));
+                } finally {
+                    TestAddon.cooldownScale = 1;
+                }
+            });
+
+            // Setting a running cooldown: shorter keeps the full length (the sweep shows progress), 0 clears it.
+            server.runOnServer(s -> {
+                ServerPlayer player = player(s);
+                long now = s.overworld().getGameTime();
+                int length = TestAddon.PING_COOLDOWN_TICKS * 3;
+                ArcaneSpellsApi.setCooldown(player, TestAddon.PING, length / 4);
+                check(ArcaneSpellsApi.cooldownLeft(player, TestAddon.PING) == length / 4,
+                        "setCooldown left " + ArcaneSpellsApi.cooldownLeft(player, TestAddon.PING));
+                check(CasterState.of(player).cooldownFraction(TestAddon.PING, now) == 0.25f,
+                        "Shortened sweep at " + CasterState.of(player).cooldownFraction(TestAddon.PING, now));
+                ArcaneSpellsApi.setCooldown(player, TestAddon.PING, 0);
+                check(ArcaneSpellsApi.castBlocker(player, TestAddon.PING) == null, "setCooldown(0) left Ping blocked");
+                ArcaneSpellsApi.setCooldown(player, ModSpells.BLINK, 30);
+            });
+            context.waitTicks(2);
+            context.runOnClient(client -> {
+                int left = ArcaneSpellsApi.cooldownLeft(client.player, ModSpells.BLINK);
+                check(left > 25 && left <= 30, "Client sees " + left + " ticks of Blink cooldown, expected about 28");
+            });
+
             // Removing a mod: a staff's unknown spell reads as Arcane Bolt, and unknown cooldowns are dropped.
             server.runOnServer(s -> {
                 check(Spell.CODEC.parse(JsonOps.INSTANCE, new JsonPrimitive("removed_mod:spell")).getOrThrow() == ModSpells.ARCANE_BOLT,
                         "An unknown selected spell did not fall back to Arcane Bolt");
-                Map<Spell, Long> cooldowns = Map.of(TestAddon.PING, 100L, ModSpells.BLINK, 120L);
+                Map<Spell, Cooldown> cooldowns = Map.of(TestAddon.PING, new Cooldown(100, 40), ModSpells.BLINK, new Cooldown(120, 60));
                 JsonElement saved = CasterState.CODEC.encodeStart(JsonOps.INSTANCE, new CasterState(50, 0, cooldowns)).getOrThrow();
-                saved.getAsJsonObject().getAsJsonObject("ready_at").addProperty("removed_mod:spell", 140L);
+                JsonObject removed = new JsonObject();
+                removed.addProperty("ready_at", 140L);
+                removed.addProperty("length", 80);
+                saved.getAsJsonObject().getAsJsonObject("cooldowns").add("removed_mod:spell", removed);
                 CasterState loaded = CasterState.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
-                check(loaded.readyAt().equals(cooldowns), "Loaded cooldowns " + loaded.readyAt());
+                check(loaded.cooldowns().equals(cooldowns), "Loaded cooldowns " + loaded.cooldowns());
             });
         }
     }

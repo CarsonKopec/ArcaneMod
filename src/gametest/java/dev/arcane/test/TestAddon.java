@@ -24,6 +24,8 @@ public final class TestAddon implements ModInitializer {
 
     /** While set, {@link SpellEvents#ALLOW_CAST} refuses Ping. */
     public static volatile boolean silenced;
+    /** {@link SpellEvents#MODIFY_COOLDOWN} scales every spell's cooldown by this. */
+    public static volatile float cooldownScale = 1;
     public static volatile Spell lastCast;
     public static volatile float lastManaSpent;
 
@@ -31,6 +33,7 @@ public final class TestAddon implements ModInitializer {
         SpellEvents.ALLOW_CAST.register((caster, spell) -> silenced && spell == PING ? Component.literal("Silenced") : null);
         // Half price, to show the cost listeners see is the one charged.
         SpellEvents.MODIFY_MANA_COST.register((caster, spell, cost) -> spell == PING ? cost / 2 : cost);
+        SpellEvents.MODIFY_COOLDOWN.register((caster, spell, ticks) -> ticks * cooldownScale);
         SpellEvents.AFTER_CAST.register((spell, context, manaSpent) -> {
             lastCast = spell;
             lastManaSpent = manaSpent;
