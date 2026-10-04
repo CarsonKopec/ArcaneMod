@@ -10,11 +10,12 @@ import net.minecraft.world.phys.Vec3;
 /**
  * One compact message per effect; particles are generated locally, never individually networked.
  *
- * <p>The wire format is unchanged since 0.4.0 ({@code effect_v2}); bump the id if it ever changes.
+ * <p>{@code effect_v3} since 0.5.0, which added the kinds after {@code IMPACT}. Bump the id whenever the format
+ * or the set of kinds changes, so a client from another version is never sent a kind it can't decode.
  */
 public record SpellEffectPayload(Kind kind, Vec3 position, Vec3 direction, float power, int age, int sourceId)
         implements CustomPacketPayload {
-    public static final Type<SpellEffectPayload> TYPE = new Type<>(ArcaneSpells.id("effect_v2"));
+    public static final Type<SpellEffectPayload> TYPE = new Type<>(ArcaneSpells.id("effect_v3"));
     public static final StreamCodec<RegistryFriendlyByteBuf, SpellEffectPayload> CODEC = StreamCodec.of(
             (buf, value) -> {
                 buf.writeVarInt(value.kind.ordinal());
@@ -41,7 +42,19 @@ public record SpellEffectPayload(Kind kind, Vec3 position, Vec3 direction, float
         /** A bolt moved; {@code direction} spans this tick's travel. */
         BOLT,
         /** A bolt detonated; {@code direction} is its flight direction. */
-        IMPACT;
+        IMPACT,
+        /** One leap of chain lightning, from {@code position} along {@code direction}; {@code age} counts the leaps. */
+        CHAIN,
+        /** The caster's feet moved from {@code position} by {@code direction}. */
+        BLINK,
+        /** A ward went up around entity {@code sourceId}, at {@code position}, for {@code age} ticks. */
+        WARD,
+        /** A ward absorbed a hit at {@code position}, facing {@code direction}; {@code power} is the strength left, 0–1. */
+        WARD_HIT,
+        /** A ward ended: {@code power} is 1 if it shattered, 0 if it faded. */
+        WARD_END,
+        /** A frost nova burst from the caster's feet at {@code position}. */
+        NOVA;
 
         private static final Kind[] VALUES = values();
 

@@ -50,10 +50,9 @@ final class SpellBolt {
         Vec3 nearest = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
         double nearestDistance = position.distanceToSqr(nearest);
         LivingEntity target = null;
-        // Sweep the entire movement segment so fast bolts cannot tunnel through targets. Like vanilla
-        // projectiles, the bolt passes through the caster's mount and anyone riding with them.
+        // Sweep the entire movement segment so fast bolts cannot tunnel through targets.
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(position, end).inflate(0.4),
-                e -> e != owner && !owner.isPassengerOfSameVehicle(e) && e.isAlive() && !e.isSpectator() && e.isPickable() && canHarm(e))) {
+                e -> e.isPickable() && SpellTargets.canTarget(owner, e))) {
             AABB box = entity.getBoundingBox().inflate(0.25);
             Vec3 hit = box.contains(position) ? position : box.clip(position, end).orElse(null);
             if (hit != null && position.distanceToSqr(hit) < nearestDistance) {
@@ -76,10 +75,10 @@ final class SpellBolt {
         Vec3 blast = position.subtract(direction.scale(0.3));
         double radius = SpellTuning.blastRadius(power);
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(blast, blast).inflate(radius),
-                e -> e != owner && e.isAlive() && !e.isSpectator() && canHarm(e))) {
+                e -> SpellTargets.canHarm(owner, e))) {
             boolean direct = victim == directTarget;
             double distance = victim.getBoundingBox().getCenter().distanceTo(blast);
-            if (!direct && (distance > radius || !hasLineOfSight(blast, victim))) continue;
+            if (!direct && (distance > radius || !SpellTargets.clearPath(level, blast, victim.getEyePosition(), owner))) continue;
 
             float falloff = (float) Math.max(0, 1 - distance / radius);
             float damage = direct ? SpellTuning.directHitDamage(power) : SpellTuning.splashDamage(power, falloff);
@@ -115,15 +114,6 @@ final class SpellBolt {
                 return 0;
             }
         };
-    }
-
-    private boolean canHarm(LivingEntity entity) {
-        return !(entity instanceof ServerPlayer other) || owner.canHarmPlayer(other);
-    }
-
-    private boolean hasLineOfSight(Vec3 from, LivingEntity victim) {
-        return level.clip(new ClipContext(from, victim.getEyePosition(), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, owner))
-                .getType() == HitResult.Type.MISS;
     }
 
     /** Column-only check: unlike {@link Level#isLoaded}, positions above or below the build limit still count. */

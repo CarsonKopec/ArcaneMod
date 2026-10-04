@@ -1,1 +1,26 @@
-{"item.arcane_spells.arcane_staff":"Arcane Staff"}
+{
+	"item.arcane_spells.arcane_staff": "Arcane Staff",
+	"item.arcane_spells.arcane_staff.spell": "Spell: %s",
+	"item.arcane_spells.arcane_staff.hint": "Hold %s to choose a spell",
+
+	"spell.arcane_spells.arcane_bolt": "Arcane Bolt",
+	"spell.arcane_spells.arcane_bolt.description": "Hold to charge, release to fire a bolt that explodes on impact.",
+	"spell.arcane_spells.chain_lightning": "Chain Lightning",
+	"spell.arcane_spells.chain_lightning.description": "Strikes the creature you aim at, then leaps between others nearby, weakening with each jump.",
+	"spell.arcane_spells.blink": "Blink",
+	"spell.arcane_spells.blink.description": "Teleport a short distance in the direction you look.",
+	"spell.arcane_spells.arcane_ward": "Arcane Ward",
+	"spell.arcane_spells.arcane_ward.description": "A shell of runes that absorbs hits and turns projectiles back on their shooter.",
+	"spell.arcane_spells.frost_nova": "Frost Nova",
+	"spell.arcane_spells.frost_nova.description": "A burst of cold that damages, slows and freezes everything around you.",
+	"spell.arcane_spells.mana": "%s mana",
+	"spell.arcane_spells.cooldown": "%s s cooldown",
+
+	"message.arcane_spells.no_mana": "Not enough mana for %s",
+	"message.arcane_spells.cooldown": "%s is recharging (%s s)",
+	"message.arcane_spells.blink_blocked": "No room to blink there",
+
+	"key.arcane_spells.spell_wheel": "Spell Wheel",
+	"key.category.arcane_spells.spells": "Arcane Spells",
+	"screen.arcane_spells.spell_wheel": "Spell Wheel"
+}

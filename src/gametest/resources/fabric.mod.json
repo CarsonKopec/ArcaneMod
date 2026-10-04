@@ -5,7 +5,8 @@
 	"environment": "client",
 	"entrypoints": {
 		"fabric-client-gametest": [
-			"dev.arcane.test.LightingGameTest"
+			"dev.arcane.test.LightingGameTest",
+			"dev.arcane.test.SpellsGameTest"
 		]
 	},
 	"depends": {
