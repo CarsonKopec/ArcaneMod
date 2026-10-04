@@ -17,7 +17,8 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds a crystal staff that casts 
 - Craft it with an amethyst shard (top right), a gold ingot (center) and a stick (bottom left).
 - **Choose a spell:** with the staff in hand, hold **R** (rebindable under Controls → Arcane Spells), point at a spell and release. Clicking also picks; Escape cancels. The staff remembers its spell, and its tooltip shows which.
 - **Cast:** right-click. Arcane Bolt is held to charge and fires on release; the other spells fire on click.
-- **Mana:** 100, refilling at 5 per second. The bar sits above the food bar while you hold the staff or are refilling. The active spell shows in a slot beside the hotbar, dimmed when you can't afford it and with a cooldown sweep. Creative players cast for free; cooldowns still apply.
+- **Mana:** 100, refilling at 5 per second. The bar sits above the food bar while you hold the staff or are refilling. The active spell shows in a slot beside the hotbar, dimmed when you can't afford it and with a cooldown sweep. A refused cast (no mana, or still recharging) fizzles and says why above the hotbar. Creative players cast for free; cooldowns still apply.
+- Every spell has its own sounds, with subtitles (Options → Accessibility → Show Subtitles).
 
 | Spell | Mana | Cooldown | Effect |
 | --- | --- | --- | --- |
@@ -40,11 +41,14 @@ The build tools need **JDK 25**; the mod itself targets **Java 21**.
 | Build the mod JAR | `gradlew.bat build` → `build/libs/` |
 | Launch a dev client | `gradlew.bat runClient` |
 | In-game integration tests | `gradlew.bat runClientGameTest` |
+| Regenerate spell icons and sounds | `python tools/generate_assets.py` (needs `pip install numpy scipy pillow soundfile`) |
+
+The spell icons (`textures/gui/sprites/spell/`) and sounds (`sounds/`) are drawn and synthesized by `tools/generate_assets.py`, so there are no third-party assets to license. Edit a function there and rerun it to change one; add `--preview DIR` to also get upscaled icons and waveform/spectrogram plots for checking sounds by eye. A resource pack can replace any icon or sound by path.
 
 The client game tests run in a real client and save screenshots to `build/run/clientGameTest/screenshots/`:
 
 - `LightingGameTest` fires a real charge and bolt. It checks that a Nebulon light renders, that a bolt cast in Adventure mode leaves a stone wall standing while a normal bolt destroys it, and that no light handles leak afterwards.
-- `SpellsGameTest` picks Chain Lightning on the spell wheel with simulated key and mouse input, then casts it with a real right-click. It checks that all five spells affect the world as described above, and that mana, cooldowns and an empty mana pool are enforced.
+- `SpellsGameTest` checks that every spell sound has a file and every icon loaded, then picks Chain Lightning on the spell wheel with simulated key and mouse input, then casts it with a real right-click. It checks that all five spells affect the world as described above, and that mana, cooldowns and an empty mana pool are enforced.
 
 **Offline/fast builds on this machine:** `.gradle-home/` is a pre-warmed Gradle home (Gradle 9.7.1 plus Loom's Minecraft 1.21.11 files). To reuse it instead of downloading everything into `~/.gradle`, set `GRADLE_USER_HOME` first:
 
@@ -71,11 +75,12 @@ src/client/java/dev/arcane/client/  client-only code
   ArcaneClient.java                  entrypoint: key binding, packet receiver and tick hooks
   gui/SpellWheelScreen.java          the radial spell wheel
   gui/SpellHud.java                  mana bar and active-spell slot
-  gui/SpellIcons.java                each spell's icon and accent color
+  gui/SpellIcons.java                each spell's icon sprite and accent color
   fx/SpellParticles.java             particle choreography for every spell
   fx/SpellLighting.java              Nebulon lights, rune circles and arcs
   particle/ArcaneSpark.java          the tinted glow particle
 src/gametest/                        Fabric client game tests
+tools/generate_assets.py             draws the spell icons and synthesizes the spell sounds
 reference/                           local-only decompiled/library sources (gitignored)
 ```
 
@@ -89,6 +94,6 @@ To rebalance, edit `SpellTuning`. To change the visuals, edit `SpellParticles` (
 
 ## Status
 
-Nebulon is a beta dependency. Shader packs, Sodium, dedicated-server multiplayer and heavy spell spam have not been tested. Spell icons are vanilla items for now.
+Nebulon is a beta dependency. Shader packs, Sodium, dedicated-server multiplayer and heavy spell spam have not been tested.
 
 Built from the Fabric example mod template (CC0-1.0).

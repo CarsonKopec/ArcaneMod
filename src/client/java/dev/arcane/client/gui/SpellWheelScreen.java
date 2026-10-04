@@ -1,6 +1,7 @@
 package dev.arcane.client.gui;
 
 import dev.arcane.network.SelectSpellPayload;
+import dev.arcane.registry.ModSounds;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.Spell;
 import dev.arcane.spell.SpellCasting;
@@ -14,7 +15,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -75,7 +75,7 @@ public final class SpellWheelScreen extends Screen {
     private void choose() {
         if (hovered != null && hovered != current && ClientPlayNetworking.canSend(SelectSpellPayload.TYPE)) {
             ClientPlayNetworking.send(new SelectSpellPayload(hovered));
-            minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_CHIME, 1.4f));
+            minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.WHEEL_SELECT, 1.0f));
         }
         onClose();
     }
@@ -124,7 +124,7 @@ public final class SpellWheelScreen extends Screen {
         int border = spell == current ? 0xFFFFFFFF : isHovered ? SpellIcons.color(spell) : 0xFF4A2D6E;
         graphics.fill(x - half, y - half, x + half, y + half, isHovered ? 0xE0281640 : 0xC0140A22);
         frame(graphics, x - half, y - half, x + half, y + half, border);
-        graphics.renderItem(SpellIcons.icon(spell), x - 8, y - 8);
+        SpellIcons.draw(graphics, spell, x - 8, y - 8);
         if (cooldown > 0) {
             int top = y - 8 + Mth.floor(16 * (1 - cooldown));
             graphics.fill(x - 8, top, x + 8, y + 8, 0x7FFFFFFF);

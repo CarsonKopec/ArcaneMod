@@ -77,7 +77,7 @@ public final class SpellHud {
         int x = right ? graphics.guiWidth() / 2 + 91 : graphics.guiWidth() / 2 - 91 - 29;
         graphics.blitSprite(RenderPipelines.GUI_TEXTURED, right ? SLOT_RIGHT : SLOT_LEFT, x, graphics.guiHeight() - 23, 29, 24);
         int itemX = right ? x + 10 : x + 3, itemY = graphics.guiHeight() - 19;
-        graphics.renderItem(SpellIcons.icon(spell), itemX, itemY);
+        SpellIcons.draw(graphics, spell, itemX, itemY);
 
         CasterState state = CasterState.of(player);
         long now = player.level().getGameTime();

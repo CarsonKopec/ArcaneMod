@@ -1,6 +1,8 @@
 package dev.arcane.test;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.arcane.ArcaneSpells;
+import dev.arcane.client.gui.SpellIcons;
 import dev.arcane.client.gui.SpellWheelScreen;
 import dev.arcane.registry.ModAttachments;
 import dev.arcane.spell.ArcaneWards;
@@ -12,9 +14,15 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import java.util.Map;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.CameraType;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.sounds.WeighedSoundEvents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.data.AtlasIds;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffects;
@@ -41,6 +49,25 @@ public final class SpellsGameTest implements FabricClientGameTest {
             server.runCommand("tp @a 0 -60 -6 0 10");
             game.getClientWorld().waitForChunksRender();
             context.waitTicks(10);
+
+            // Assets: every mod sound resolves to a file, and every spell icon made it into the GUI atlas. Either
+            // mistake is otherwise silent: a missing sound plays nothing, a missing icon draws the magenta square.
+            context.runOnClient(client -> {
+                int sounds = 0;
+                for (Identifier id : BuiltInRegistries.SOUND_EVENT.keySet()) {
+                    if (!id.getNamespace().equals(ArcaneSpells.ID)) continue;
+                    WeighedSoundEvents event = client.getSoundManager().getSoundEvent(id);
+                    check(event != null, "No sounds.json entry for " + id);
+                    Identifier file = event.getSound(RandomSource.create()).getPath();
+                    check(client.getResourceManager().getResource(file).isPresent(), "Missing sound file " + file);
+                    sounds++;
+                }
+                check(sounds > 0, "No spell sounds registered");
+                TextureAtlas gui = client.getAtlasManager().getAtlasOrThrow(AtlasIds.GUI);
+                for (Spell spell : Spell.values()) {
+                    check(gui.getSprite(SpellIcons.sprite(spell)) != gui.missingSprite(), "Missing icon for " + spell);
+                }
+            });
 
             // Spell wheel: hold the key, point towards Chain Lightning (second slot, up and to the right), release.
             context.getInput().holdKey(InputConstants.KEY_R);

@@ -1,0 +1,49 @@
+{
+	"spell.arcane_bolt.charge": {
+		"subtitle": "subtitles.arcane_spells.spell.arcane_bolt.charge",
+		"sounds": ["arcane_spells:spell/arcane_bolt_charge"]
+	},
+	"spell.arcane_bolt.cast": {
+		"subtitle": "subtitles.arcane_spells.spell.arcane_bolt.cast",
+		"sounds": ["arcane_spells:spell/arcane_bolt_cast"]
+	},
+	"spell.chain_lightning.cast": {
+		"subtitle": "subtitles.arcane_spells.spell.chain_lightning.cast",
+		"sounds": ["arcane_spells:spell/chain_lightning_cast"]
+	},
+	"spell.chain_lightning.hit": {
+		"subtitle": "subtitles.arcane_spells.spell.chain_lightning.hit",
+		"sounds": ["arcane_spells:spell/chain_lightning_hit"]
+	},
+	"spell.blink": {
+		"subtitle": "subtitles.arcane_spells.spell.blink",
+		"sounds": ["arcane_spells:spell/blink"]
+	},
+	"spell.arcane_ward.raise": {
+		"subtitle": "subtitles.arcane_spells.spell.arcane_ward.raise",
+		"sounds": ["arcane_spells:spell/arcane_ward_raise"]
+	},
+	"spell.arcane_ward.hit": {
+		"subtitle": "subtitles.arcane_spells.spell.arcane_ward.hit",
+		"sounds": ["arcane_spells:spell/arcane_ward_hit"]
+	},
+	"spell.arcane_ward.break": {
+		"subtitle": "subtitles.arcane_spells.spell.arcane_ward.break",
+		"sounds": ["arcane_spells:spell/arcane_ward_break"]
+	},
+	"spell.arcane_ward.fade": {
+		"subtitle": "subtitles.arcane_spells.spell.arcane_ward.fade",
+		"sounds": ["arcane_spells:spell/arcane_ward_fade"]
+	},
+	"spell.frost_nova": {
+		"subtitle": "subtitles.arcane_spells.spell.frost_nova",
+		"sounds": ["arcane_spells:spell/frost_nova"]
+	},
+	"spell.fizzle": {
+		"subtitle": "subtitles.arcane_spells.spell.fizzle",
+		"sounds": ["arcane_spells:spell/fizzle"]
+	},
+	"ui.spell_wheel.select": {
+		"sounds": ["arcane_spells:ui/spell_wheel_select"]
+	}
+}

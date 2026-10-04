@@ -2,9 +2,9 @@ package dev.arcane.spell;
 
 import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.network.SpellEffects;
+import dev.arcane.registry.ModSounds;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -37,8 +37,7 @@ final class FrostNova {
             Vec3 push = at.subtract(center).multiply(1, 0, 1).normalize().scale(SpellTuning.NOVA_KNOCKBACK);
             victim.push(push.x, 0.15, push.z);
         }
-        level.playSound(null, center.x, center.y, center.z, SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 0.9f, 1.3f);
-        level.playSound(null, center.x, center.y, center.z, SoundEvents.PLAYER_HURT_FREEZE, SoundSource.PLAYERS, 1.0f, 0.7f);
+        level.playSound(null, center.x, center.y, center.z, ModSounds.FROST_NOVA, SoundSource.PLAYERS, 1.0f, 1.0f);
         SpellEffects.send(level, SpellEffectPayload.Kind.NOVA, caster.position(), new Vec3(0, 1, 0), 1, 0, caster.getId());
         return true;
     }

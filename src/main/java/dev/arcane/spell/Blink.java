@@ -2,10 +2,10 @@ package dev.arcane.spell;
 
 import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.network.SpellEffects;
+import dev.arcane.registry.ModSounds;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.Vec3;
@@ -31,8 +31,8 @@ final class Blink {
         caster.stopRiding();
         caster.teleportTo(destination.x, destination.y, destination.z);
         caster.resetFallDistance();
-        level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.6f, 1.5f);
-        level.playSound(null, destination.x, destination.y, destination.z, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.6f, 1.8f);
+        level.playSound(null, origin.x, origin.y, origin.z, ModSounds.BLINK, SoundSource.PLAYERS, 0.7f, 0.9f);
+        level.playSound(null, destination.x, destination.y, destination.z, ModSounds.BLINK, SoundSource.PLAYERS, 0.7f, 1.15f);
         SpellEffects.send(level, SpellEffectPayload.Kind.BLINK, origin, destination.subtract(origin), 1, 0, caster.getId());
         return true;
     }

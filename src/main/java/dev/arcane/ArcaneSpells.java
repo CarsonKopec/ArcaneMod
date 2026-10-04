@@ -6,6 +6,7 @@ import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModComponents;
 import dev.arcane.registry.ModItems;
 import dev.arcane.registry.ModParticles;
+import dev.arcane.registry.ModSounds;
 import dev.arcane.spell.ArcaneWards;
 import dev.arcane.spell.SpellBolts;
 import dev.arcane.spell.SpellCasting;
@@ -29,6 +30,7 @@ public final class ArcaneSpells implements ModInitializer {
         // Components first: the staff's default spell is one.
         ModComponents.register();
         ModAttachments.register();
+        ModSounds.register();
         ModItems.register();
         ModParticles.register();
         PayloadTypeRegistry.playS2C().register(SpellEffectPayload.TYPE, SpellEffectPayload.CODEC);

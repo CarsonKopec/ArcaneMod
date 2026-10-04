@@ -20,6 +20,18 @@
 	"message.arcane_spells.cooldown": "%s is recharging (%s s)",
 	"message.arcane_spells.blink_blocked": "No room to blink there",
 
+	"subtitles.arcane_spells.spell.arcane_bolt.charge": "Staff hums",
+	"subtitles.arcane_spells.spell.arcane_bolt.cast": "Arcane bolt fires",
+	"subtitles.arcane_spells.spell.chain_lightning.cast": "Lightning crackles",
+	"subtitles.arcane_spells.spell.chain_lightning.hit": "Lightning strikes",
+	"subtitles.arcane_spells.spell.blink": "Someone blinks",
+	"subtitles.arcane_spells.spell.arcane_ward.raise": "Ward rises",
+	"subtitles.arcane_spells.spell.arcane_ward.hit": "Ward absorbs a blow",
+	"subtitles.arcane_spells.spell.arcane_ward.break": "Ward shatters",
+	"subtitles.arcane_spells.spell.arcane_ward.fade": "Ward fades",
+	"subtitles.arcane_spells.spell.frost_nova": "Frost bursts",
+	"subtitles.arcane_spells.spell.fizzle": "Spell fizzles",
+
 	"key.arcane_spells.spell_wheel": "Spell Wheel",
 	"key.category.arcane_spells.spells": "Arcane Spells",
 	"screen.arcane_spells.spell_wheel": "Spell Wheel"

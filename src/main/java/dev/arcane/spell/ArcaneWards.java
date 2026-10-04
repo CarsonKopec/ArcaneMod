@@ -2,6 +2,7 @@ package dev.arcane.spell;
 
 import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.network.SpellEffects;
+import dev.arcane.registry.ModSounds;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -10,15 +11,14 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileDeflection;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -47,7 +47,7 @@ public final class ArcaneWards {
         // Recasting replaces the old ward with a fresh one.
         ACTIVE.put(caster.getUUID(), new Ward(level, caster));
         Vec3 center = caster.getBoundingBox().getCenter();
-        level.playSound(null, center.x, center.y, center.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.8f, 1.6f);
+        level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_RAISE, SoundSource.PLAYERS, 0.8f, 1.0f);
         SpellEffects.send(level, SpellEffectPayload.Kind.WARD, center, new Vec3(0, 1, 0), 1, SpellTuning.WARD_DURATION_TICKS, caster.getId());
         return true;
     }
@@ -97,15 +97,15 @@ public final class ArcaneWards {
             Vec3 outward = from.subtract(center).normalize();
             Vec3 hit = center.add(outward.scale(SpellTuning.WARD_RADIUS));
             SpellEffects.send(level, SpellEffectPayload.Kind.WARD_HIT, hit, outward, strength / SpellTuning.WARD_STRENGTH, 0, owner.getId());
-            level.playSound(null, hit.x, hit.y, hit.z, SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 0.8f, 1.4f);
+            level.playSound(null, hit.x, hit.y, hit.z, ModSounds.WARD_HIT, SoundSource.PLAYERS, 0.8f, 1.0f);
         }
 
         void end(boolean shattered) {
             strength = 0;
             Vec3 center = owner.getBoundingBox().getCenter();
             SpellEffects.send(level, SpellEffectPayload.Kind.WARD_END, center, new Vec3(0, 1, 0), shattered ? 1 : 0, 0, owner.getId());
-            if (shattered) level.playSound(null, center.x, center.y, center.z, SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.0f, 0.8f);
-            else level.playSound(null, center.x, center.y, center.z, SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 0.6f, 1.6f);
+            if (shattered) level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_BREAK, SoundSource.PLAYERS, 1.0f, 1.0f);
+            else level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_FADE, SoundSource.PLAYERS, 0.7f, 1.0f);
         }
 
         /** Turns back any projectile that will be inside the shell next tick and is still heading inwards. */
@@ -120,7 +120,7 @@ public final class ArcaneWards {
                 projectile.deflect(ProjectileDeflection.REVERSE, owner, EntityReference.of(owner), false);
                 Vec3 hit = center.add(offset.normalize().scale(SpellTuning.WARD_RADIUS));
                 SpellEffects.send(level, SpellEffectPayload.Kind.WARD_HIT, hit, offset.normalize(), strength / SpellTuning.WARD_STRENGTH, 0, owner.getId());
-                level.playSound(null, hit.x, hit.y, hit.z, SoundEvents.BREEZE_DEFLECT, SoundSource.PLAYERS, 0.8f, 1.2f);
+                level.playSound(null, hit.x, hit.y, hit.z, ModSounds.WARD_HIT, SoundSource.PLAYERS, 0.8f, 1.35f);
                 strength -= SpellTuning.WARD_DEFLECT_COST;
                 if (strength <= 0) {
                     end(true);

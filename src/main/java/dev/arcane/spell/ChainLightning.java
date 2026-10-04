@@ -2,12 +2,12 @@ package dev.arcane.spell;
 
 import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.network.SpellEffects;
+import dev.arcane.registry.ModSounds;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
@@ -27,7 +27,7 @@ final class ChainLightning {
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster)).getLocation();
         // Roughly the tip of the staff.
         Vec3 from = eye.add(look.scale(0.8)).add(0, -0.3, 0);
-        level.playSound(null, caster.getX(), caster.getY(), caster.getZ(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 0.5f, 1.9f);
+        level.playSound(null, caster.getX(), caster.getY(), caster.getZ(), ModSounds.CHAIN_CAST, SoundSource.PLAYERS, 0.8f, 1.0f);
 
         LivingEntity target = aimed(level, caster, eye, reach);
         if (target == null) {
@@ -41,7 +41,7 @@ final class ChainLightning {
             Vec3 at = target.getBoundingBox().getCenter();
             SpellEffects.send(level, SpellEffectPayload.Kind.CHAIN, from, at.subtract(from), damage / SpellTuning.CHAIN_DAMAGE, jump, caster.getId());
             target.hurtServer(level, level.damageSources().indirectMagic(caster, caster), damage);
-            level.playSound(null, at.x, at.y, at.z, SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 0.35f, 1.6f + jump * 0.12f);
+            level.playSound(null, at.x, at.y, at.z, ModSounds.CHAIN_HIT, SoundSource.PLAYERS, 0.6f, 1.0f + jump * 0.08f);
             struck.add(target);
             from = at;
             damage *= SpellTuning.CHAIN_DAMAGE_FALLOFF;

@@ -2,13 +2,13 @@ package dev.arcane.item;
 
 import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.network.SpellEffects;
+import dev.arcane.registry.ModSounds;
 import dev.arcane.spell.Spell;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -26,6 +26,9 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class ArcaneStaffItem extends Item {
     private static final int USE_DURATION = 72000;
+    private static final int FIZZLE_INTERVAL_TICKS = 10;
+    /** Client only: when the last refused cast fizzled. */
+    private static long lastFizzle;
 
     public ArcaneStaffItem(Properties properties) {
         super(properties);
@@ -43,13 +46,14 @@ public final class ArcaneStaffItem extends Item {
         Spell spell = SpellCasting.selected(player.getItemInHand(hand));
         Component blocker = SpellCasting.blocker(player, spell);
         if (blocker != null) {
-            if (!level.isClientSide()) player.displayClientMessage(blocker, true);
+            if (level.isClientSide()) fizzle(level, player);
+            else player.displayClientMessage(blocker, true);
             return InteractionResult.FAIL;
         }
         if (spell.charged()) {
             player.startUsingItem(hand);
             if (!level.isClientSide()) {
-                level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 0.6f, 1.2f);
+                level.playSound(null, player.blockPosition(), ModSounds.BOLT_CHARGE, SoundSource.PLAYERS, 0.6f, 1.0f);
             }
             return InteractionResult.CONSUME;
         }
@@ -74,5 +78,16 @@ public final class ArcaneStaffItem extends Item {
             return false;
         }
         return SpellCasting.cast(server, player, SpellCasting.selected(stack), SpellTuning.power(charged));
+    }
+
+    /**
+     * A refused cast fizzles for the caster alone: passing the player to playSound on the client plays it locally as
+     * a prediction. Holding right-click retries every few ticks, so it sounds at most twice a second.
+     */
+    private static void fizzle(Level level, Player player) {
+        long now = level.getGameTime();
+        if (Math.abs(now - lastFizzle) < FIZZLE_INTERVAL_TICKS) return;
+        lastFizzle = now;
+        level.playSound(player, player.getX(), player.getY(), player.getZ(), ModSounds.FIZZLE, SoundSource.PLAYERS, 0.5f, 1.0f);
     }
 }
