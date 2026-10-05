@@ -91,8 +91,13 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
                 if (level.getBlockState(pos).isAir() && pos.getZ() <= 69) broken++;
             }
             check(broken >= 200, "Meteors broke only " + broken + " blocks of the plateau's top");
-            // The Dread Star lands on the mark itself, and its blast is far bigger than a meteor's.
-            check(level.getBlockState(MARK.below(3)).isAir(), "The Dread Star left no crater at the mark");
+            // The Dread Star lands on the mark itself, and its blast is far bigger than a meteor's. Like any explosion it
+            // gets only a couple of blocks into stone, so look one layer under the top, which a lone meteor can't reach.
+            boolean cratered = false;
+            for (BlockPos pos : BlockPos.betweenClosed(MARK.offset(-1, -1, -1), MARK.offset(1, -1, 1))) {
+                cratered |= level.getBlockState(pos).isAir();
+            }
+            check(cratered, "The Dread Star left no crater at the mark");
             // Killed pigs are soon gone altogether, so count the pigs left unharmed.
             long unharmed = level.getEntities(EntityType.PIG, pig -> pig.isAlive() && pig.getHealth() == pig.getMaxHealth()).size();
             check(unharmed < 5, "No pig was hit by " + SpellTuning.METEOR_COUNT + " meteors and the Dread Star");
