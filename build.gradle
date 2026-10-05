@@ -81,5 +81,8 @@ fabricApi {
 		modId = 'arcane_spells_test'
 		enableGameTests = false
 		enableClientGameTests = true
+		// DedicatedServerGameTest runs a dedicated server, which needs the Minecraft EULA accepted:
+		// https://aka.ms/MinecraftEULA (accepted by the project owner).
+		eula = true
 	}
 }
