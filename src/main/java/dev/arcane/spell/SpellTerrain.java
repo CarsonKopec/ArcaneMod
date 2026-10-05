@@ -1,5 +1,6 @@
 package dev.arcane.spell;
 
+import dev.arcane.registry.ModGameRules;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,12 +14,18 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * What spells may do to terrain, shared so every spell follows the same rules: blocks only break where the caster
- * could break them by hand, so never in Adventure mode, under spawn protection or beyond the world border. Whether the
- * caster may build is read once, when the spell is cast, and passed in as {@code mayBuild}: a bolt or meteor still in
- * flight follows the rules of the moment it was cast, whatever the caster does meanwhile.
+ * could break them by hand, so never in Adventure mode, under spawn protection or beyond the world border, and never
+ * with the {@link ModGameRules#TERRAIN_DAMAGE} game rule off. Whether the spell may break blocks at all is read once,
+ * when it is cast ({@link #mayBreak}), and passed in as {@code mayBuild}: a bolt or meteor still in flight follows the
+ * rules of the moment it was cast, whatever the caster or the server does meanwhile.
  */
 final class SpellTerrain {
     private SpellTerrain() {
+    }
+
+    /** Whether a spell {@code caster} casts now may break blocks at all; read it once, at the cast. */
+    static boolean mayBreak(ServerLevel level, ServerPlayer caster) {
+        return caster.mayBuild() && level.getGameRules().get(ModGameRules.TERRAIN_DAMAGE);
     }
 
     /**

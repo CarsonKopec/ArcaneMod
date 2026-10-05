@@ -4,6 +4,7 @@ import dev.arcane.network.SelectSpellPayload;
 import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModComponents;
+import dev.arcane.registry.ModGameRules;
 import dev.arcane.registry.ModItems;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
@@ -38,6 +39,7 @@ public final class ArcaneSpells implements ModInitializer {
         // Components first: the staff's default spell is one.
         ModComponents.register();
         ModAttachments.register();
+        ModGameRules.register();
         ModSounds.register();
         ModSpellEffects.register();
         ModSpells.register();

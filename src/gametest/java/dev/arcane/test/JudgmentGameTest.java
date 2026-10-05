@@ -9,6 +9,7 @@ import dev.arcane.spell.SpellTuning;
 import java.util.List;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -22,8 +23,9 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The Astral Staff and Celestial Judgment in a real client: the staff holds only its own spells, the spell refuses a
- * short channel, a mark too close or no mark at all, leaves terrain alone in Adventure mode, and otherwise, cast with
- * a real two-second right-click, bores a crater, spares obsidian, scorches the walls, and kills what it should.
+ * short channel, a mark too close or no mark at all, leaves terrain alone in Adventure mode and with the
+ * {@code arcane_spells:terrain_damage} game rule off, and otherwise, cast with a real two-second right-click, bores a
+ * crater, spares obsidian, scorches the walls, and kills what it should.
  * Screenshots record every phase.
  */
 public final class JudgmentGameTest implements FabricClientGameTest {
@@ -70,20 +72,14 @@ public final class JudgmentGameTest implements FabricClientGameTest {
                 check(CasterState.of(player).manaAt() == SpellTuning.BASE_MAX_MANA, "A refused cast spent mana");
             });
 
-            // Adventure mode: the whole strike plays out, and the plateau is untouched.
+            // In Adventure mode, then in Survival with the terrain_damage game rule off, the whole strike plays out and
+            // the plateau is untouched.
             server.runCommand("gamemode adventure @a");
-            server.runCommand(CASTER_AT);
-            context.waitTicks(2);
-            server.runOnServer(s -> {
-                ServerPlayer player = player(s);
-                // Aimed here, in the same tick: the client's own rotation may not have caught up with the teleport.
-                player.lookAt(EntityAnchorArgument.Anchor.EYES, MARK.getBottomCenter().add(0, 1, 0));
-                check(SpellCasting.cast(s.overworld(), player, ModSpells.CELESTIAL_JUDGMENT, 1),
-                        "Adventure cast refused, aiming " + player.getXRot() + "/" + player.getYRot() + " from " + player.position());
-            });
-            context.waitTicks(STRIKE_TICKS);
-            server.runOnServer(s -> check(!s.overworld().getBlockState(MARK).isAir(), "An Adventure-mode strike broke terrain"));
+            strikeLeavesTerrain(context, server, "An Adventure-mode strike broke terrain");
             server.runCommand("gamemode survival @a");
+            server.runCommand("gamerule arcane_spells:terrain_damage false");
+            strikeLeavesTerrain(context, server, "A strike broke terrain with terrain_damage off");
+            server.runCommand("gamerule arcane_spells:terrain_damage true");
 
             // The real thing: pigs at the mark, near the blast's edge and far away; a real two-second channel.
             // The edge pig stands just past the rim, inside the blast, to the side so the blast throws it along the plateau.
@@ -147,6 +143,22 @@ public final class JudgmentGameTest implements FabricClientGameTest {
                 check(far != null && far.getHealth() == far.getMaxHealth(), "The far pig was hurt");
             });
         }
+    }
+
+    /** Strikes the mark from the caster's spot, then checks once the strike is over that the mark still stands. */
+    private static void strikeLeavesTerrain(ClientGameTestContext context, TestServerContext server, String failure) {
+        server.runCommand(CASTER_AT);
+        context.waitTicks(2);
+        server.runOnServer(s -> {
+            ServerPlayer player = player(s);
+            player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+            // Aimed here, in the same tick: the client's own rotation may not have caught up with the teleport.
+            player.lookAt(EntityAnchorArgument.Anchor.EYES, MARK.getBottomCenter().add(0, 1, 0));
+            check(SpellCasting.cast(s.overworld(), player, ModSpells.CELESTIAL_JUDGMENT, 1),
+                    "Cast refused, aiming " + player.getXRot() + "/" + player.getYRot() + " from " + player.position());
+        });
+        context.waitTicks(STRIKE_TICKS);
+        server.runOnServer(s -> check(!s.overworld().getBlockState(MARK).isAir(), failure));
     }
 
     private static ServerPlayer player(MinecraftServer server) {

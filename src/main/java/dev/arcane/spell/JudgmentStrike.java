@@ -75,7 +75,7 @@ final class JudgmentStrike {
         this.impact = impact;
         this.sourceId = sourceId;
         this.skyY = Math.min(level.getMaxY() - 1, impact.y + SpellTuning.JUDGMENT_SKY_HEIGHT);
-        this.mayBuild = caster.mayBuild();
+        this.mayBuild = SpellTerrain.mayBreak(level, caster);
         this.random = level.getRandom();
         this.rimPhases = new double[] {random.nextDouble() * Mth.TWO_PI, random.nextDouble() * Mth.TWO_PI, random.nextDouble() * Mth.TWO_PI};
         SpellEffects.send(level, ModSpellEffects.JUDGMENT_MARK, impact, skyOffset(), 1, SpellTuning.JUDGMENT_GATHER_TICKS, sourceId);

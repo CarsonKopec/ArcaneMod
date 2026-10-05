@@ -84,7 +84,7 @@ public final class Singularity extends MarkedSpell {
             this.caster = caster;
             this.center = center;
             this.id = id;
-            this.mayBuild = caster.mayBuild();
+            this.mayBuild = SpellTerrain.mayBreak(level, caster);
             this.meal = meal(center);
             SpellEffects.send(level, ModSpellEffects.SINGULARITY, center, Vec3.ZERO, (float) SpellTuning.SINGULARITY_PULL_RADIUS,
                     SpellTuning.SINGULARITY_DURATION_TICKS, id);

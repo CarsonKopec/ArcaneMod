@@ -29,7 +29,7 @@ final class SpellBolt {
     SpellBolt(ServerLevel level, ServerPlayer owner, Vec3 position, Vec3 direction, float power, int sourceId) {
         this.level = level;
         this.owner = owner;
-        this.mayBuild = owner.mayBuild();
+        this.mayBuild = SpellTerrain.mayBreak(level, owner);
         this.position = position;
         this.direction = direction;
         this.power = power;

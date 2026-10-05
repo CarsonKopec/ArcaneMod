@@ -93,7 +93,7 @@ public final class MeteorSwarm extends MarkedSpell {
             this.sky = new Vec3(mark.x, Math.min(level.getMaxY() - 1, mark.y + SpellTuning.METEOR_SKY_HEIGHT), mark.z);
             Vec3 toward = new Vec3(mark.x - caster.getX(), 0, mark.z - caster.getZ());
             this.heading = toward.lengthSqr() < 1.0e-6 ? new Vec3(0, 0, 1) : toward.normalize();
-            this.mayBuild = caster.mayBuild();
+            this.mayBuild = SpellTerrain.mayBreak(level, caster);
             this.random = level.getRandom();
             double dreadFall = (sky.y - mark.y) / SpellTuning.DREAD_STAR_SPEED;
             int duration = SpellTuning.METEOR_COUNT * SpellTuning.METEOR_INTERVAL_TICKS + DREAD_STAR_PAUSE_TICKS + (int) dreadFall + 10;

@@ -49,6 +49,7 @@ Blocks Celestial Judgment and Singularity break are vaporised rather than droppe
 
 - Spells never hurt the caster, and Chain Lightning, Frost Nova and the bolt's direct hit pass over the caster's mount. PvP follows the server's rules.
 - Arcane Bolt breaks terrain using vanilla explosion resistance and drops (strength 3–6; TNT is 4). It can set off TNT but never starts fires. Blocks only break where the caster could break them by hand: in Adventure mode, under spawn protection and beyond the world border, the blast still hurts entities but leaves terrain (and TNT) alone.
+- **To stop spells breaking terrain at all,** for example on a shared server, run `/gamerule arcane_spells:terrain_damage false` (or switch off "Spells break terrain" under Miscellaneous in the world's game rules). Every spell still hurts, burns and throws creatures, but no spell breaks a block or sets off TNT, in any game mode. It's on by default.
 - Spell particles follow Video Settings → Particles: **All** shows everything, Decreased halves them and Minimal turns them off, leaving the lights and arcs. They appear within 64 blocks of the camera (192 for Celestial Judgment).
 - Celestial Judgment's screen shake follows Options → Accessibility → Screen Effect Scale (none at 0%), and its flashes follow Hide Lightning Flashes. Both, and the darkening, weaken with distance from the strike.
 
@@ -67,10 +68,10 @@ The spell icons (`textures/gui/sprites/spell/`), the Astral Staff and beam textu
 
 The client game tests run in a real client and save screenshots to `build/run/clientGameTest/screenshots/`:
 
-- `LightingGameTest` fires a real charge and bolt. It checks that a Nebulon light renders, that a bolt cast in Adventure mode leaves a stone wall standing while a normal bolt destroys it, and that no light handles leak afterwards.
+- `LightingGameTest` fires a real charge and bolt. It checks that a Nebulon light renders, that a bolt cast in Adventure mode or with `terrain_damage` off leaves a stone wall standing while a normal bolt destroys it, and that no light handles leak afterwards.
 - `SpellsGameTest` checks that every spell sound has a file and every icon loaded, then picks Chain Lightning on the spell wheel with simulated key and mouse input, then casts it with a real right-click. It checks that all five spells affect the world as described above, and that mana, cooldowns and an empty mana pool are enforced.
-- `JudgmentGameTest` checks that the Astral Staff holds Celestial Judgment (and the Arcane Staff never can), that a short channel, a mark too close and no mark at all are refused without cost, and that a strike in Adventure mode leaves terrain alone. It then channels a real two-second right-click on a stone plateau, and checks the crater, that the shaft reaches bedrock without breaking it, that obsidian survives, that the walls are scorched, and who the strike killed, hurt and spared. Screenshots cover the channel and every phase, from a spectator's vantage point.
-- `AstralSpellsGameTest` checks that the Astral Staff holds all five spells and shows them on the wheel, then casts the other four on a stone plateau: Meteor Swarm cratering it and hitting pigs; Singularity dragging pigs and a dropped diamond in, eating the ground and crushing what it caught; Chrono Field freezing a wandering pig and an incoming arrow, holding back a blow until time resumes (then dealing it 1.5 times over) and letting both move on; and Astral Gate refusing a spot too close, carrying the caster and a pig standing in the gate 54 blocks away, bringing the caster back when they step out of the far gate and in again, and gating home to their respawn point when they look straight up. Chrono Field also checks the caster is empowered. Both Astral tests build an 81-block stone plateau (`Plateau`) wide enough for the crater.
+- `JudgmentGameTest` checks that the Astral Staff holds Celestial Judgment (and the Arcane Staff never can), that a short channel, a mark too close and no mark at all are refused without cost, and that a strike in Adventure mode or with `terrain_damage` off leaves terrain alone. It then channels a real two-second right-click on a stone plateau, and checks the crater, that the shaft reaches bedrock without breaking it, that obsidian survives, that the walls are scorched, and who the strike killed, hurt and spared. Screenshots cover the channel and every phase, from a spectator's vantage point.
+- `AstralSpellsGameTest` checks that the Astral Staff holds all five spells and shows them on the wheel, then casts the other four on a stone plateau: Meteor Swarm cratering it and hitting pigs; Singularity dragging pigs and a dropped diamond in, eating the ground and crushing what it caught; Chrono Field freezing a wandering pig and an incoming arrow, holding back a blow until time resumes (then dealing it three times over) and letting both move on; and Astral Gate refusing a spot too close, carrying the caster and a pig standing in the gate 54 blocks away, bringing the caster back when they step out of the far gate and in again, and gating home to their respawn point when they look straight up. Chrono Field also checks the caster is empowered. Both Astral tests build an 81-block stone plateau (`Plateau`) wide enough for the crater.
 - `SpellApiGameTest` uses `TestAddon`, a stand-in for another mod written only against the API, with one spell (Ping), its own effect type and a listener on each event. It checks that Ping joins the wheel after the built-in spells, that the events can refuse a cast, change its cost and cooldown (shorter, longer or none) and see it happen, that setting a running cooldown keeps the HUD's sweep in proportion, that Ping's effect reaches a client renderer even when another renderer throws, that the mana API stays in bounds and syncs, that max mana and regeneration follow the attributes (by command and by modifier) without refilling or back-dating regeneration, and that saved staffs and cooldowns survive a mod's spells disappearing.
 
 **Offline/fast builds on this machine:** `.gradle-home/` is a pre-warmed Gradle home (Gradle 9.7.1 plus Loom's Minecraft 1.21.11 files). To reuse it instead of downloading everything into `~/.gradle`, set `GRADLE_USER_HOME` first:
@@ -86,7 +87,7 @@ src/main/java/dev/arcane/          common code (runs on server and client)
   ArcaneSpells.java                  entrypoint: wires everything up
   api/                               the API for other mods (see below)
   mixin/PlayerMixin.java             adds the mana attributes to players
-  registry/                          item, particle, data component, attachment, spell and effect registration
+  registry/                          item, particle, data component, attachment, game rule, spell and effect registration
   item/ArcaneStaffItem.java          both staffs: casts the selected spell from the staff's tag, charge/release or click
   spell/SpellTuning.java             ALL balance numbers: mana, costs, cooldowns, damage, ranges
   spell/SpellCasting.java            the one entry point: mana and cooldown checks, then the spell
@@ -95,7 +96,7 @@ src/main/java/dev/arcane/          common code (runs on server and client)
   spell/ChainLightning, Blink,       the other spells
         ArcaneWard, FrostNova
   spell/MarkedSpell.java             every Astral spell's channel and aiming: the ring, full channel, where it lands
-  spell/SpellTerrain.java            the terrain rules every spell shares: explosions, and vaporising
+  spell/SpellTerrain.java            the terrain rules every spell shares: who may break what, explosions, vaporising
   spell/CelestialJudgment,           Celestial Judgment: the strike's phases, terrain and damage
         JudgmentStrike
   spell/MeteorSwarm, Singularity,    the other Astral spells, each owning its swarms, holes, fields or gates

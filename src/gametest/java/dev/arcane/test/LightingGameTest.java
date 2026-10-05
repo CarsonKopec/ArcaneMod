@@ -10,8 +10,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * End-to-end check in a real client: charge light renders, a bolt cast in Adventure mode leaves terrain alone,
- * a normal bolt destroys a wall, and every temporary light is cleaned up.
+ * End-to-end check in a real client: charge light renders, a bolt cast in Adventure mode or with the
+ * {@code arcane_spells:terrain_damage} game rule off leaves terrain alone, a normal bolt destroys a wall, and every
+ * temporary light is cleaned up.
  */
 public final class LightingGameTest implements FabricClientGameTest {
     private static final BlockPos WALL = new BlockPos(0, -59, 6);
@@ -46,6 +47,13 @@ public final class LightingGameTest implements FabricClientGameTest {
                 if (s.overworld().getBlockState(WALL).isAir()) throw new AssertionError("Adventure-mode blast broke terrain");
             });
             server.runCommand("gamemode creative @a");
+            server.runCommand("gamerule arcane_spells:terrain_damage false");
+            server.runOnServer(s -> ArcaneBolt.launch(s.overworld(), s.getPlayerList().getPlayers().getFirst(), 1));
+            context.waitTicks(8);
+            server.runOnServer(s -> {
+                if (s.overworld().getBlockState(WALL).isAir()) throw new AssertionError("Blast broke terrain with terrain_damage off");
+            });
+            server.runCommand("gamerule arcane_spells:terrain_damage true");
 
             server.runOnServer(s -> ArcaneBolt.launch(s.overworld(), s.getPlayerList().getPlayers().getFirst(), 1));
             context.waitTicks(8);
