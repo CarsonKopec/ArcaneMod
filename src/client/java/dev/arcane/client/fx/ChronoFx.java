@@ -94,18 +94,18 @@ final class ChronoFx {
             if (fade > 0) {
                 for (float latitude : LATITUDES) {
                     double angle = Math.toRadians(latitude);
-                    planes.ring(center.add(0, r * Math.sin(angle), 0), UP, r * Math.cos(angle), 0.07f, scaled(TEAL, 0.45f * fade));
+                    planes.ring(center.add(0, r * Math.sin(angle), 0), UP, r * Math.cos(angle), 0.15f, scaled(TEAL, 0.45f * fade));
                 }
                 for (int i = 0; i < MERIDIANS; i++) {
                     double angle = i * Math.PI / MERIDIANS;
-                    planes.ring(center, new Vec3(Math.cos(angle), 0, Math.sin(angle)), r, 0.05f, scaled(TEAL, 0.3f * fade));
+                    planes.ring(center, new Vec3(Math.cos(angle), 0, Math.sin(angle)), r, 0.1f, scaled(TEAL, 0.3f * fade));
                 }
                 // The clock face: rim, twelve-sided hour ring, centre.
                 Vec3 ground = center.add(0, 0.06, 0);
-                planes.ring(ground, UP, r * 0.95, 0.25f, scaled(TEAL, fade));
-                planes.polygon(ground, UP, r * 0.85, 12, 0, 0.1f, scaled(PALE, 0.6f * fade));
-                planes.ring(ground, UP, r * 0.2, 0.12f, scaled(PALE, 0.8f * fade));
-                if (endAge >= 0) planes.ring(ground, UP, r * (1 + 0.6 * ease(endAge / (float) END_TICKS)), 0.4f * fade, scaled(PALE, fade));
+                planes.ring(ground, UP, r * 0.95, 0.6f, scaled(TEAL, fade));
+                planes.polygon(ground, UP, r * 0.85, 12, 0, 0.25f, scaled(PALE, 0.6f * fade));
+                planes.ring(ground, UP, r * 0.2, 0.3f, scaled(PALE, 0.8f * fade));
+                if (endAge >= 0) planes.ring(ground, UP, r * (1 + 0.6 * ease(endAge / (float) END_TICKS)), 1.2f * fade, scaled(PALE, fade));
             }
             planes.end();
             glow = fade > 0 ? light(glow, center.add(0, 2, 0), (float) radius, 1.1f * fade, TEAL) : unlight(glow);
@@ -114,7 +114,7 @@ final class ChronoFx {
         private void particles() {
             // Motes hang where they appear: nothing moves in here.
             if (age % 3 == 0) {
-                for (int i = 0, n = Fx.scaled(4); i < n; i++) {
+                for (int i = 0, n = Fx.scaled(12); i < n; i++) {
                     Vec3 at = center.add(Fx.anyDirection(random).scale(Math.cbrt(random.nextDouble()) * radius));
                     if (at.y > center.y) particle(ParticleTypes.END_ROD, at, Vec3.ZERO);
                 }
@@ -138,7 +138,7 @@ final class ChronoFx {
 
         /** A hand of the clock: a line of light from the centre, {@code angle} clockwise from twelve (north). */
         private void hand(double angle, double length) {
-            for (double d = radius * 0.22; d <= length; d += 0.6) {
+            for (double d = radius * 0.22; d <= length; d += 0.8) {
                 Vec3 at = onCircle(center, d, angle - Math.PI / 2, 0.15);
                 particle(ModParticles.CYAN, at, Vec3.ZERO);
             }

@@ -26,7 +26,7 @@
 	"spell.arcane_spells.chrono_field": "Chrono Field",
 	"spell.arcane_spells.chrono_field.description": "Channel, then release: time stops in a dome around you. Blows struck inside it land at once, harder, when it ends.",
 	"spell.arcane_spells.astral_gate": "Astral Gate",
-	"spell.arcane_spells.astral_gate.description": "Channel, then release: step through a gate to the place you marked, far away. Others can follow for a few seconds.",
+	"spell.arcane_spells.astral_gate.description": "Channel, then release: step through a gate to the place you marked, far away, or look straight up to gate home. Both ends stay open for anyone.",
 	"spell.arcane_spells.mana": "%s mana",
 	"spell.arcane_spells.cooldown": "%s s cooldown",
 

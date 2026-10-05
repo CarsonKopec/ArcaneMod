@@ -18,6 +18,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -32,20 +33,20 @@ import net.minecraft.world.phys.Vec3;
  * caster, and a pig standing in the gate, to the far end. Screenshots record each.
  */
 public final class AstralSpellsGameTest implements FabricClientGameTest {
-    /** As in JudgmentGameTest: a stone plateau with its top face at y=-43. */
-    private static final String PLATEAU = "fill -16 -63 -2 16 -44 46 minecraft:stone";
-    private static final BlockPos MARK = new BlockPos(0, -44, 30);
-    /** The top face of the mark's block: where an aim at it lands. */
-    private static final Vec3 MARK_TOP = MARK.getBottomCenter().add(0, 1, 0);
-    private static final String CASTER_AT = "tp @a 0 -43 4 0 3.64";
-    private static final String VANTAGE = "tp @a 34 -18 -4 facing 0 -13 30";
+    private static final BlockPos MARK = Plateau.MARK;
+    private static final Vec3 MARK_TOP = Plateau.MARK_TOP;
+    private static final String CASTER_AT = Plateau.CASTER_AT;
+    private static final String VANTAGE = "tp @a 56 -10 -14 facing 0 -10 40";
+    /** The whole swarm, the Dread Star last, with time for it to land. */
+    private static final int SWARM_TICKS = SpellTuning.METEOR_COUNT * SpellTuning.METEOR_INTERVAL_TICKS + 12
+            + (int) (SpellTuning.METEOR_SKY_HEIGHT / SpellTuning.DREAD_STAR_SPEED) + 20;
 
     @Override public void runTest(ClientGameTestContext context) {
         try (var game = context.worldBuilder().create()) {
             var server = game.getServer();
             server.runCommand("time set 6000");
             server.runCommand("gamemode survival @a");
-            server.runCommand(PLATEAU);
+            Plateau.build(server);
             server.runCommand("give @a arcane_spells:astral_staff");
             server.runCommand(CASTER_AT);
             game.getClientWorld().waitForChunksRender();
@@ -74,51 +75,53 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
     private static void meteorSwarm(ClientGameTestContext context, TestServerContext server) {
         for (int i = 0; i < 5; i++) {
             double angle = i * Math.PI * 2 / 5;
-            server.runCommand(String.format("summon minecraft:pig %.1f -43 %.1f {NoAI:1b}", 0.5 + Math.cos(angle) * 7, 30.5 + Math.sin(angle) * 7));
+            server.runCommand(String.format("summon minecraft:pig %.1f -43 %.1f {NoAI:1b}", 0.5 + Math.cos(angle) * 10, 40.5 + Math.sin(angle) * 10));
         }
         server.runOnServer(s -> check(castAt(s, ModSpells.METEOR_SWARM, MARK_TOP), "Meteor Swarm was refused"));
         server.runCommand("gamemode spectator @a");
         server.runCommand(VANTAGE);
         context.waitTicks(30);
         context.takeScreenshot("astral-meteors");
-        context.waitTicks(SpellTuning.METEOR_COUNT * SpellTuning.METEOR_INTERVAL_TICKS + 30);
+        context.waitTicks(SWARM_TICKS - 30);
         context.takeScreenshot("astral-meteors-after");
         server.runOnServer(s -> {
             ServerLevel level = s.overworld();
             int broken = 0;
-            for (BlockPos pos : BlockPos.betweenClosed(MARK.offset(-16, -2, -16), MARK.offset(16, 0, 16))) {
-                if (level.getBlockState(pos).isAir() && pos.getZ() <= 46) broken++;
+            for (BlockPos pos : BlockPos.betweenClosed(MARK.offset(-24, -2, -24), MARK.offset(24, 0, 24))) {
+                if (level.getBlockState(pos).isAir() && pos.getZ() <= 69) broken++;
             }
-            check(broken >= 20, "Meteors broke only " + broken + " blocks of the plateau's top");
-            List<? extends Pig> pigs = level.getEntities(EntityType.PIG, pig -> true);
-            long hit = pigs.stream().filter(pig -> !pig.isAlive() || pig.getHealth() < pig.getMaxHealth()).count();
-            check(hit >= 1, "No pig was hit by " + SpellTuning.METEOR_COUNT + " meteors");
+            check(broken >= 200, "Meteors broke only " + broken + " blocks of the plateau's top");
+            // The Dread Star lands on the mark itself, and its blast is far bigger than a meteor's.
+            check(level.getBlockState(MARK.below(3)).isAir(), "The Dread Star left no crater at the mark");
+            // Killed pigs are soon gone altogether, so count the pigs left unharmed.
+            long unharmed = level.getEntities(EntityType.PIG, pig -> pig.isAlive() && pig.getHealth() == pig.getMaxHealth()).size();
+            check(unharmed < 5, "No pig was hit by " + SpellTuning.METEOR_COUNT + " meteors and the Dread Star");
         });
         server.runCommand("kill @e[type=!minecraft:player]");
         server.runCommand("gamemode survival @a");
     }
 
     private static void singularity(ClientGameTestContext context, TestServerContext server) {
-        server.runCommand(PLATEAU);
+        Plateau.build(server);
         server.runCommand(CASTER_AT);
         // With their AI: a mob without it ignores its own velocity, so nothing could drag it.
-        server.runCommand("summon minecraft:pig 9.5 -43 30.5");
-        server.runCommand("summon minecraft:pig -8.5 -43 30.5");
-        server.runCommand("summon minecraft:pig 0.5 -43 39.5");
-        server.runCommand("summon minecraft:item 0.5 -43 22.5 {Item:{id:\"minecraft:diamond\",count:1}}");
+        server.runCommand("summon minecraft:pig 12.5 -43 40.5");
+        server.runCommand("summon minecraft:pig -11.5 -43 40.5");
+        server.runCommand("summon minecraft:pig 0.5 -43 52.5");
+        server.runCommand("summon minecraft:item 0.5 -43 30.5 {Item:{id:\"minecraft:diamond\",count:1}}");
         context.waitTicks(5);
         Vec3 center = MARK_TOP.add(0, SpellTuning.SINGULARITY_LIFT, 0);
         server.runOnServer(s -> check(castAt(s, ModSpells.SINGULARITY, MARK_TOP), "Singularity was refused"));
         server.runCommand("gamemode spectator @a");
-        server.runCommand("tp @a 22 -34 12 facing 0 -40 30");
+        server.runCommand("tp @a 34 -26 14 facing 0 -38 40");
         context.waitTicks(40);
         context.takeScreenshot("astral-singularity");
         server.runOnServer(s -> {
             for (Pig pig : s.overworld().getEntities(EntityType.PIG, pig -> pig.isAlive())) {
-                check(pig.getBoundingBox().getCenter().distanceTo(center) < 6, "A pig wasn't dragged in: " + pig.position());
+                check(pig.getBoundingBox().getCenter().distanceTo(center) < 8, "A pig wasn't dragged in: " + pig.position());
             }
             List<ItemEntity> items = s.overworld().getEntitiesOfClass(ItemEntity.class, new AABB(center, center).inflate(20));
-            check(!items.isEmpty() && items.getFirst().position().distanceTo(center) < 6, "The diamond wasn't dragged in: " + items);
+            check(!items.isEmpty() && items.getFirst().position().distanceTo(center) < 8, "The diamond wasn't dragged in: " + items);
         });
         context.waitTicks(SpellTuning.SINGULARITY_DURATION_TICKS - 40 + 6);
         context.takeScreenshot("astral-singularity-collapse");
@@ -133,7 +136,7 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
     }
 
     private static void chronoField(ClientGameTestContext context, TestServerContext server) {
-        server.runCommand(PLATEAU);
+        Plateau.build(server);
         server.runCommand("tp @a 0 -43 10 0 20");
         // A pig free to wander, and an arrow flying in from outside the dome, wide of the caster.
         server.runCommand("summon minecraft:pig 3.5 -43 12.5");
@@ -147,9 +150,10 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
             Arrow arrow = s.overworld().getEntities(EntityType.ARROW, a -> true).getFirst();
             check(ChronoField.isFrozen(pig) && pig.isNoAi(), "The pig wasn't frozen");
             check(ChronoField.isFrozen(arrow), "The arrow wasn't frozen, at " + arrow.position());
+            check(player(s).hasEffect(MobEffects.STRENGTH) && player(s).hasEffect(MobEffects.SPEED), "The caster wasn't empowered in their own field");
             held[0] = pig.position();
             held[1] = arrow.position();
-            pig.hurtServer(s.overworld(), s.overworld().damageSources().playerAttack(player(s)), 4);
+            pig.hurtServer(s.overworld(), s.overworld().damageSources().playerAttack(player(s)), 2);
             check(pig.getHealth() == pig.getMaxHealth(), "A frozen pig took damage at once");
         });
         server.runCommand("gamemode spectator @a");
@@ -165,7 +169,7 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
         context.waitTicks(SpellTuning.CHRONO_DURATION_TICKS - 25 + 3);
         server.runOnServer(s -> {
             Pig pig = s.overworld().getEntities(EntityType.PIG, p -> true).getFirst();
-            float expected = pig.getMaxHealth() - 4 * SpellTuning.CHRONO_DAMAGE_MULTIPLIER;
+            float expected = pig.getMaxHealth() - 2 * SpellTuning.CHRONO_DAMAGE_MULTIPLIER;
             check(!ChronoField.isFrozen(pig) && !pig.isNoAi(), "The pig didn't thaw");
             check(Math.abs(pig.getHealth() - expected) < 0.01, "Held damage left the pig at " + pig.getHealth() + ", expected " + expected);
             List<? extends Arrow> arrows = s.overworld().getEntities(EntityType.ARROW, a -> true);
@@ -176,33 +180,48 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
     }
 
     private static void astralGate(ClientGameTestContext context, TestServerContext server) {
-        server.runCommand(PLATEAU);
+        Plateau.build(server);
         server.runCommand(CASTER_AT);
-        server.runCommand("summon minecraft:pig 1.5 -43 4.5 {NoAI:1b}");
+        server.runCommand("spawnpoint @a 30 -43 20");
+        server.runCommand("summon minecraft:pig 1.5 -43 6.5 {NoAI:1b}");
         context.waitTicks(3);
-        Vec3 far = new Vec3(0.5, -43, 44.5);
+        Vec3 origin = new Vec3(0.5, -43, 6.5), home = new Vec3(30.5, -43, 20.5), far = new Vec3(0.5, -43, 60.5);
+
+        // Too close is refused; far away opens, and a pig standing in the gate follows.
         server.runOnServer(s -> {
-            ServerPlayer player = player(s);
-            player.setAttached(ModAttachments.CASTER, CasterState.FULL);
-            player.setXRot(-90);
-            check(!SpellCasting.cast(s.overworld(), player, ModSpells.ASTRAL_GATE, 1), "A gate opened to the sky");
-            player.lookAt(EntityAnchorArgument.Anchor.EYES, new Vec3(0.5, -43, 9));
-            check(!SpellCasting.cast(s.overworld(), player, ModSpells.ASTRAL_GATE, 1), "A gate opened 5 blocks away");
+            check(!castAt(s, ModSpells.ASTRAL_GATE, new Vec3(0.5, -43, 11)), "A gate opened 5 blocks away");
             check(castAt(s, ModSpells.ASTRAL_GATE, far), "Astral Gate was refused");
         });
         context.waitTicks(5);
         context.takeScreenshot("astral-gate");
         context.waitTicks(SpellTuning.GATE_CROSS_TICKS + 5);
         server.runOnServer(s -> {
-            check(player(s).position().distanceTo(far) < 1, "The caster arrived at " + player(s).position());
-            Pig pig = s.overworld().getEntities(EntityType.PIG, p -> true).getFirst();
-            check(pig.position().distanceTo(far) < 2.5, "The pig in the gate stayed at " + pig.position());
+            check(player(s).position().distanceTo(far) < 1.5, "The caster arrived at " + player(s).position());
+            Pig pig = s.overworld().getEntities(EntityType.PIG, p -> p.isAlive()).getFirst();
+            check(pig.position().distanceTo(far) < 3, "The pig in the gate stayed at " + pig.position());
             float spent = SpellTuning.BASE_MAX_MANA - CasterState.of(player(s)).manaAt();
             check(Math.abs(spent - SpellTuning.GATE_MANA) < 0.01, "The gate cost " + spent + " mana");
         });
-        server.runCommand("tp @a 0.5 -43 44.5 180 10");
+        server.runCommand("tp @a 0.5 -43 60.5 180 10");
         context.waitTicks(3);
         context.takeScreenshot("astral-gate-arrived");
+
+        // Both ways: step out of the far gate, then back into it, and come out of the first.
+        server.runCommand("tp @a 5.5 -43 60.5");
+        context.waitTicks(3);
+        server.runCommand("tp @a 0.5 -43 60.5");
+        context.waitTicks(4);
+        server.runOnServer(s -> check(player(s).position().distanceTo(origin) < 1.5, "Stepping back in went to " + player(s).position()));
+
+        // Looking straight up opens a gate home, to the respawn point.
+        server.runOnServer(s -> {
+            ServerPlayer player = player(s);
+            player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+            player.setXRot(-90);
+            check(SpellCasting.cast(s.overworld(), player, ModSpells.ASTRAL_GATE, 1), "The gate home was refused");
+        });
+        context.waitTicks(SpellTuning.GATE_CROSS_TICKS + 5);
+        server.runOnServer(s -> check(player(s).position().distanceTo(home) < 1.5, "The gate home went to " + player(s).position()));
     }
 
     /** Casts {@code spell} at {@code at} from wherever the caster stands, aimed in the same tick, with a full pool. */

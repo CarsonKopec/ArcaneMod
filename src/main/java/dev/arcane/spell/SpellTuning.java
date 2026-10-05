@@ -76,130 +76,145 @@ public final class SpellTuning {
 
     // Celestial Judgment (Astral Staff)
 
-    /** Nearly a full base pool: one cast at a time, unless gear raises max mana. */
     public static final float JUDGMENT_MANA = 90;
-    /** One minute. */
-    public static final int JUDGMENT_COOLDOWN_TICKS = 1200;
+    /** 45 s. */
+    public static final int JUDGMENT_COOLDOWN_TICKS = 900;
     /** The channel (2 s) must be held to the end; releasing early casts nothing and costs nothing. */
     public static final int JUDGMENT_CHARGE_TICKS = 40;
     /** How far away the caster can mark the ground. */
-    public static final double JUDGMENT_RANGE = 96;
+    public static final double JUDGMENT_RANGE = 128;
     /** The mark must be at least this far away horizontally, so the caster is never inside the crater. */
-    public static final double JUDGMENT_MIN_DISTANCE = 18;
+    public static final double JUDGMENT_MIN_DISTANCE = 30;
     /** From the mark to the beam: the sky darkens and the circles form (2.5 s). */
     public static final int JUDGMENT_GATHER_TICKS = 50;
-    /** How long the beam burns before it detonates (1.5 s). */
+    /** How long the beam burns before it detonates (1.5 s); it bores its shaft down to bedrock in that time. */
     public static final int JUDGMENT_BEAM_TICKS = 30;
     /** The crater is carved outwards over this many ticks after the detonation, spreading the work. */
-    public static final int JUDGMENT_CARVE_TICKS = 8;
+    public static final int JUDGMENT_CARVE_TICKS = 30;
     /** Height of the sky circle above the mark. */
-    public static final double JUDGMENT_SKY_HEIGHT = 64;
-    /** The beam's radius, and the shaft it bores. */
-    public static final double JUDGMENT_BEAM_RADIUS = 3.5;
-    /** How far below the mark the shaft goes. */
-    public static final int JUDGMENT_SHAFT_DEPTH = 24;
+    public static final double JUDGMENT_SKY_HEIGHT = 80;
+    /** The beam's radius, and the shaft it bores from the surface to bedrock. */
+    public static final double JUDGMENT_BEAM_RADIUS = 6;
     /** Damage to anything in the beam, every {@link #JUDGMENT_BEAM_HIT_INTERVAL} ticks; it also sets them alight. */
-    public static final float JUDGMENT_BEAM_DAMAGE = 12;
+    public static final float JUDGMENT_BEAM_DAMAGE = 30;
     public static final int JUDGMENT_BEAM_HIT_INTERVAL = 10;
+    public static final int JUDGMENT_BEAM_FIRE_SECONDS = 10;
     /** The crater's horizontal radius, give or take 15% to roughen the rim. */
-    public static final double JUDGMENT_CRATER_RADIUS = 12;
+    public static final double JUDGMENT_CRATER_RADIUS = 24;
     /** How far the crater reaches below the mark; above it, it reaches as far as it does sideways. */
-    public static final double JUDGMENT_CRATER_DEPTH = 9;
+    public static final double JUDGMENT_CRATER_DEPTH = 16;
     /** Entities this close to the mark are caught by the detonation. */
-    public static final double JUDGMENT_BLAST_RADIUS = 16;
+    public static final double JUDGMENT_BLAST_RADIUS = 32;
     /** Detonation damage at the centre, falling to nothing at the edge. */
-    public static final float JUDGMENT_BLAST_DAMAGE = 40;
-    public static final double JUDGMENT_BLAST_KNOCKBACK = 2.4;
+    public static final float JUDGMENT_BLAST_DAMAGE = 100;
+    public static final double JUDGMENT_BLAST_KNOCKBACK = 4.0;
     /** Strikes in progress at once, server-wide; more fizzle. */
     public static final int MAX_ACTIVE_JUDGMENTS = 8;
 
     // Meteor Swarm (Astral Staff)
 
     public static final float METEOR_MANA = 75;
-    /** 45 s. */
-    public static final int METEOR_COOLDOWN_TICKS = 900;
+    /** 35 s. */
+    public static final int METEOR_COOLDOWN_TICKS = 700;
     /** 1.5 s. */
     public static final int METEOR_CHARGE_TICKS = 30;
-    public static final double METEOR_RANGE = 96;
-    public static final double METEOR_MIN_DISTANCE = 16;
+    public static final double METEOR_RANGE = 128;
+    public static final double METEOR_MIN_DISTANCE = 24;
     /** Meteors land anywhere within this radius of the mark. */
-    public static final double METEOR_AREA_RADIUS = 14;
-    public static final int METEOR_COUNT = 18;
-    /** One meteor every this many ticks: 18 over 3.6 s. */
-    public static final int METEOR_INTERVAL_TICKS = 4;
+    public static final double METEOR_AREA_RADIUS = 24;
+    public static final int METEOR_COUNT = 40;
+    /** One meteor every this many ticks: 40 over 4 s, then the Dread Star. */
+    public static final int METEOR_INTERVAL_TICKS = 2;
     /** Height of the burning sigil the meteors fall from, above the mark. */
-    public static final double METEOR_SKY_HEIGHT = 55;
+    public static final double METEOR_SKY_HEIGHT = 70;
     /** Blocks per tick. */
-    public static final double METEOR_SPEED = 3.0;
+    public static final double METEOR_SPEED = 3.5;
     /** A meteor that hits nothing burns out after this long. */
-    public static final int METEOR_LIFETIME_TICKS = 60;
-    public static final double METEOR_BLAST_RADIUS = 4.5;
+    public static final int METEOR_LIFETIME_TICKS = 80;
+    public static final double METEOR_BLAST_RADIUS = 6;
     /** At the centre of each impact, falling to nothing at its edge; it also sets things alight. */
-    public static final float METEOR_DAMAGE = 14;
-    public static final int METEOR_FIRE_SECONDS = 4;
-    /** Vanilla explosion strength for terrain; TNT is 4. */
-    public static final float METEOR_TERRAIN_STRENGTH = 3.5f;
+    public static final float METEOR_DAMAGE = 30;
+    public static final int METEOR_FIRE_SECONDS = 8;
+    /** Vanilla explosion strength for terrain: a charged creeper's. TNT is 4. */
+    public static final float METEOR_TERRAIN_STRENGTH = 6;
+    /** The swarm ends with the Dread Star: one colossal, slower meteor straight onto the mark. */
+    public static final double DREAD_STAR_SPEED = 2.2;
+    public static final double DREAD_STAR_BLAST_RADIUS = 16;
+    public static final float DREAD_STAR_DAMAGE = 80;
+    public static final float DREAD_STAR_TERRAIN_STRENGTH = 12;
+    /** How much larger the Dread Star looks than a meteor. */
+    public static final float DREAD_STAR_SIZE = 4;
     public static final int MAX_ACTIVE_SWARMS = 8;
 
     // Singularity (Astral Staff)
 
     public static final float SINGULARITY_MANA = 70;
-    /** 40 s. */
-    public static final int SINGULARITY_COOLDOWN_TICKS = 800;
+    /** 35 s. */
+    public static final int SINGULARITY_COOLDOWN_TICKS = 700;
     public static final int SINGULARITY_CHARGE_TICKS = 30;
-    public static final double SINGULARITY_RANGE = 64;
-    public static final double SINGULARITY_MIN_DISTANCE = 12;
+    public static final double SINGULARITY_RANGE = 96;
+    public static final double SINGULARITY_MIN_DISTANCE = 24;
     /** How high above the mark the hole hangs. */
-    public static final double SINGULARITY_LIFT = 3;
-    /** 6 s, then it collapses. */
-    public static final int SINGULARITY_DURATION_TICKS = 120;
+    public static final double SINGULARITY_LIFT = 6;
+    /** 10 s, then it collapses. */
+    public static final int SINGULARITY_DURATION_TICKS = 200;
     /** Creatures, items and projectiles this close are dragged in. */
-    public static final double SINGULARITY_PULL_RADIUS = 14;
+    public static final double SINGULARITY_PULL_RADIUS = 32;
     /** Speed added towards the hole each tick at the edge of its pull, tripling at its heart. */
-    public static final double SINGULARITY_PULL = 0.07;
+    public static final double SINGULARITY_PULL = 0.12;
     /** Anything this close to the heart is crushed every {@link #SINGULARITY_CRUSH_INTERVAL} ticks. */
-    public static final double SINGULARITY_CRUSH_RADIUS = 2.5;
-    public static final float SINGULARITY_CRUSH_DAMAGE = 4;
+    public static final double SINGULARITY_CRUSH_RADIUS = 4;
+    public static final float SINGULARITY_CRUSH_DAMAGE = 10;
     public static final int SINGULARITY_CRUSH_INTERVAL = 10;
-    /** The hole eats the ground within this radius, nearest first. */
-    public static final double SINGULARITY_CONSUME_RADIUS = 5;
-    public static final int SINGULARITY_CONSUME_PER_TICK = 3;
+    /** The hole devours everything within this radius, nearest first. */
+    public static final double SINGULARITY_CONSUME_RADIUS = 12;
+    public static final int SINGULARITY_CONSUME_PER_TICK = 30;
+    /** Of the blocks it eats each tick, this many are torn loose and fly into it, rather than simply vanishing. */
+    public static final int SINGULARITY_DEBRIS_PER_TICK = 3;
     /** The collapse hurls everything this close outwards. */
-    public static final double SINGULARITY_COLLAPSE_RADIUS = 9;
-    public static final float SINGULARITY_COLLAPSE_DAMAGE = 16;
-    public static final double SINGULARITY_COLLAPSE_KNOCKBACK = 2.0;
+    public static final double SINGULARITY_COLLAPSE_RADIUS = 24;
+    public static final float SINGULARITY_COLLAPSE_DAMAGE = 60;
+    public static final double SINGULARITY_COLLAPSE_KNOCKBACK = 4.0;
+    /** Vanilla explosion strength of the collapse, for terrain. TNT is 4. */
+    public static final float SINGULARITY_COLLAPSE_TERRAIN_STRENGTH = 8;
     public static final int MAX_ACTIVE_SINGULARITIES = 4;
 
     // Chrono Field (Astral Staff)
 
     public static final float CHRONO_MANA = 60;
-    /** 50 s. */
-    public static final int CHRONO_COOLDOWN_TICKS = 1000;
+    /** 40 s. */
+    public static final int CHRONO_COOLDOWN_TICKS = 800;
     /** 1 s. */
     public static final int CHRONO_CHARGE_TICKS = 20;
     /** The dome's radius, around where the caster stood. */
-    public static final double CHRONO_RADIUS = 10;
-    /** 8 s. */
-    public static final int CHRONO_DURATION_TICKS = 160;
+    public static final double CHRONO_RADIUS = 32;
+    /** 15 s. */
+    public static final int CHRONO_DURATION_TICKS = 300;
     /** Damage dealt to frozen creatures is held back, then lands this much harder when time resumes. */
-    public static final float CHRONO_DAMAGE_MULTIPLIER = 1.5f;
+    public static final float CHRONO_DAMAGE_MULTIPLIER = 3;
+    /** While inside their own field, the caster moves and strikes with these: Speed II, Strength III, Haste II. */
+    public static final int CHRONO_SPEED_AMPLIFIER = 1;
+    public static final int CHRONO_STRENGTH_AMPLIFIER = 2;
+    public static final int CHRONO_HASTE_AMPLIFIER = 1;
     public static final int MAX_ACTIVE_CHRONO_FIELDS = 4;
 
     // Astral Gate (Astral Staff)
 
     public static final float GATE_MANA = 50;
-    /** 30 s. */
-    public static final int GATE_COOLDOWN_TICKS = 600;
+    /** 15 s. */
+    public static final int GATE_COOLDOWN_TICKS = 300;
     public static final int GATE_CHARGE_TICKS = 20;
-    public static final double GATE_RANGE = 160;
+    public static final double GATE_RANGE = 384;
     /** Nearer than this, Blink does the job. */
     public static final double GATE_MIN_DISTANCE = 8;
+    /** Looking at least this far up (degrees) when released opens a gate home instead: to the caster's respawn point. */
+    public static final float GATE_HOME_PITCH = 60;
     /** From the gates opening to the caster stepping through. */
     public static final int GATE_CROSS_TICKS = 10;
-    /** How long the gates stay open, for others to follow. */
-    public static final int GATE_OPEN_TICKS = 100;
-    /** Anything standing this close to the first gate's centre is carried through. */
-    public static final double GATE_RADIUS = 1.5;
+    /** How long the gates stay open, both ways, for anyone. */
+    public static final int GATE_OPEN_TICKS = 400;
+    /** Anything standing this close to a gate's centre is carried through. */
+    public static final double GATE_RADIUS = 2;
     public static final int MAX_ACTIVE_GATES = 8;
 
     /** Blocks at least this blast resistant survive spells that vaporise terrain, as obsidian (1200) does. */

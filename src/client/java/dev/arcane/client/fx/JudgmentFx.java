@@ -71,6 +71,12 @@ final class JudgmentFx {
     /** How long the crater smoulders after the detonation. */
     private static final int AFTERMATH_TICKS = 200;
     private static final double CRATER = SpellTuning.JUDGMENT_CRATER_RADIUS;
+    /** The beam's half-width, and the unit the rest of the strike's shapes are sized in. */
+    private static final float BEAM = (float) SpellTuning.JUDGMENT_BEAM_RADIUS;
+    /** The sky seal's radius. */
+    private static final double SKY = CRATER * 1.7;
+    /** How far the detonation's shockwave races. */
+    private static final double SHOCKWAVE = SpellTuning.JUDGMENT_BLAST_RADIUS * 1.8;
     private static final int TINT = 0x0C0620;
 
     private static final Fx.Tracker<Strike> STRIKES = new Fx.Tracker<>();
@@ -168,10 +174,10 @@ final class JudgmentFx {
                 Vec3 ground = impact.add(0, 0.06, 0);
                 double outer = CRATER * ease(age / 18f);
                 groundRunes = show(groundRunes, circle(ground, UP, outer * 0.95, 0.06f, scaled(GOLD, 0.3f * heat), 4, id, 0.35f));
-                planes.seal(ground, UP, outer, 0.22f, 6, age * 0.012f, scaled(GOLD, heat));
-                if (age >= 8) planes.ring(ground, UP, 7.5 * ease((age - 8) / 14f), 0.16f, scaled(ICE, heat));
-                if (age >= 16) planes.ring(ground, UP, 3.6 * ease((age - 16) / 12f), 0.14f, scaled(ColorRgba.WHITE, heat));
-                groundLight = light(groundLight, impact.add(0, 1.5, 0), beaming ? 26 : 6 + 10 * g, beaming ? 5 : 0.4f + 1.8f * g, PALE_GOLD);
+                planes.seal(ground, UP, outer, 0.4f, 6, age * 0.012f, scaled(GOLD, heat));
+                if (age >= 8) planes.ring(ground, UP, CRATER * 0.62 * ease((age - 8) / 14f), 0.3f, scaled(ICE, heat));
+                if (age >= 16) planes.ring(ground, UP, CRATER * 0.3 * ease((age - 16) / 12f), 0.25f, scaled(ColorRgba.WHITE, heat));
+                groundLight = light(groundLight, impact.add(0, 2, 0), beaming ? 48 : 10 + 20 * g, beaming ? 6 : 0.6f + 2.4f * g, PALE_GOLD);
             } else {
                 groundRunes = hide(groundRunes);
                 groundLight = unlight(groundLight);
@@ -181,12 +187,12 @@ final class JudgmentFx {
             // detonation.
             float skyFade = blasted ? 1 - blastAge / 30f : 1;
             if (skyFade > 0) {
-                double outer = 22 * ease(age / 30f);
+                double outer = SKY * ease(age / 30f);
                 float bright = skyFade * (0.6f + 0.4f * g);
-                skyRunes = show(skyRunes, circle(sky, DOWN, outer * 0.95, 0.12f, scaled(GOLD, 0.3f * bright), 5, id + 3L, 0.12f));
-                planes.seal(sky, DOWN, outer, 0.5f, 6, -age * 0.008f, scaled(GOLD, bright));
-                if (age >= 10) planes.ring(sky.subtract(0, 0.3, 0), DOWN, 10 * ease((age - 10) / 20f), 0.4f, scaled(ColorRgba.WHITE, skyFade));
-                skyLight = light(skyLight, sky.subtract(0, 3, 0), 28, (0.5f + 1.5f * g) * skyFade, PALE_GOLD);
+                skyRunes = show(skyRunes, circle(sky, DOWN, outer * 0.95, 0.2f, scaled(GOLD, 0.3f * bright), 5, id + 3L, 0.12f));
+                planes.seal(sky, DOWN, outer, 0.9f, 6, -age * 0.008f, scaled(GOLD, bright));
+                if (age >= 10) planes.ring(sky.subtract(0, 0.3, 0), DOWN, SKY * 0.45 * ease((age - 10) / 20f), 0.7f, scaled(ColorRgba.WHITE, skyFade));
+                skyLight = light(skyLight, sky.subtract(0, 4, 0), 48, (0.8f + 2.2f * g) * skyFade, PALE_GOLD);
             } else {
                 skyRunes = hide(skyRunes);
                 skyLight = unlight(skyLight);
@@ -195,16 +201,17 @@ final class JudgmentFx {
             // The beam: three nested billboards, slamming down then boring into the shaft, with a glow at its foot.
             if (beaming) {
                 float slam = beamAge < 3 ? 0.25f + 0.75f * beamAge / 3f : 1 + 0.06f * Mth.sin(age * 1.7f);
-                double bottom = impact.y - SpellTuning.JUDGMENT_SHAFT_DEPTH * Math.min(1, beamAge / (float) Math.max(1, beamTicks - 4));
+                double bottom = Mth.lerp(Math.min(1, beamAge / (float) Math.max(1, beamTicks - 4)), impact.y, world().getMinY());
                 double top = sky.y + 1;
                 Vec3 middle = new Vec3(impact.x, (top + bottom) / 2, impact.z);
                 float height = (float) (top - bottom);
-                beamHalo = show(beamHalo, beamSprite(middle, 15 * slam, height, scaled(GOLD, 0.4f)));
-                beamBody = show(beamBody, beamSprite(middle, 6.5f * slam, height, PALE_GOLD));
-                beamCore = show(beamCore, beamSprite(middle, 2.4f * slam, height, ColorRgba.WHITE));
-                planes.glow(impact.add(0, 1.2, 0), 4.5f + 0.6f * Mth.sin(age * 2.1f), PALE_GOLD);
+                // The body is the shaft's width; a halo glows far wider, a white-hot core runs down the middle.
+                beamHalo = show(beamHalo, beamSprite(middle, BEAM * 4.4f * slam, height, scaled(GOLD, 0.4f)));
+                beamBody = show(beamBody, beamSprite(middle, BEAM * 2 * slam, height, PALE_GOLD));
+                beamCore = show(beamCore, beamSprite(middle, BEAM * 0.7f * slam, height, ColorRgba.WHITE));
+                planes.glow(impact.add(0, 2, 0), BEAM * 1.4f + Mth.sin(age * 2.1f), PALE_GOLD);
                 BeamLight light = NebulonLights.beam(impact.subtract(0, 2, 0), new Vec3(impact.x, Math.min(top, impact.y + 200), impact.z))
-                        .color(PALE_GOLD).radius(10).brightness(4.5f).maxRenderDistance(RENDER_DISTANCE).build();
+                        .color(PALE_GOLD).radius(BEAM * 2.5f).brightness(6).maxRenderDistance(RENDER_DISTANCE).build();
                 if (beamLight != null && beamLight.isAlive()) beamLight.set(light);
                 else beamLight = NebulonLights.lights().add(world(), light);
             } else {
@@ -218,19 +225,21 @@ final class JudgmentFx {
             // The detonation: a fireball, two shockwave rings racing outwards and thinning as they go, a blinding light
             // fading, the crater glowing.
             if (blasted) {
-                if (blastAge <= 18) {
-                    float size = blastAge < 4 ? 4 + 12 * blastAge / 4f : 16 + (blastAge - 4) * 0.4f;
-                    float fade = blastAge < 4 ? 1 : 1 - (blastAge - 4) / 14f;
-                    planes.glow(impact.add(0, 3, 0), size, scaled(PALE_GOLD, fade));
+                if (blastAge <= 20) {
+                    float fireball = (float) CRATER * 1.3f;
+                    float size = blastAge < 5 ? fireball * (0.25f + 0.75f * blastAge / 5f) : fireball + (blastAge - 5) * 0.5f;
+                    float fade = blastAge < 5 ? 1 : 1 - (blastAge - 5) / 15f;
+                    planes.glow(impact.add(0, CRATER * 0.25, 0), size, scaled(PALE_GOLD, fade));
                 }
-                if (blastAge <= 16) {
-                    float fade = 1 - blastAge / 16f;
-                    planes.ring(impact.add(0, 0.2, 0), UP, 3 + 27 * ease(blastAge / 14f), 1.6f * fade + 0.1f, scaled(ColorRgba.WHITE, fade));
-                    planes.ring(impact.add(0, 0.3, 0), UP, 2 + 18 * ease(blastAge / 16f), 0.8f * fade + 0.1f, scaled(GOLD, fade));
+                if (blastAge <= 18) {
+                    float fade = 1 - blastAge / 18f;
+                    planes.ring(impact.add(0, 0.2, 0), UP, 4 + SHOCKWAVE * ease(blastAge / 16f), 3f * fade + 0.15f, scaled(ColorRgba.WHITE, fade));
+                    planes.ring(impact.add(0, 0.3, 0), UP, 3 + SHOCKWAVE * 0.65 * ease(blastAge / 18f), 1.5f * fade + 0.15f, scaled(GOLD, fade));
                 }
                 float flash = 1 - blastAge / 30f;
-                blastLight = flash > 0 ? light(blastLight, impact.add(0, 4, 0), 56, 7 * flash * flash, PALE_GOLD) : unlight(blastLight);
-                emberLight = light(emberLight, impact.subtract(0, 4, 0), 18, 2.2f * (1 - blastAge / (float) AFTERMATH_TICKS), EMBER);
+                blastLight = flash > 0 ? light(blastLight, impact.add(0, 6, 0), 110, 9 * flash * flash, PALE_GOLD) : unlight(blastLight);
+                float smoulder = 3 * (1 - blastAge / (float) AFTERMATH_TICKS);
+                emberLight = light(emberLight, impact.subtract(0, CRATER * 0.3, 0), (float) CRATER * 1.2f, smoulder, EMBER);
             }
             planes.end();
         }
@@ -253,7 +262,7 @@ final class JudgmentFx {
         private void stormParticles() {
             int count = Fx.scaled(beamAge >= 0 ? 3 : 1 + Math.round(3 * gathered()));
             for (int i = 0; i < count; i++) {
-                double angle = random.nextDouble() * Mth.TWO_PI, radius = 12 + random.nextDouble() * 26;
+                double angle = random.nextDouble() * Mth.TWO_PI, radius = SKY * (0.55 + random.nextDouble() * 1.2);
                 Vec3 at = onCircle(sky, radius, angle, 2 + random.nextDouble() * 5);
                 // Tangential, so the cloud turns around the seal.
                 Vec3 swirl = new Vec3(-Math.sin(angle), 0, Math.cos(angle)).scale(0.12 + random.nextDouble() * 0.1);
@@ -270,7 +279,7 @@ final class JudgmentFx {
                 particle(i % 2 == 0 ? ModParticles.GOLD : ParticleTypes.END_ROD, at, new Vec3(0, 0.25 + random.nextDouble() * 0.35, 0));
             }
             for (int i = 0, n = Fx.scaled(2); i < n; i++) {
-                Vec3 at = onCircle(sky, Math.sqrt(random.nextDouble()) * 20, random.nextDouble() * Mth.TWO_PI, -1);
+                Vec3 at = onCircle(sky, Math.sqrt(random.nextDouble()) * SKY * 0.9, random.nextDouble() * Mth.TWO_PI, -1);
                 particle(ModParticles.GOLD, at, new Vec3(0, -0.25, 0));
             }
             if (age > gatherTicks - 25) {
@@ -291,7 +300,7 @@ final class JudgmentFx {
                 particle(ModParticles.GOLD, foot, new Vec3(Math.cos(angle) * speed, 0.15 + random.nextDouble() * 0.45, Math.sin(angle) * speed));
             }
             for (int i = 0, n = Fx.scaled(4); i < n; i++) {
-                Vec3 at = onCircle(impact, random.nextDouble() * 3, random.nextDouble() * Mth.TWO_PI, 5 + random.nextDouble() * 55);
+                Vec3 at = onCircle(impact, random.nextDouble() * BEAM, random.nextDouble() * Mth.TWO_PI, 5 + random.nextDouble() * 70);
                 particle(ParticleTypes.END_ROD, at, new Vec3(0, -1.5, 0));
             }
             BlockParticleOption debris = new BlockParticleOption(ParticleTypes.BLOCK, ground());
@@ -300,8 +309,8 @@ final class JudgmentFx {
             }
             for (int i = 0, n = Fx.scaled(3); i < n; i++) {
                 double angle = random.nextDouble() * Mth.TWO_PI;
-                Vec3 at = onCircle(impact, 4 + random.nextDouble() * 3, angle, 0.3);
-                particle(ParticleTypes.LARGE_SMOKE, at, new Vec3(Math.cos(angle) * 0.15, 0.05, Math.sin(angle) * 0.15));
+                Vec3 at = onCircle(impact, BEAM + 1 + random.nextDouble() * 4, angle, 0.3);
+                particle(ParticleTypes.LARGE_SMOKE, at, new Vec3(Math.cos(angle) * 0.2, 0.05, Math.sin(angle) * 0.2));
             }
             particle(ParticleTypes.LAVA, foot, Vec3.ZERO);
         }
@@ -309,9 +318,9 @@ final class JudgmentFx {
         /** The detonation itself: flares, fireballs, a sphere of sparks, a fountain of debris and lava, the first smoke. */
         private void explosionParticles() {
             for (int i = 0; i < 5; i++) particle(FLARE, impact.add(jitter(random, 6), 1 + random.nextDouble() * 4, jitter(random, 6)), Vec3.ZERO);
-            explosionBursts(4);
+            explosionBursts(8);
             for (int i = 0, n = Fx.scaled(24); i < n; i++) {
-                particle(ParticleTypes.EXPLOSION, impact.add(upwards(random, 0.2).scale(2 + random.nextDouble() * 5)), Vec3.ZERO);
+                particle(ParticleTypes.EXPLOSION, impact.add(upwards(random, 0.2).scale(2 + random.nextDouble() * CRATER * 0.5)), Vec3.ZERO);
             }
             for (int i = 0, n = Fx.scaled(180); i < n; i++) {
                 particle(ModParticles.GOLD, impact.add(0, 1, 0), upwards(random, 0.3).scale(0.6 + random.nextDouble() * 1.2));
@@ -330,16 +339,16 @@ final class JudgmentFx {
         /** Fireballs across a dome over the crater. */
         private void explosionBursts(int count) {
             for (int i = 0; i < count; i++) {
-                particle(ParticleTypes.EXPLOSION_EMITTER, impact.add(upwards(random, 0.4).scale(random.nextDouble() * 8)), Vec3.ZERO);
+                particle(ParticleTypes.EXPLOSION_EMITTER, impact.add(upwards(random, 0.4).scale(random.nextDouble() * CRATER * 0.6)), Vec3.ZERO);
             }
         }
 
         /** The shockwave racing outwards across the ground, the smoke column, then embers rising from the crater. */
         private void aftermathParticles() {
-            if (blastAge <= 3) explosionBursts(2);
-            if (blastAge <= 12) {
-                double radius = 2 + 28 * ease(blastAge / 12f);
-                for (int i = 0, n = Fx.scaled(28); i < n; i++) {
+            if (blastAge <= 5) explosionBursts(3);
+            if (blastAge <= 14) {
+                double radius = 4 + SHOCKWAVE * ease(blastAge / 14f);
+                for (int i = 0, n = Fx.scaled(48); i < n; i++) {
                     double angle = random.nextDouble() * Mth.TWO_PI;
                     Vec3 out = new Vec3(Math.cos(angle), 0, Math.sin(angle));
                     particle(i % 4 == 0 ? ModParticles.GOLD : ParticleTypes.CLOUD, onCircle(impact, radius, angle, 0.3), out.scale(0.4).add(0, 0.05, 0));
@@ -347,8 +356,8 @@ final class JudgmentFx {
             }
             if (blastAge <= 60) {
                 for (int i = 0, n = Fx.scaled(2); i < n; i++) {
-                    Vec3 at = onCircle(impact, random.nextDouble() * 3, random.nextDouble() * Mth.TWO_PI, random.nextDouble() * 4);
-                    particle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, at, new Vec3(0, 0.1, 0));
+                    Vec3 at = onCircle(impact, random.nextDouble() * BEAM, random.nextDouble() * Mth.TWO_PI, random.nextDouble() * 6);
+                    particle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, at, new Vec3(0, 0.12, 0));
                 }
             }
             if (blastAge % 2 == 0) {

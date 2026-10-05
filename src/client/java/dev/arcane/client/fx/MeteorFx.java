@@ -34,7 +34,8 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Meteor Swarm as the client sees it: a burning seal over the target area, its edge marked in red on the ground, and
- * each meteor a blazing ball trailing flame and smoke, flown here from its launch message until it strikes.
+ * each meteor a blazing ball trailing flame and smoke, flown here from its launch message until it strikes. The Dread
+ * Star, last, is the same at its own far larger size.
  */
 final class MeteorFx {
     private static final Fx.Tracker<Swarm> SWARMS = new Fx.Tracker<>();
@@ -130,6 +131,8 @@ final class MeteorFx {
         final Vec3 start;
         final Vec3 velocity;
         final int lifetime;
+        /** 1 for a meteor; the Dread Star is several times that. */
+        final float size;
         final Fx.Planes planes = new Fx.Planes();
         final RandomSource random = RandomSource.create();
         PointLightHandle light;
@@ -141,6 +144,7 @@ final class MeteorFx {
             this.start = launch.position();
             this.velocity = launch.direction();
             this.lifetime = Math.max(1, launch.age());
+            this.size = Math.max(1, launch.power());
             this.position = start;
         }
 
@@ -149,9 +153,14 @@ final class MeteorFx {
             impactAge = 0;
             position = at;
             float near = proximity(at);
-            ScreenEffects.shake(0.35f * near);
-            ScreenEffects.flash(0.12f * near);
+            ScreenEffects.shake(Math.min(1, 0.35f * size) * near);
+            ScreenEffects.flash(Math.min(1, 0.12f * size * size) * near);
             if (particlesVisible(at)) impactParticles();
+        }
+
+        /** How long its impact keeps glowing: longer for the Dread Star. */
+        private int impactTicks() {
+            return Math.round(IMPACT_TICKS * (float) Math.sqrt(size));
         }
 
         @Override public boolean tick() {
@@ -164,52 +173,60 @@ final class MeteorFx {
                 if (particlesVisible(position)) trailParticles(previous);
             }
             SpellLighting.guarded(this::animate);
-            return impactAge > IMPACT_TICKS || impactAge < 0 && age > lifetime + 5;
+            return impactAge > impactTicks() || impactAge < 0 && age > lifetime + 5;
         }
 
         private void animate() {
             planes.begin();
             if (impactAge < 0) {
-                planes.glow(position, 1.8f + 0.3f * Mth.sin(age * 1.3f), BLAZE);
-                planes.glow(position.subtract(velocity.scale(0.4)), 1.3f, scaled(FIRE, 0.8f));
-                light = light(light, position, 12, 2.5f, FIRE);
+                planes.glow(position, size * (1.8f + 0.3f * Mth.sin(age * 1.3f)), BLAZE);
+                planes.glow(position.subtract(velocity.scale(0.4 * size)), size * 1.3f, scaled(FIRE, 0.8f));
+                light = light(light, position, 12 * size, 2.5f * size, FIRE);
             } else {
-                float fade = 1 - impactAge / (float) IMPACT_TICKS;
-                if (impactAge <= 10) planes.glow(position.add(0, 1, 0), 2 + 5 * ease(impactAge / 3f), scaled(BLAZE, 1 - impactAge / 10f));
-                if (impactAge <= 9) planes.ring(position.add(0, 0.2, 0), UP, 1 + 8 * ease(impactAge / 8f), 0.5f * (1 - impactAge / 9f) + 0.05f,
-                        scaled(FIRE, 1 - impactAge / 9f));
-                light = light(light, position.add(0, 1.5, 0), 14, 4 * fade * fade, FIRE);
+                int glowTicks = Math.round(10 * size), ringTicks = Math.round(9 * size);
+                float fade = 1 - impactAge / (float) impactTicks();
+                if (impactAge <= glowTicks) {
+                    planes.glow(position.add(0, size, 0), size * (2 + 5 * ease(impactAge / 3f)), scaled(BLAZE, 1 - impactAge / (float) glowTicks));
+                }
+                if (impactAge <= ringTicks) {
+                    float left = 1 - impactAge / (float) ringTicks;
+                    planes.ring(position.add(0, 0.2, 0), UP, size * (1 + 8 * ease(impactAge / (float) (ringTicks - 1))), size * 0.5f * left + 0.05f,
+                            scaled(FIRE, left));
+                }
+                light = light(light, position.add(0, 1.5, 0), 14 * size, 4 * size * fade * fade, FIRE);
             }
             planes.end();
         }
 
         /** Flame and smoke along this tick's stretch of the path, with the odd spat ember. */
         private void trailParticles(Vec3 from) {
-            for (int i = 0, n = Fx.scaled(6); i < n; i++) {
-                Vec3 at = from.lerp(position, random.nextDouble()).add(anyDirection(random).scale(0.4));
-                particle(ParticleTypes.FLAME, at, anyDirection(random).scale(0.03));
+            for (int i = 0, n = Fx.scaled(Math.round(6 * size)); i < n; i++) {
+                Vec3 at = from.lerp(position, random.nextDouble()).add(anyDirection(random).scale(0.4 * size));
+                particle(ParticleTypes.FLAME, at, anyDirection(random).scale(0.03 * size));
             }
-            for (int i = 0, n = Fx.scaled(3); i < n; i++) {
-                particle(ParticleTypes.LARGE_SMOKE, from.lerp(position, random.nextDouble()), Vec3.ZERO);
+            for (int i = 0, n = Fx.scaled(Math.round(3 * size)); i < n; i++) {
+                particle(ParticleTypes.LARGE_SMOKE, from.lerp(position, random.nextDouble()).add(anyDirection(random).scale(0.3 * size)), Vec3.ZERO);
             }
             if (age % 2 == 0) particle(ParticleTypes.LAVA, position, Vec3.ZERO);
         }
 
         private void impactParticles() {
-            particle(ParticleTypes.EXPLOSION_EMITTER, position, Vec3.ZERO);
-            for (int i = 0, n = Fx.scaled(6); i < n; i++) {
-                particle(ParticleTypes.EXPLOSION, position.add(upwards(random, 0.2).scale(1 + random.nextDouble() * 2.5)), Vec3.ZERO);
+            for (int i = 0; i < Math.round(size * size); i++) {
+                particle(ParticleTypes.EXPLOSION_EMITTER, position.add(upwards(random, 0.3).scale(random.nextDouble() * 2 * (size - 1))), Vec3.ZERO);
             }
-            for (int i = 0, n = Fx.scaled(30); i < n; i++) {
-                particle(ParticleTypes.FLAME, position.add(0, 0.5, 0), upwards(random, 0.3).scale(0.2 + random.nextDouble() * 0.4));
+            for (int i = 0, n = Fx.scaled(Math.round(6 * size)); i < n; i++) {
+                particle(ParticleTypes.EXPLOSION, position.add(upwards(random, 0.2).scale(size * (1 + random.nextDouble() * 2.5))), Vec3.ZERO);
+            }
+            for (int i = 0, n = Fx.scaled(Math.round(30 * size)); i < n; i++) {
+                particle(ParticleTypes.FLAME, position.add(0, 0.5, 0), upwards(random, 0.3).scale(Math.sqrt(size) * (0.2 + random.nextDouble() * 0.4)));
             }
             BlockParticleOption debris = new BlockParticleOption(ParticleTypes.BLOCK, ground());
-            for (int i = 0, n = Fx.scaled(30); i < n; i++) {
-                particle(debris, position.add(0, 0.5, 0), upwards(random, 0.6).scale(0.4 + random.nextDouble() * 0.6));
+            for (int i = 0, n = Fx.scaled(Math.round(30 * size)); i < n; i++) {
+                particle(debris, position.add(0, 0.5, 0), upwards(random, 0.6).scale(Math.sqrt(size) * (0.4 + random.nextDouble() * 0.6)));
             }
-            for (int i = 0, n = Fx.scaled(10); i < n; i++) particle(ParticleTypes.LAVA, position, Vec3.ZERO);
-            for (int i = 0, n = Fx.scaled(4); i < n; i++) {
-                particle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, position.add(upwards(random, 0).scale(random.nextDouble() * 2)), new Vec3(0, 0.07, 0));
+            for (int i = 0, n = Fx.scaled(Math.round(10 * size)); i < n; i++) particle(ParticleTypes.LAVA, position, Vec3.ZERO);
+            for (int i = 0, n = Fx.scaled(Math.round(4 * size)); i < n; i++) {
+                particle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, position.add(upwards(random, 0).scale(random.nextDouble() * 2 * size)), new Vec3(0, 0.07, 0));
             }
         }
 

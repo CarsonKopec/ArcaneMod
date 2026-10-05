@@ -123,7 +123,8 @@ final class JudgmentStrike {
             top = Math.max(top, level.getHeight(Heightmap.Types.WORLD_SURFACE, column.getX(), column.getZ()));
         }
         shaftTop = Math.min(top, level.getMaxY());
-        shaftBottom = Math.max(level.getMinY(), Mth.floor(impact.y) - SpellTuning.JUDGMENT_SHAFT_DEPTH);
+        // All the way down: bedrock itself is unbreakable, so the shaft ends on it.
+        shaftBottom = level.getMinY();
         shaftRow = shaftTop;
     }
 
@@ -140,7 +141,7 @@ final class JudgmentStrike {
             Vec3 at = victim.getBoundingBox().getCenter();
             if (Mth.square(at.x - impact.x) + Mth.square(at.z - impact.z) > reach * reach) continue;
             if (victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), SpellTuning.JUDGMENT_BEAM_DAMAGE)) {
-                victim.igniteForSeconds(5);
+                victim.igniteForSeconds(SpellTuning.JUDGMENT_BEAM_FIRE_SECONDS);
             }
         }
     }
@@ -195,7 +196,8 @@ final class JudgmentStrike {
                     double d = Math.sqrt(Mth.square(x / rim) + Mth.square(z / rim) + Mth.square(up / vertical));
                     BlockPos pos = new BlockPos(centre.getX() + dx, y, centre.getZ() + dz);
                     if (d <= 1) {
-                        inside.add(new Spot(pos, d));
+                        // Air needs no carving; skipping it keeps the per-tick budget for real blocks.
+                        if (!level.getBlockState(pos).isAir()) inside.add(new Spot(pos, d));
                     } else if (d <= 1.2 && up <= 1) {
                         outside.add(pos);
                     }

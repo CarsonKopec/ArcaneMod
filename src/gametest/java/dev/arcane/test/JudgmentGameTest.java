@@ -28,12 +28,8 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class JudgmentGameTest implements FabricClientGameTest {
     private static final int GLFW_MOUSE_BUTTON_RIGHT = 1;
-    /** Superflat ground is four blocks deep; the crater needs a plateau of stone to dig into. Its top is at y=-44. */
-    private static final String PLATEAU = "fill -16 -63 -2 16 -44 46 minecraft:stone";
-    /** The mark, on the plateau's top face, 26 blocks from where the caster stands. */
-    private static final BlockPos MARK = new BlockPos(0, -44, 30);
-    /** Standing on the plateau, 26 blocks south of the mark, looking down at it (3.64 degrees, from eye height). */
-    private static final String CASTER_AT = "tp @a 0 -43 4 0 3.64";
+    private static final BlockPos MARK = Plateau.MARK;
+    private static final String CASTER_AT = Plateau.CASTER_AT;
     /** Every phase, with a few ticks to spare. */
     private static final int STRIKE_TICKS = SpellTuning.JUDGMENT_GATHER_TICKS + SpellTuning.JUDGMENT_BEAM_TICKS + SpellTuning.JUDGMENT_CARVE_TICKS + 5;
 
@@ -42,8 +38,8 @@ public final class JudgmentGameTest implements FabricClientGameTest {
             var server = game.getServer();
             server.runCommand("time set 6000");
             server.runCommand("gamemode survival @a");
-            server.runCommand(PLATEAU);
-            server.runCommand("setblock 5 -47 30 minecraft:obsidian");
+            Plateau.build(server);
+            server.runCommand("setblock 8 -48 40 minecraft:obsidian");
             server.runCommand("give @a arcane_spells:astral_staff");
             server.runCommand(CASTER_AT);
             game.getClientWorld().waitForChunksRender();
@@ -66,9 +62,9 @@ public final class JudgmentGameTest implements FabricClientGameTest {
                 ServerPlayer player = player(s);
                 player.setAttached(ModAttachments.CASTER, CasterState.FULL);
                 check(!SpellCasting.cast(s.overworld(), player, ModSpells.CELESTIAL_JUDGMENT, 0.5f), "A half channel was cast");
-                player.teleportTo(0, -43, 4);
+                player.teleportTo(0.5, -43, 6.5);
                 player.lookAt(EntityAnchorArgument.Anchor.EYES, MARK.offset(0, 0, -16).getCenter());
-                check(!SpellCasting.cast(s.overworld(), player, ModSpells.CELESTIAL_JUDGMENT, 1), "A mark 10 blocks away was struck");
+                check(!SpellCasting.cast(s.overworld(), player, ModSpells.CELESTIAL_JUDGMENT, 1), "A mark 18 blocks away was struck");
                 player.setXRot(-90);
                 check(!SpellCasting.cast(s.overworld(), player, ModSpells.CELESTIAL_JUDGMENT, 1), "Aiming at the sky struck something");
                 check(CasterState.of(player).manaAt() == SpellTuning.BASE_MAX_MANA, "A refused cast spent mana");
@@ -90,9 +86,10 @@ public final class JudgmentGameTest implements FabricClientGameTest {
             server.runCommand("gamemode survival @a");
 
             // The real thing: pigs at the mark, near the blast's edge and far away; a real two-second channel.
-            server.runCommand("summon minecraft:pig 0 -43 30 {NoAI:1b}");
-            server.runCommand("summon minecraft:pig 0 -43 45 {NoAI:1b}");
-            server.runCommand("summon minecraft:pig 0 -60 75 {NoAI:1b}");
+            // The edge pig stands just past the rim, inside the blast, to the side so the blast throws it along the plateau.
+            server.runCommand("summon minecraft:pig 0.5 -43 40.5 {NoAI:1b}");
+            server.runCommand("summon minecraft:pig 29.5 -43 40.5 {NoAI:1b}");
+            server.runCommand("summon minecraft:pig 0 -60 110 {NoAI:1b}");
             server.runCommand(CASTER_AT);
             server.runOnServer(s -> player(s).setAttached(ModAttachments.CASTER, CasterState.FULL));
             context.waitTicks(5);
@@ -114,7 +111,7 @@ public final class JudgmentGameTest implements FabricClientGameTest {
             // Watch from a spectator's vantage point off the plateau's corner, high enough to see the ground circles and
             // far enough back to see the sky circle too.
             server.runCommand("gamemode spectator @a");
-            server.runCommand("tp @a 34 -18 -4 facing 0 -13 30");
+            server.runCommand("tp @a 70 -15 -30 facing 0 -3 40");
             context.waitTicks(30);
             context.takeScreenshot("judgment-gather");
             context.waitTicks(SpellTuning.JUDGMENT_GATHER_TICKS - 30 + 12);
@@ -125,27 +122,28 @@ public final class JudgmentGameTest implements FabricClientGameTest {
             context.takeScreenshot("judgment-shockwave");
             context.waitTicks(40);
             context.takeScreenshot("judgment-aftermath");
-            server.runCommand("tp @a 0 -10 22 facing 0 -50 30");
+            server.runCommand("tp @a 0 15 25 facing 0 -50 40");
             context.waitTicks(5);
             context.takeScreenshot("judgment-crater");
 
             server.runOnServer(s -> {
                 ServerLevel level = s.overworld();
                 check(level.getBlockState(MARK.below(4)).isAir(), "No crater under the mark");
-                check(level.getBlockState(new BlockPos(0, -63, 30)).isAir(), "The shaft didn't reach bedrock");
-                check(level.getBlockState(new BlockPos(5, -47, 30)).is(Blocks.OBSIDIAN), "Obsidian didn't survive");
-                check(!level.getBlockState(new BlockPos(16, -45, 30)).isAir(), "The crater reached past its rim");
+                check(level.getBlockState(new BlockPos(0, -63, 40)).isAir(), "The shaft didn't reach bedrock");
+                check(level.getBlockState(new BlockPos(0, -64, 40)).is(Blocks.BEDROCK), "The shaft broke bedrock");
+                check(level.getBlockState(new BlockPos(8, -48, 40)).is(Blocks.OBSIDIAN), "Obsidian didn't survive");
+                check(!level.getBlockState(new BlockPos(36, -45, 40)).isAir(), "The crater reached past its rim");
                 int seared = 0;
-                for (BlockPos pos : BlockPos.betweenClosed(-16, -56, 14, 16, -40, 46)) {
+                for (BlockPos pos : BlockPos.betweenClosed(-30, -62, 10, 30, -40, 69)) {
                     BlockState state = level.getBlockState(pos);
                     if (state.is(Blocks.BLACKSTONE) || state.is(Blocks.BASALT) || state.is(Blocks.MAGMA_BLOCK)) seared++;
                 }
                 check(seared > 50, "Only " + seared + " scorched blocks");
                 List<? extends Pig> pigs = level.getEntities(EntityType.PIG, pig -> pig.isAlive());
                 check(pigs.stream().noneMatch(pig -> pig.position().distanceTo(MARK.getCenter()) < 8), "A pig at the mark survived");
-                Pig near = pigs.stream().filter(pig -> pig.getZ() > 40 && pig.getZ() < 60).findFirst().orElse(null);
+                Pig near = pigs.stream().filter(pig -> pig.getX() > 20 && pig.getY() > -70).findFirst().orElse(null);
                 check(near != null && near.getHealth() < near.getMaxHealth(), "The pig near the blast's edge was unhurt or killed: " + near);
-                Pig far = pigs.stream().filter(pig -> pig.getZ() > 70).findFirst().orElse(null);
+                Pig far = pigs.stream().filter(pig -> pig.getZ() > 100).findFirst().orElse(null);
                 check(far != null && far.getHealth() == far.getMaxHealth(), "The far pig was hurt");
             });
         }

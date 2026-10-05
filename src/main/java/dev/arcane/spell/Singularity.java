@@ -18,17 +18,20 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
  * Singularity, an Astral Staff spell: a black hole hangs over the marked ground for six seconds. It drags in creatures
  * (players under the server's PvP rules), dropped items, experience and projectiles, crushes whatever reaches its heart,
- * and eats the ground beneath it, nearest first. Then it collapses, hurling everything near it outwards. Owns every
- * singularity.
+ * and devours the ground around it, nearest first: a few blocks a tick are torn loose and fly into it, the rest simply
+ * vanish. Then it collapses in a blast that hurls everything outwards. Owns every singularity.
  *
  * <p>Nothing it pulls takes fall damage while caught; what it flings out at the end may.
  */
@@ -36,7 +39,9 @@ public final class Singularity extends MarkedSpell {
     private static final List<Hole> HOLES = new ArrayList<>();
     private static int nextSourceId = -1;
     /** The most blocks of ground looked at in a tick, eaten or not. */
-    private static final int MAX_CHECKED_PER_TICK = 64;
+    private static final int MAX_CHECKED_PER_TICK = 256;
+    /** Torn-loose blocks this close to the heart are swallowed. */
+    private static final double SWALLOW_RADIUS = 1.5;
 
     public Singularity() {
         super(new Properties().manaCost(SpellTuning.SINGULARITY_MANA).cooldown(SpellTuning.SINGULARITY_COOLDOWN_TICKS)
@@ -69,6 +74,8 @@ public final class Singularity extends MarkedSpell {
         final boolean mayBuild;
         /** The ground within reach, nearest first: the order it's eaten in. */
         final List<BlockPos> meal;
+        /** Blocks it has torn loose, still flying in. */
+        final List<FallingBlockEntity> debris = new ArrayList<>();
         int eaten;
         int age;
 
@@ -111,7 +118,8 @@ public final class Singularity extends MarkedSpell {
         private boolean caught(Entity entity) {
             if (entity == caster || entity.isSpectator() || entity instanceof Player player && player.isCreative()) return false;
             if (entity instanceof LivingEntity living) return SpellTargets.canHarm(caster, living);
-            return entity instanceof ItemEntity || entity instanceof ExperienceOrb || entity instanceof Projectile;
+            return entity instanceof ItemEntity || entity instanceof ExperienceOrb || entity instanceof Projectile
+                    || entity instanceof FallingBlockEntity;
         }
 
         /** Everything caught accelerates towards the heart, harder the nearer it is; old speed bleeds away, so few orbit. */
@@ -121,6 +129,10 @@ public final class Singularity extends MarkedSpell {
                 Vec3 toward = center.subtract(entity.getBoundingBox().getCenter());
                 double distance = toward.length();
                 if (distance > radius) continue;
+                if (entity instanceof FallingBlockEntity && distance < SWALLOW_RADIUS) {
+                    entity.discard();
+                    continue;
+                }
                 Vec3 direction = distance < 1.0e-3 ? Vec3.ZERO : toward.scale(1 / distance);
                 double strength = SpellTuning.SINGULARITY_PULL * (1 + 2 * (1 - distance / radius));
                 Vec3 velocity = entity.getDeltaMovement().scale(distance < 1 ? 0.5 : 0.92).add(direction.scale(strength));
@@ -141,20 +153,39 @@ public final class Singularity extends MarkedSpell {
             }
         }
 
-        /** Eats a few blocks of ground a tick, nearest the heart first, under the same rules as Celestial Judgment. */
+        /**
+         * Eats blocks of ground each tick, nearest the heart first, under the same rules as Celestial Judgment. The first
+         * few plain blocks each tick are torn loose and fly in, as falling blocks that never land; the rest vanish.
+         */
         private void consume() {
             int vaporised = 0;
             for (int checked = 0; checked < MAX_CHECKED_PER_TICK && eaten < meal.size()
                     && vaporised < SpellTuning.SINGULARITY_CONSUME_PER_TICK; checked++) {
                 BlockPos pos = meal.get(eaten++);
-                if (SpellTerrain.mayVaporise(level, caster, mayBuild, pos, level.getBlockState(pos))) {
+                BlockState state = level.getBlockState(pos);
+                if (!SpellTerrain.mayVaporise(level, caster, mayBuild, pos, state)) continue;
+                if (vaporised < SpellTuning.SINGULARITY_DEBRIS_PER_TICK && !state.hasBlockEntity() && state.getFluidState().isEmpty()) {
+                    tearLoose(pos, state);
+                } else {
                     SpellTerrain.vaporise(level, pos);
-                    vaporised++;
                 }
+                vaporised++;
             }
+            debris.removeIf(Entity::isRemoved);
+        }
+
+        private void tearLoose(BlockPos pos, BlockState state) {
+            FallingBlockEntity block = FallingBlockEntity.fall(level, pos, state);
+            block.disableDrop();
+            block.setNoGravity(true);
+            block.setDeltaMovement(center.subtract(pos.getCenter()).normalize().scale(0.3).add(0, 0.2, 0));
+            debris.add(block);
         }
 
         private void collapse() {
+            // Whatever it hadn't swallowed yet goes with it.
+            debris.forEach(Entity::discard);
+            debris.clear();
             SpellEffects.send(level, ModSpellEffects.SINGULARITY_COLLAPSE, center, Vec3.ZERO, 1, 0, id);
             level.playSound(null, center.x, center.y, center.z, ModSounds.SINGULARITY_COLLAPSE, SoundSource.PLAYERS, 8.0f, 1.0f);
             double radius = SpellTuning.SINGULARITY_COLLAPSE_RADIUS;
@@ -173,6 +204,9 @@ public final class Singularity extends MarkedSpell {
                 entity.setDeltaMovement(away.x * push, 0.5 + 0.6 * falloff, away.z * push);
                 entity.hurtMarked = true;
             }
+            // Entities were thrown first, so the blast's terrain half can't add a second shove.
+            level.explode(caster, level.damageSources().explosion(caster, caster), SpellTerrain.explosion(level, caster, mayBuild),
+                    center, SpellTuning.SINGULARITY_COLLAPSE_TERRAIN_STRENGTH, false, Level.ExplosionInteraction.BLOCK);
         }
     }
 }

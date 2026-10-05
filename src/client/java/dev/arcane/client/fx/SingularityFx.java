@@ -37,6 +37,8 @@ final class SingularityFx {
     private static final ColorRgba PALE = ColorRgba.rgba(0xEBD8FFFF);
     private static final ParticleOptions FLARE = ColorParticleOption.create(ParticleTypes.FLASH, 0xFFD9B8FF);
     private static final int TINT = 0x0E0418;
+    /** The heart's radius: the unit its rings are sized in. */
+    private static final float HEART = (float) SpellTuning.SINGULARITY_CRUSH_RADIUS;
     /** The rings crush inwards over this long before the blast. */
     private static final int IMPLODE_TICKS = 5;
     private static final int COLLAPSE_TICKS = 40;
@@ -92,49 +94,50 @@ final class SingularityFx {
             float pulse = 0.85f + 0.15f * Mth.sin(age * 0.5f);
             planes.begin();
             if (size > 0) {
-                planes.halo(center, 1.3 * size, 0.14f, scaled(PALE, pulse));
+                planes.halo(center, HEART * 0.55 * size, 0.25f, scaled(PALE, pulse));
                 ColorRgba[] colors = {VIOLET, MAGENTA, PALE};
                 for (int i = 0; i < 3; i++) {
                     // Each ring leans 20-35 degrees and precesses at its own speed.
                     double tilt = 0.35 + 0.12 * i, phase = age * (0.05 + 0.03 * i) + i * 2.1;
                     Vec3 normal = new Vec3(Math.sin(tilt) * Math.cos(phase), Math.cos(tilt), Math.sin(tilt) * Math.sin(phase));
-                    planes.ring(center, normal, (2.0 + 0.9 * i) * size, 0.22f - 0.04f * i, scaled(colors[i], 0.8f * pulse));
+                    planes.ring(center, normal, HEART * (0.85 + 0.4 * i) * size, 0.4f - 0.07f * i, scaled(colors[i], 0.8f * pulse));
                 }
                 // Its reach, on the ground beneath, with arcs spiralling inwards.
                 Vec3 ground = center.subtract(0, SpellTuning.SINGULARITY_LIFT - 0.08, 0);
-                planes.ring(ground, UP, reach, 0.12f, scaled(VIOLET, 0.35f * size));
+                planes.ring(ground, UP, reach, 0.25f, scaled(VIOLET, 0.35f * size));
                 for (int i = 0; i < 3; i++) {
                     float from = -age * 0.08f + i * Mth.TWO_PI / 3;
                     double radius = reach * (1 - ((age * 0.02 + i / 3.0) % 1));
-                    planes.arc(ground, UP, radius, 0.18f, from, from + 1.2f, scaled(MAGENTA, 0.5f * size));
+                    planes.arc(ground, UP, radius, 0.35f, from, from + 1.2f, scaled(MAGENTA, 0.5f * size));
                 }
             }
             if (collapseAge >= IMPLODE_TICKS) {
                 int burst = collapseAge - IMPLODE_TICKS;
-                if (burst <= 14) planes.glow(center, 2 + 12 * ease(burst / 4f), scaled(PALE, 1 - burst / 14f));
-                if (burst <= 12) {
+                if (burst <= 16) planes.glow(center, HEART * (0.8f + 5 * ease(burst / 4f)), scaled(PALE, 1 - burst / 16f));
+                if (burst <= 14) {
                     Vec3 ground = center.subtract(0, SpellTuning.SINGULARITY_LIFT - 0.15, 0);
-                    planes.ring(ground, UP, 1 + 16 * ease(burst / 10f), 0.8f * (1 - burst / 12f) + 0.05f, scaled(MAGENTA, 1 - burst / 12f));
+                    double radius = 1 + SpellTuning.SINGULARITY_COLLAPSE_RADIUS * 1.3 * ease(burst / 12f);
+                    planes.ring(ground, UP, radius, 2f * (1 - burst / 14f) + 0.1f, scaled(MAGENTA, 1 - burst / 14f));
                 }
             }
             planes.end();
             float bright = collapseAge >= IMPLODE_TICKS ? 6 * Math.max(0, 1 - (collapseAge - IMPLODE_TICKS) / 25f) : 1.6f * size * pulse;
-            glow = bright > 0.01f ? light(glow, center, 12, bright, VIOLET) : unlight(glow);
+            glow = bright > 0.01f ? light(glow, center, HEART * 6, bright, VIOLET) : unlight(glow);
         }
 
         private void particles() {
             if (collapseAge >= 0) return;
             float size = size();
             // The dark heart: ink and smoke, held close.
-            for (int i = 0, n = Fx.scaled(6); i < n; i++) {
-                particle(ParticleTypes.SQUID_INK, center.add(anyDirection(random).scale(0.6 * size * random.nextDouble())), Vec3.ZERO);
+            for (int i = 0, n = Fx.scaled(12); i < n; i++) {
+                particle(ParticleTypes.SQUID_INK, center.add(anyDirection(random).scale(HEART * 0.35 * size * random.nextDouble())), Vec3.ZERO);
             }
-            for (int i = 0, n = Fx.scaled(2); i < n; i++) {
-                particle(ParticleTypes.LARGE_SMOKE, center.add(anyDirection(random).scale(0.9 * size)), Vec3.ZERO);
+            for (int i = 0, n = Fx.scaled(4); i < n; i++) {
+                particle(ParticleTypes.LARGE_SMOKE, center.add(anyDirection(random).scale(HEART * 0.5 * size)), Vec3.ZERO);
             }
             // Portal particles fly from where they're aimed back to where they spawned: these all pour into the heart.
-            for (int i = 0, n = Fx.scaled(14); i < n; i++) {
-                particle(ParticleTypes.PORTAL, center, anyDirection(random).scale(3 + random.nextDouble() * 5));
+            for (int i = 0, n = Fx.scaled(24); i < n; i++) {
+                particle(ParticleTypes.PORTAL, center, anyDirection(random).scale(4 + random.nextDouble() * 10));
             }
             // Dust swept across the ground towards it.
             if (age % 2 == 0) {
@@ -152,11 +155,12 @@ final class SingularityFx {
             if (!particlesVisible(center)) return;
             for (int i = 0; i < 3; i++) particle(FLARE, center.add(anyDirection(random)), Vec3.ZERO);
             particle(ParticleTypes.EXPLOSION_EMITTER, center, Vec3.ZERO);
-            for (int i = 0, n = Fx.scaled(120); i < n; i++) {
-                particle(ParticleTypes.REVERSE_PORTAL, center, anyDirection(random).scale(0.6 + random.nextDouble() * 0.8));
+            for (int i = 0; i < 4; i++) particle(ParticleTypes.EXPLOSION_EMITTER, center.add(anyDirection(random).scale(HEART)), Vec3.ZERO);
+            for (int i = 0, n = Fx.scaled(240); i < n; i++) {
+                particle(ParticleTypes.REVERSE_PORTAL, center, anyDirection(random).scale(0.8 + random.nextDouble() * 1.4));
             }
-            for (int i = 0, n = Fx.scaled(60); i < n; i++) {
-                particle(ParticleTypes.END_ROD, center, anyDirection(random).scale(0.5 + random.nextDouble() * 0.6));
+            for (int i = 0, n = Fx.scaled(120); i < n; i++) {
+                particle(ParticleTypes.END_ROD, center, anyDirection(random).scale(0.6 + random.nextDouble() * 1.0));
             }
         }
 

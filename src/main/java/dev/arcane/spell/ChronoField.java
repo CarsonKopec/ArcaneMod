@@ -19,6 +19,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -31,8 +33,9 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Chrono Field, an Astral Staff spell: time stops in a dome around where the caster stood, for eight seconds. Creatures
  * the caster could hurt, projectiles (the caster's own included) and lit TNT are frozen where they are, and anything
- * that enters is frozen too; the caster moves freely. Damage dealt to frozen creatures is held back, then lands all at
- * once, {@link SpellTuning#CHRONO_DAMAGE_MULTIPLIER} times as hard, when time resumes. Owns every field.
+ * that enters is frozen too; the caster moves freely, and while inside their own field fights with Speed II, Strength
+ * III and Haste II. Damage dealt to frozen creatures is held back, then lands all at once,
+ * {@link SpellTuning#CHRONO_DAMAGE_MULTIPLIER} times as hard, when time resumes. Owns every field.
  *
  * <p>Mobs are frozen with No AI, and creatures other than players without gravity, so their own AI and physics don't
  * fight the hold; players are only ever held in place, so nothing is written into their saved data. Everything thaws
@@ -115,6 +118,7 @@ public final class ChronoField extends MarkedSpell {
                 return true;
             }
             capture();
+            empowerCaster();
             // Unloaded or dead entries were thawed or are gone; let them go.
             frozen.removeIf(entry -> {
                 if (!entry.entity.isRemoved() && FROZEN.get(entry.entity) == entry) {
@@ -128,6 +132,17 @@ public final class ChronoField extends MarkedSpell {
             SpellEffects.send(level, ModSpellEffects.CHRONO_END, center, Vec3.ZERO, (float) SpellTuning.CHRONO_RADIUS, 0, id);
             level.playSound(null, center.x, center.y, center.z, ModSounds.CHRONO_END, SoundSource.PLAYERS, 3.0f, 1.0f);
             return true;
+        }
+
+        /**
+         * The caster, inside their own field, moves and strikes in stopped time. Renewed every tick for a moment only,
+         * so it ends the instant they step out or time resumes.
+         */
+        private void empowerCaster() {
+            if (caster.level() != level || !caster.isAlive() || caster.position().distanceTo(center) > SpellTuning.CHRONO_RADIUS) return;
+            caster.addEffect(new MobEffectInstance(MobEffects.SPEED, 10, SpellTuning.CHRONO_SPEED_AMPLIFIER, true, false, true));
+            caster.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 10, SpellTuning.CHRONO_STRENGTH_AMPLIFIER, true, false, true));
+            caster.addEffect(new MobEffectInstance(MobEffects.HASTE, 10, SpellTuning.CHRONO_HASTE_AMPLIFIER, true, false, true));
         }
 
         /** Freezes everything newly inside the dome. */

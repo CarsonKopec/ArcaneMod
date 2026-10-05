@@ -25,7 +25,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Astral Gate as the client sees it: at each end an upright ring facing the other end, two hexagons turning against each
  * other inside it and a seal on the ground, light pouring in. Whatever crosses leaves a streak of light along the way
- * and bursts out at the far gate.
+ * and bursts out at the far gate. A gate whose far end is in another world is drawn alone, facing the way it was cast.
  */
 final class GateFx {
     private static final Fx.Tracker<Gate> GATES = new Fx.Tracker<>();
@@ -50,6 +50,8 @@ final class GateFx {
         final Vec3 destination;
         /** Horizontal, from the first gate towards the second: each gate faces the other. */
         final Vec3 facing;
+        /** Its other end is in another world. */
+        final boolean single;
         final int duration;
         final Fx.Planes planes = new Fx.Planes();
         final RandomSource random = RandomSource.create();
@@ -58,7 +60,8 @@ final class GateFx {
 
         Gate(SpellEffect effect) {
             this.origin = effect.position();
-            this.destination = origin.add(effect.direction());
+            this.single = effect.power() < 0.5f;
+            this.destination = single ? origin : origin.add(effect.direction());
             Vec3 across = new Vec3(effect.direction().x, 0, effect.direction().z);
             this.facing = across.lengthSqr() < 1.0e-6 ? new Vec3(0, 0, 1) : across.normalize();
             this.duration = effect.age() > 0 ? effect.age() : SpellTuning.GATE_OPEN_TICKS;
@@ -67,7 +70,7 @@ final class GateFx {
         @Override public boolean tick() {
             age++;
             SpellLighting.guarded(this::animate);
-            for (Vec3 end : new Vec3[] {origin, destination}) {
+            for (Vec3 end : single ? new Vec3[] {origin} : new Vec3[] {origin, destination}) {
                 if (age < duration && particlesVisible(end)) inflow(end);
             }
             return age > duration;
@@ -82,11 +85,12 @@ final class GateFx {
             float open = openness();
             planes.begin();
             portal(origin, facing, open);
-            portal(destination, facing.reverse(), open);
+            if (!single) portal(destination, facing.reverse(), open);
             planes.end();
             float bright = 1.4f * open;
-            originLight = bright > 0.01f ? light(originLight, origin.add(0, RING_HEIGHT, 0), 7, bright, ROSE) : unlight(originLight);
-            destinationLight = bright > 0.01f ? light(destinationLight, destination.add(0, RING_HEIGHT, 0), 7, bright, ROSE) : unlight(destinationLight);
+            originLight = bright > 0.01f ? light(originLight, origin.add(0, RING_HEIGHT, 0), 9, bright, ROSE) : unlight(originLight);
+            destinationLight = bright > 0.01f && !single
+                    ? light(destinationLight, destination.add(0, RING_HEIGHT, 0), 9, bright, ROSE) : unlight(destinationLight);
         }
 
         private void portal(Vec3 feet, Vec3 normal, float open) {
