@@ -41,6 +41,7 @@
 		"geckolib": "~${geckolib_version}",
 		"cardinal-components-base": "~${cca_version}",
 		"cardinal-components-entity": "~${cca_version}",
-		"owo": "~${owo_version}"
+		"owo": "~${owo_version}",
+		"trinkets": "~${trinkets_version}"
 	}
 }

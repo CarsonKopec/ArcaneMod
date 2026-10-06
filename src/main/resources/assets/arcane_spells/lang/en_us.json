@@ -3,6 +3,12 @@
 	"item.arcane_spells.arcane_staff.spell": "Spell: %s",
 	"item.arcane_spells.arcane_staff.hint": "Hold %s to choose a spell",
 	"item.arcane_spells.astral_staff": "Astral Staff",
+	"item.arcane_spells.arcane_ring": "Arcane Ring",
+	"item.arcane_spells.arcane_ring.description": "Two can be worn, one on each hand",
+	"item.arcane_spells.astral_amulet": "Astral Amulet",
+	"item.arcane_spells.astral_amulet.description": "A star's light, held at the throat",
+	"item.arcane_spells.chrono_charm": "Chrono Charm",
+	"item.arcane_spells.chrono_charm.description": "Worn at the belt: new spell cooldowns are 15% shorter",
 
 	"attribute.name.arcane_spells.max_mana": "Max Mana",
 	"attribute.name.arcane_spells.mana_regen": "Mana Regeneration",

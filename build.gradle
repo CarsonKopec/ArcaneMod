@@ -39,6 +39,15 @@ repositories {
 		url = 'https://jitpack.io'
 		content { includeGroup 'com.github.kdl-org' }
 	}
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = 'Modrinth'
+				url = 'https://api.modrinth.com/maven'
+			}
+		}
+		filter { includeGroup 'maven.modrinth' }
+	}
 }
 
 loom {
@@ -73,6 +82,8 @@ dependencies {
 		exclude group: 'net.fabricmc.fabric-api'
 	}
 	modImplementation "io.wispforest:owo-lib:${project.owo_version}"
+	// Ring, necklace and belt slots for the mod's trinkets. It bundles Cardinal Components 7.3.0; the 7.3.2 above wins.
+	modImplementation "maven.modrinth:trinkets-updated:${project.trinkets_version}"
 	// owo-config generates wrappers from annotated models in either source set.
 	annotationProcessor "io.wispforest:owo-lib:${project.owo_version}"
 	clientAnnotationProcessor "io.wispforest:owo-lib:${project.owo_version}"
@@ -90,6 +101,7 @@ processResources {
 		geckolib_version  : project.geckolib_version,
 		cca_version       : project.cca_version,
 		owo_version       : project.owo_version,
+		trinkets_version  : project.trinkets_version,
 	]
 	inputs.properties props
 

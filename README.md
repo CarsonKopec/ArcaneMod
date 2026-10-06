@@ -5,7 +5,7 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
 ## Install
 
 1. Install Fabric Loader **0.19.5 or later** for Minecraft **1.21.11** (https://fabricmc.net/use/installer/). Minecraft needs Java 21 or newer.
-2. Put these seven JARs in the instance's `mods` folder. Choose the **Fabric / Minecraft 1.21.11** files:
+2. Put these eight JARs in the instance's `mods` folder. Choose the **Fabric / Minecraft 1.21.11** files:
    - `arcane-spells-0.5.0.jar` (from `build/libs/`, not the `-sources` JAR)
    - [Fabric API 0.141.6+1.21.11](https://modrinth.com/mod/fabric-api/versions?g=1.21.11)
    - [Nebulon 0.1.2-beta+mc1.21.11.20260928.19](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/0.1.2-beta+mc1.21.11.20260928.19/nebulon-0.1.2-beta+mc1.21.11.20260928.19.jar)
@@ -13,9 +13,10 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
    - [GeckoLib 5.4.5](https://modrinth.com/mod/geckolib/version/G1BvHQDL)
    - [Cardinal Components API 7.3.2](https://modrinth.com/mod/cardinal-components-api/version/HZMLTuxY) (the complete release JAR)
    - [owo-lib 0.13.0+1.21.11](https://modrinth.com/mod/owo-lib/version/33Ei8Thm)
-3. For multiplayer, install all seven on the server **and** every client, with the same Arcane Spells version on both. 0.5 is not network-compatible with 0.4.
+   - [Trinkets Updated 3.11.0-beta.2+1.21.11](https://modrinth.com/mod/trinkets-updated/version/3.11.0-beta.2+1.21.11)
+3. For multiplayer, install all eight on the server **and** every client, with the same Arcane Spells version on both. 0.5 is not network-compatible with 0.4.
 
-These libraries power player casting poses, animated 3D staffs, saved player progression, and the spell book and settings screens. Magical equipment slots remain pending a compatible Fabric library.
+These libraries power player casting poses, animated 3D staffs, saved player progression, the spell book and settings screens, and the trinket slots.
 
 ## Play
 
@@ -29,6 +30,10 @@ These libraries power player casting poses, animated 3D staffs, saved player pro
 - **Affinities and corruption:** paid casts grant school affinity XP based on mana spent. Astral casts increase corruption, which fades by one point every two seconds while not using an item. These values are saved and displayed as foundations for later spell interactions; they currently carry no damage penalty or additional spell locks.
 - **Casting visuals:** both staffs have animated 3D crystals and crowns, with idle, channel and successful-release animations. In third person, the player uses distinct Arcane and Astral casting poses, mirrored for the casting hand. Planetfall has its own: a gathering channel that settles into a held ready pose once fully charged, and its own release. Short or refused casts do not play a success gesture.
 - **Cast:** right-click. Arcane Bolt and Celestial Judgment are held to charge and fire on release; the other spells fire on click.
+- **Trinkets:** three magical trinkets, worn in Trinkets' slots. Right-click one to put it on, or place it in its slot in the inventory: one ring slot sits beside the player, and the other ring, necklace and belt slots open from the off-hand, chestplate and leggings slots.
+  - **Arcane Ring** (ring, on either hand, so two can be worn): +20 max mana each. Craft an amethyst shard over three gold ingots set in a ring.
+  - **Astral Amulet** (necklace): +1 mana per second. Craft four gold nuggets over an eye of ender.
+  - **Chrono Charm** (belt): new spell cooldowns are 15% shorter. Craft string over an amethyst shard, a clock and another amethyst shard.
 - **Mana:** 100, refilling at 5 per second. Both are player attributes, `arcane_spells:max_mana` and `arcane_spells:mana_regen`, so gear, effects, other mods and `/attribute` can change them. Raising the maximum doesn't refill the pool. The bar sits above the food bar while you hold the staff or are refilling. The active spell shows in a slot beside the hotbar, dimmed when you can't afford it and with a cooldown sweep. A refused cast (no mana, or still recharging) fizzles and says why above the hotbar. Creative players cast for free; cooldowns still apply.
 - Every spell has its own sounds, with subtitles (Options → Accessibility → Show Subtitles).
 
@@ -88,12 +93,13 @@ Dependency versions are pinned in `gradle.properties`, with their Maven reposito
 | GeckoLib | `5.4.5` | Animated staff, spell entity and equipment models. [GeckoLib 5 documentation](https://github.com/bernie-g/geckolib/wiki). |
 | Cardinal Components API (CCA) | `7.3.2` | Saved mana, cooldowns, mastery, affinities, corruption and talents, synchronized to their owner. Development uses only `cardinal-components-base` and `cardinal-components-entity`; players install the complete release JAR linked above. [Development setup](https://ladysnake.org/wiki/cardinal-components-api/dev-install). |
 | owo-lib | `0.13.0+1.21.11` | Radial spell wheel, spell book, talent tree and generated client configuration screen. `annotationProcessor` and `clientAnnotationProcessor` generate configuration wrappers. [Official setup](https://github.com/wisp-forest/owo-lib). |
+| Trinkets Updated | `3.11.0-beta.2+1.21.11` | Ring, necklace and belt slots for the trinkets. Patbox's fork of Trinkets, the only accessory-slot library with a 1.21.11 build; same `dev.emi.trinkets.api` API. From Modrinth's Maven. [Source](https://github.com/Patbox/trinkets). |
 
 `PlayerProgressionComponent` is the CCA authority for player state. Existing Fabric `arcane_spells:caster` attachment saves are imported lazily, including mana and cooldowns, then retired; existing CCA data takes precedence. Normal death resets mana and cooldowns as before, while retaining progression; lossless respawns preserve everything. Talent purchases are server validated, and their attribute bonuses are transient modifiers reapplied after loading. `CasterState` and `ArcaneSpellsApi` retain the shared access path for the HUD and add-ons.
 
 PAL's upper-body animations live in `assets/arcane_spells/player_animations/`. GeckoLib's staff geometry and animations live in `assets/arcane_spells/geckolib/`; regenerate geometry with `python tools/generate_staff_models.py`. Staff animation release packets are sent only after successful casts, and carry which set of poses to play, so changing the selected spell can't change a release already earned. Armor, grimoires, mobs and summons can use the same GeckoLib foundation but do not yet have new content or models.
 
-**Equipment slots remain pending.** [Curios 14.0.0 for Minecraft 1.21.11](https://modrinth.com/mod/curios/version/14.0.0%2B1.21.11) targets NeoForge and cannot load in this Fabric project. The official Fabric alternatives [Accessories](https://github.com/wisp-forest/accessories) and [Trinkets](https://github.com/emilyploszaj/trinkets) also have no published 1.21.11 release as of October 5, 2026. None is included or required; installing a release for another loader or Minecraft version does not provide compatible slots.
+**Equipment slots come from Trinkets Updated.** [Curios](https://modrinth.com/mod/curios/version/14.0.0%2B1.21.11) targets NeoForge and cannot load in this Fabric project, and the official [Accessories](https://github.com/wisp-forest/accessories) and [Trinkets](https://github.com/emilyploszaj/trinkets) have no 1.21.11 release. Trinkets only enables the slots mods ask for: `data/trinkets/entities/arcane_spells.json` turns on the ring, necklace and belt slots for players, and item tags under `data/trinkets/tags/item/` say which trinket fits which slot. `ArcaneTrinketItem` gives a trinket its attribute bonus while worn; the Chrono Charm's cooldown cut is a `SpellEvents.MODIFY_COOLDOWN` listener in `ModItems`. Their numbers are in `SpellTuning`, and their icons are drawn by `tools/generate_assets.py`.
 
 ### Build and test
 
@@ -109,6 +115,7 @@ The spell icons (`textures/gui/sprites/spell/`), the Astral Staff and beam textu
 The client game tests run in a real client and save screenshots to `build/run/clientGameTest/screenshots/`:
 
 - `LibraryUiGameTest` opens the book with K, selects a spell, navigates progression and talents, resizes the window, toggles both generated settings, and preserves the R wheel's hold/release behavior. It captures both staff models and checks PAL's channel/release layers fade out.
+- `TrinketsGameTest` checks that players have the ring, necklace and belt slots, that each trinket fits only its own, that two rings, the amulet and the charm add their bonuses (on the server and the client, whose HUD and wheel read them) while a third ring has nowhere to go, and that taking them off removes every bonus. It photographs the inventory's necklace slot and the ring's tooltip.
 - `ProgressionGameTest` connects to a dedicated server and tests legacy mana/cooldown import, CCA save/load, owner-only synchronization, paid-cast mastery and affinity, server-validated talent purchases, attribute bonuses, and death versus lossless respawn copying.
 - `LightingGameTest` fires a real charge and bolt. It checks that a Nebulon light renders, that a bolt cast in Adventure mode or with `terrain_damage` off leaves a stone wall standing while a normal bolt destroys it, and that no light handles leak afterwards.
 - `SpellsGameTest` checks that every spell sound has a file and every icon loaded, then picks Chain Lightning on the spell wheel with simulated key and mouse input, then casts it with a real right-click. It checks that all five spells affect the world as described above, and that mana, cooldowns and an empty mana pool are enforced.
@@ -135,6 +142,7 @@ src/main/java/dev/arcane/          common code (runs on server and client)
   mixin/PlayerMixin.java             adds the mana attributes to players
   registry/                          item, particle, data component, attachment, game rule, damage type, spell and effect registration
   item/ArcaneStaffItem.java          both staffs: casts the selected spell from the staff's tag, charge/release or click
+  item/ArcaneTrinketItem.java        the trinkets: worn in Trinkets' slots, with an attribute bonus while worn
   spell/SpellTuning.java             ALL balance numbers: mana, costs, cooldowns, damage, ranges
   spell/SpellCasting.java            the one entry point: mana and cooldown checks, then the spell
   spell/CasterState.java             a player's mana and cooldowns (saved, synced to that player)

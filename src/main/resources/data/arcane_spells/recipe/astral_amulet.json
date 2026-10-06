@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		"N N",
+		"N N",
+		" E "
+	],
+	"key": {
+		"N": "minecraft:gold_nugget",
+		"E": "minecraft:ender_eye"
+	},
+	"result": {
+		"id": "arcane_spells:astral_amulet",
+		"count": 1
+	}
+}

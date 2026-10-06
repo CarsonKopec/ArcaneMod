@@ -9,6 +9,15 @@ public final class SpellTuning {
     /** Base value of the mana regeneration attribute, per second: an empty pool refills in 20 s. */
     public static final float BASE_MANA_REGEN = 5;
 
+    // Trinkets, worn in Trinkets' slots
+
+    /** Max mana an Arcane Ring adds. Two can be worn, one on each hand. */
+    public static final float ARCANE_RING_MAX_MANA = 20;
+    /** Mana per second the Astral Amulet adds. */
+    public static final float ASTRAL_AMULET_MANA_REGEN = 1;
+    /** How much shorter the Chrono Charm makes each new cooldown, as a fraction. */
+    public static final float CHRONO_CHARM_COOLDOWN_CUT = 0.15f;
+
     // Arcane Bolt
 
     public static final float BOLT_MANA = 25;

@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		" S ",
+		"ACA"
+	],
+	"key": {
+		"S": "minecraft:string",
+		"A": "minecraft:amethyst_shard",
+		"C": "minecraft:clock"
+	},
+	"result": {
+		"id": "arcane_spells:chrono_charm",
+		"count": 1
+	}
+}

@@ -388,9 +388,78 @@ def texture_judgment_beam():
     return Image.fromarray(np.round(sheet * 255).astype(np.uint8), "RGBA")
 
 
+def gold_rim(c, cx, cy, rx, ry, inner, outer):
+    """An elliptical band of gold, lit from the top left: inner and outer are the band's edges as fractions of the
+    ellipse."""
+    for y in range(c.size):
+        for x in range(c.size):
+            dx, dy = (x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry
+            d = math.hypot(dx, dy)
+            if inner <= d <= outer:
+                lit = dx + dy < -0.35
+                shade = dx + dy > 0.6
+                c.put(x, y, hex_rgba("#FFE08A" if lit else "#7A5A16" if shade else "#C99A2E"))
+
+
+def texture_arcane_ring():
+    """A gold band seen from above and a little in front, set with a cut amethyst, the Arcane Staff's crystal."""
+    c = Canvas()
+    gold_rim(c, 8, 10.2, 5.6, 3.9, 0.66, 1.0)
+    # The setting, then the stone in it: light at the top left facet, deep violet below.
+    c.disc(8, 5.6, 2.9, [(1.0, "#C99A2E")])
+    c.disc(8, 5.6, 2.2, [(0.45, "#E9D4FF"), (0.8, "#AD55FF"), (1.0, "#6A2FA8")])
+    c.put(7, 4, hex_rgba("#FFFFFF"))
+    c.outline("#1E1236")
+    return c.image()
+
+
+def texture_astral_amulet():
+    """A fine gold chain hanging to the Astral Staff's head in small: a gold ring round a deep blue orb, a star at
+    its heart."""
+    c = Canvas()
+    chain = [(1.0, "#E8C25A")]
+    c.stroke([(2.5, 0.5), (5.5, 6.0), (7.0, 7.4)], 0.55, 0.55, chain)
+    c.stroke([(13.5, 0.5), (10.5, 6.0), (9.0, 7.4)], 0.55, 0.55, chain)
+    head = (8.0, 11.0)
+    c.disc(head[0], head[1], 3.6, [(0.55, "#3E5BB8"), (1.0, "#22306E")])
+    gold_rim(c, head[0], head[1], 4.6, 4.6, 0.8, 1.0)
+    star = [(0.5, "#FFFFFF"), (1.0, "#BDF3FF")]
+    for dx, dy in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+        c.stroke([head, (head[0] + dx * 2.6, head[1] + dy * 2.6)], 0.9, 0.4, star)
+    c.put(7, 10, hex_rgba("#FFFFFF"))
+    c.put(8, 10, hex_rgba("#FFFFFF"))
+    c.outline("#1E1236")
+    return c.image()
+
+
+def texture_chrono_charm():
+    """A pocket-watch charm on a loop: gold case, a pale face the Chrono Field's colour, its hands stopped."""
+    c = Canvas()
+    # The loop it hangs from.
+    for y in range(16):
+        for x in range(16):
+            d = math.dist((x + 0.5, y + 0.5), (8.0, 2.4))
+            if 1.0 <= d <= 2.0:
+                c.put(x, y, hex_rgba("#E8C25A"))
+    centre = (8.0, 9.6)
+    c.disc(centre[0], centre[1], 5.2, [(0.78, "#BDF3FF"), (1.0, "#C99A2E")])
+    gold_rim(c, centre[0], centre[1], 5.2, 5.2, 0.8, 1.0)
+    # Hour marks at the quarters, then the hands: the hour hand short and dark, the minute hand long.
+    for dx, dy in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+        c.put(int(centre[0] + dx * 3.2), int(centre[1] + dy * 3.2), hex_rgba("#3B6E87"))
+    c.stroke([centre, (centre[0] + 2.2, centre[1] - 1.6)], 0.6, 0.45, [(1.0, "#22306E")])
+    c.stroke([centre, (centre[0] - 0.6, centre[1] - 3.3)], 0.5, 0.35, [(1.0, "#22306E")])
+    c.put(8, 9, hex_rgba("#FFE08A"))
+    c.outline("#1E1236")
+    return c.image()
+
+
 TEXTURE_MAKERS = {
     "item/astral_staff": texture_astral_staff,
     "effect/judgment_beam": texture_judgment_beam,
+    "item/arcane_ring": texture_arcane_ring,
+    "item/astral_amulet": texture_astral_amulet,
+    "item/chrono_charm": texture_chrono_charm,
 }
 
 
