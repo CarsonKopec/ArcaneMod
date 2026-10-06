@@ -10,6 +10,7 @@ import dev.arcane.progression.SpellSchool;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
+import dev.arcane.spell.SpellTuning;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.base.BaseUIComponent;
 import io.wispforest.owo.ui.component.ButtonComponent;
@@ -294,8 +295,8 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
             int color = schoolColor(school);
             FlowLayout schoolCard = card(Sizing.expand(25), color);
             schoolCard.child(label(schoolName(school), color));
-            schoolCard.child(liveLabel(liveViews, () -> Component.translatable("book.arcane_spells.affinity_xp",
-                    ArcaneProgression.get(minecraft.player).affinity(school)), TEXT));
+            schoolCard.child(liveLabel(liveViews, () -> affinityProgress(school), TEXT));
+            schoolCard.child(liveLabel(liveViews, () -> affinityDiscount(school), color));
             schools.child(schoolCard);
         }
         content.child(schools);
@@ -453,6 +454,24 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
     private static void update(LabelComponent label, Component text) {
         // Avoid invalidating the layout on ticks where the visible value has not changed.
         if (!label.text().equals(text)) label.text(text);
+    }
+
+    /** The school's affinity XP, out of what the next percent off its costs needs, while there is one to come. */
+    private Component affinityProgress(SpellSchool school) {
+        var progression = ArcaneProgression.get(minecraft.player);
+        int discount = progression.affinityDiscount(school);
+        if (discount >= SpellTuning.AFFINITY_MAX_PERCENT) {
+            return Component.translatable("book.arcane_spells.affinity_xp", progression.affinity(school));
+        }
+        return Component.translatable("book.arcane_spells.affinity_progress", progression.affinity(school),
+                (discount + 1) * SpellTuning.AFFINITY_XP_PER_PERCENT);
+    }
+
+    /** What the school's affinity takes off its spells' mana costs. */
+    private Component affinityDiscount(SpellSchool school) {
+        int discount = ArcaneProgression.get(minecraft.player).affinityDiscount(school);
+        return discount == 0 ? Component.translatable("book.arcane_spells.affinity_none")
+                : Component.translatable("book.arcane_spells.affinity_discount", discount);
     }
 
     private static Component schoolName(SpellSchool school) {

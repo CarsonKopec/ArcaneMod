@@ -18,6 +18,13 @@ public final class SpellTuning {
     /** How much shorter the Chrono Charm makes each new cooldown, as a fraction. */
     public static final float CHRONO_CHARM_COOLDOWN_CUT = 0.15f;
 
+    // Progression
+
+    /** Affinity XP, one per point of mana spent on a school's spells, for each 1% off that school's mana costs. */
+    public static final int AFFINITY_XP_PER_PERCENT = 500;
+    /** The most affinity takes off a school's mana costs, in percent. */
+    public static final int AFFINITY_MAX_PERCENT = 10;
+
     // Arcane Bolt
 
     public static final float BOLT_MANA = 25;

@@ -12,6 +12,8 @@ import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModItems;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
+import dev.arcane.spell.SpellCasting;
+import dev.arcane.spell.SpellTuning;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -130,6 +132,7 @@ public final class ProgressionGameTest implements FabricClientGameTest {
                 check(progression.casts(TestAddon.PING) == 51 && progression.mastery(TestAddon.PING) == 10
                                 && progression.skillPoints() == 0,
                         "Casts above maximum mastery created extra points");
+                checkAffinityDiscount(owner, progression);
                 checkPersistenceAndRespawn(owner, progression);
             });
             context.waitFor(client -> client.player != null
@@ -171,6 +174,18 @@ public final class ProgressionGameTest implements FabricClientGameTest {
         loaded.readData(TagValueInput.create(ProblemReporter.DISCARDING, owner.registryAccess(), saved));
         check(loaded.casterState().equals(legacy), "Saved CCA state lost to the stale legacy attachment");
         check(owner.getAttached(ModAttachments.CASTER) == null, "An obsolete legacy attachment survived CCA precedence");
+    }
+
+    /** Practice in a school makes its spells cheaper: one percent per 500 XP, up to ten, and only that school's. */
+    private static void checkAffinityDiscount(ServerPlayer owner, PlayerProgressionComponent progression) {
+        int arcane = progression.affinity(SpellSchool.ARCANE);
+        check(progression.affinityDiscount(SpellSchool.ARCANE) == Math.min(10, arcane / 500), "Wrong discount for " + arcane + " XP");
+        progression.recordCast(ModSpells.ARCANE_BOLT, 5_000);
+        check(progression.affinityDiscount(SpellSchool.ARCANE) == 10, "Affinity's discount is not capped at 10%");
+        check(Math.abs(SpellCasting.manaCost(owner, ModSpells.ARCANE_BOLT) - SpellTuning.BOLT_MANA * 0.9f) < 1.0e-3f,
+                "Arcane affinity did not cut the bolt's cost: " + SpellCasting.manaCost(owner, ModSpells.ARCANE_BOLT));
+        check(progression.affinity(SpellSchool.FROST) == 0 && SpellCasting.manaCost(owner, ModSpells.FROST_NOVA) == SpellTuning.NOVA_MANA,
+                "Arcane affinity cut another school's costs");
     }
 
     private static void checkPersistenceAndRespawn(ServerPlayer owner, PlayerProgressionComponent original) {

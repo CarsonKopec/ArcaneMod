@@ -5,6 +5,7 @@ import dev.arcane.ArcaneSpells;
 import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.client.animation.StaffCastingAnimations;
 import dev.arcane.client.render.StaffRenderers;
+import dev.arcane.client.render.TrinketRenderers;
 import dev.arcane.client.gui.ArcaneScreens;
 import dev.arcane.client.fx.AstralFx;
 import dev.arcane.client.fx.ScreenEffects;
@@ -52,6 +53,7 @@ public final class ArcaneClient implements ClientModInitializer {
         ArcaneScreens.register();
         StaffCastingAnimations.register();
         StaffRenderers.register();
+        TrinketRenderers.register();
 
         // Lights first, as they were before the particles.
         SpellLighting.register();

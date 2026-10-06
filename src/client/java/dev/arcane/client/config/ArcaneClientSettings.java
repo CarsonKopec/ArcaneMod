@@ -27,6 +27,10 @@ public final class ArcaneClientSettings {
         return CONFIG.staffAnimations();
     }
 
+    public static ArcaneClientConfigModel.PlanetfallGlow planetfallGlow() {
+        return CONFIG.planetfallGlow();
+    }
+
     public static void setCastingAnimations(boolean enabled) {
         CONFIG.castingAnimations(enabled);
     }

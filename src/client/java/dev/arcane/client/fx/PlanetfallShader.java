@@ -18,6 +18,7 @@ import de.nexusrealms.nebulon.api.render.client.post.NebulonPostProcessing;
 import de.nexusrealms.nebulon.api.render.client.post.PostPassContext;
 import de.nexusrealms.nebulon.api.render.client.post.PostPassHandle;
 import dev.arcane.ArcaneSpells;
+import dev.arcane.client.config.ArcaneClientSettings;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.OptionalInt;
@@ -51,7 +52,8 @@ import org.joml.Vector4f;
  *   <li>{@code planetfall}: everything else, over the frame, in high dynamic range: light can be many times brighter
  *       than white. There are no floating-point textures to hold it, so it is RGBM-encoded.</li>
  *   <li>{@code planetfall_bloom_extract}, {@code _down}, {@code _up}: the glow of everything brighter than white, blurred
- *       down a chain of ever smaller copies and added back up it. Not on Intel's integrated graphics: see {@link #glow}.</li>
+ *       down a chain of ever smaller copies and added back up it. By default not on Intel's integrated graphics: see
+ *       {@link #glowByDefault}.</li>
  *   <li>{@code planetfall_streak}: that glow smeared sideways, as an anamorphic lens does.</li>
  *   <li>{@code planetfall_composite}: all of it together, highlights rolled off rather than clipped, with what the
  *       moment does to the eye, written back over the frame.</li>
@@ -88,8 +90,8 @@ final class PlanetfallShader {
     private static final View VIEW = new View();
     /** Set by the first failure; the pass then stays off until the game restarts. */
     private static boolean failed;
-    /** Whether to draw the glow, the bloom and lens streaks: decided once, on the first frame drawn. */
-    private static Boolean glow;
+    /** Whether to draw the glow, the bloom and lens streaks, when the setting leaves it to us: decided once. */
+    private static Boolean glowByDefault;
 
     private PlanetfallShader() {
     }
@@ -245,22 +247,32 @@ final class PlanetfallShader {
         }
     }
 
-    /**
-     * Whether to draw the glow. Not on Intel's integrated graphics: there, the bloom's chain of passes hung the GPU
-     * during a session's first Planetfall, about two runs in three, until Windows reset the driver and the game lost its
-     * window (UHD Graphics on an i5-11400H, driver 30.0.101.1340). Without the glow, eighteen runs in a row were clean;
-     * nothing else in the pass needed to change.
-     */
+    /** Whether to draw the glow: as the Planetfall glow setting says, which by default is {@link #glowByDefault()}. */
     private static boolean glow() {
-        if (glow == null) {
+        return switch (ArcaneClientSettings.planetfallGlow()) {
+            case ON -> true;
+            case OFF -> false;
+            case AUTO -> glowByDefault();
+        };
+    }
+
+    /**
+     * Not on Intel's integrated graphics: there, the bloom's chain of passes hung the GPU during a session's first
+     * Planetfall, about two runs in three, until Windows reset the driver and the game lost its window (UHD Graphics on
+     * an i5-11400H, driver 30.0.101.1340). Without the glow, eighteen runs in a row were clean; nothing else in the pass
+     * needed to change. Newer drivers may well be fixed, so the setting can turn it back on.
+     */
+    private static boolean glowByDefault() {
+        if (glowByDefault == null) {
             var device = RenderSystem.getDevice();
             String renderer = device.getRenderer();
             boolean intel = (device.getVendor() + " " + renderer).toLowerCase(Locale.ROOT).contains("intel");
             // Arc cards are discrete, with drivers of their own.
-            glow = !intel || renderer.contains("Arc");
-            if (!glow) ArcaneSpells.LOGGER.info("Planetfall draws without its glow on {}, whose drivers have hung drawing it", renderer);
+            glowByDefault = !intel || renderer.contains("Arc");
+            if (!glowByDefault) ArcaneSpells.LOGGER.info("Planetfall draws without its glow on {}, whose drivers have hung drawing it;"
+                    + " the Planetfall glow setting can turn it on", renderer);
         }
-        return glow;
+        return glowByDefault;
     }
 
     private static void build() {

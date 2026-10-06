@@ -7,6 +7,7 @@ import dev.arcane.api.spell.Spell;
 import dev.arcane.registry.ModAttachments;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.ManaLimits;
+import dev.arcane.spell.SpellTuning;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Locale;
@@ -51,7 +52,10 @@ public final class PlayerProgressionComponent implements AutoSyncedComponent, Se
             caster = legacy == null ? CasterState.FULL : legacy;
             casterInitialized = true;
         }
-        if (casterInitialized && owner instanceof ServerPlayer) owner.removeAttached(ModAttachments.CASTER);
+        // Called every tick: only touch the attachment when there is one left to retire.
+        if (casterInitialized && owner instanceof ServerPlayer && owner.hasAttached(ModAttachments.CASTER)) {
+            owner.removeAttached(ModAttachments.CASTER);
+        }
         return caster;
     }
 
@@ -73,6 +77,11 @@ public final class PlayerProgressionComponent implements AutoSyncedComponent, Se
 
     public int affinity(SpellSchool school) {
         return affinities.getOrDefault(school, 0);
+    }
+
+    /** Whole percent off {@code school}'s mana costs its affinity has earned: one per 500 XP, up to 10. */
+    public int affinityDiscount(SpellSchool school) {
+        return Math.min(SpellTuning.AFFINITY_MAX_PERCENT, affinity(school) / SpellTuning.AFFINITY_XP_PER_PERCENT);
     }
 
     public int corruption() {

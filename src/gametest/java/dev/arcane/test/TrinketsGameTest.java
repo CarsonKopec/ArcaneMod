@@ -16,6 +16,7 @@ import dev.emi.trinkets.api.TrinketsApi;
 import java.util.List;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -91,6 +92,13 @@ public final class TrinketsGameTest implements FabricClientGameTest {
                 String tooltip = String.join("\n", lines.stream().map(Component::getString).toList());
                 check(tooltip.contains("Max Mana") && tooltip.contains("one on each hand"), "The ring's tooltip lacks its bonus:\n" + tooltip);
             });
+
+            // Worn, the amulet and the charm show on the player.
+            server.runCommand("tp @a 0 -60 0 180 10");
+            context.runOnClient(client -> client.options.setCameraType(CameraType.THIRD_PERSON_FRONT));
+            context.waitTicks(10);
+            context.takeScreenshot("trinkets-worn");
+            context.runOnClient(client -> client.options.setCameraType(CameraType.FIRST_PERSON));
 
             // The inventory: the chest group's slots open from the chestplate slot, showing the amulet worn.
             context.getInput().pressKey(InputConstants.KEY_E);

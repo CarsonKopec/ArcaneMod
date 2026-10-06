@@ -7,4 +7,10 @@ import io.wispforest.owo.config.annotation.Config;
 public class ArcaneClientConfigModel {
     public boolean castingAnimations = true;
     public boolean staffAnimations = true;
+    /** Planetfall's glow: its bloom and lens streaks. Auto leaves it off on Intel's integrated graphics. */
+    public PlanetfallGlow planetfallGlow = PlanetfallGlow.AUTO;
+
+    public enum PlanetfallGlow {
+        AUTO, ON, OFF
+    }
 }

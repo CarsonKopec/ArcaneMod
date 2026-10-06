@@ -24,5 +24,8 @@ public final class ArcaneProgression implements EntityComponentInitializer {
     public static void register() {
         SpellEvents.AFTER_CAST.register((spell, context, spent) -> get(context.caster()).recordCast(spell, spent));
         SpellEvents.MODIFY_COOLDOWN.register((player, spell, ticks) -> ticks * (1 - 0.05f * get(player).rank(ArcaneTalent.FOCUS)));
+        // Practice in a school makes its spells cheaper. Both sides: the HUD shows what a spell costs.
+        SpellEvents.MODIFY_MANA_COST.register((player, spell, cost) ->
+                cost * (1 - get(player).affinityDiscount(SpellSchool.of(spell)) / 100f));
     }
 }
