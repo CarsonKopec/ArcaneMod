@@ -19,6 +19,7 @@ import de.nexusrealms.nebulon.api.render.client.post.PostPassContext;
 import de.nexusrealms.nebulon.api.render.client.post.PostPassHandle;
 import dev.arcane.ArcaneSpells;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.OptionalInt;
 import java.util.function.Consumer;
 import net.fabricmc.loader.api.FabricLoader;
@@ -50,7 +51,7 @@ import org.joml.Vector4f;
  *   <li>{@code planetfall}: everything else, over the frame, in high dynamic range: light can be many times brighter
  *       than white. There are no floating-point textures to hold it, so it is RGBM-encoded.</li>
  *   <li>{@code planetfall_bloom_extract}, {@code _down}, {@code _up}: the glow of everything brighter than white, blurred
- *       down a chain of ever smaller copies and added back up it.</li>
+ *       down a chain of ever smaller copies and added back up it. Not on Intel's integrated graphics: see {@link #glow}.</li>
  *   <li>{@code planetfall_streak}: that glow smeared sideways, as an anamorphic lens does.</li>
  *   <li>{@code planetfall_composite}: all of it together, highlights rolled off rather than clipped, with what the
  *       moment does to the eye, written back over the frame.</li>
@@ -87,6 +88,8 @@ final class PlanetfallShader {
     private static final View VIEW = new View();
     /** Set by the first failure; the pass then stays off until the game restarts. */
     private static boolean failed;
+    /** Whether to draw the glow, the bloom and lens streaks: decided once, on the first frame drawn. */
+    private static Boolean glow;
 
     private PlanetfallShader() {
     }
@@ -102,7 +105,6 @@ final class PlanetfallShader {
      */
     static boolean available() {
         if (failed || SpellLighting.disabled() || VULKAN_MOD) return false;
-        if ("noshader".equals(System.getenv("ARCANE_DEBUG"))) return false; // GPUDEBUG
         try {
             return !NebulonRenderSystem.environment().irisShaderPackActive();
         } catch (RuntimeException | LinkageError e) {
@@ -150,45 +152,6 @@ final class PlanetfallShader {
         Arrays.fill(STREAK, null);
     }
 
-    // GPUDEBUG: per-stage GPU times, read back a few frames later. Slot 0 is a timestamp at the start of the chain.
-    private static final int DEBUG_RING = 4, DEBUG_SLOTS = 6;
-    private static final String[] DEBUG_NAMES = {"period", "copy", "volume", "effect", "bloom", "composite"};
-    private static int[][] debugQueries;
-    private static long debugFrame, debugLastStamp, debugLastWall;
-    private static final long[] DEBUG_WALL = new long[DEBUG_RING];
-
-    private static void debugBegin(int stage) { // GPUDEBUG
-        org.lwjgl.opengl.GL33.glBeginQuery(org.lwjgl.opengl.GL33.GL_TIME_ELAPSED, debugQueries[(int) (debugFrame % DEBUG_RING)][stage]);
-    }
-
-    private static void debugEnd() { // GPUDEBUG
-        org.lwjgl.opengl.GL33.glEndQuery(org.lwjgl.opengl.GL33.GL_TIME_ELAPSED);
-    }
-
-    private static void debugFrameStart() { // GPUDEBUG
-        if (debugQueries == null) {
-            debugQueries = new int[DEBUG_RING][DEBUG_SLOTS];
-            for (int[] frameQueries : debugQueries) org.lwjgl.opengl.GL33.glGenQueries(frameQueries);
-        }
-        int slot = (int) (debugFrame % DEBUG_RING);
-        long wall = System.nanoTime();
-        if (debugFrame >= DEBUG_RING) {
-            StringBuilder line = new StringBuilder("PFGPU frame=").append(debugFrame - DEBUG_RING);
-            long stamp = org.lwjgl.opengl.GL33.glGetQueryObjecti64(debugQueries[slot][0], org.lwjgl.opengl.GL33.GL_QUERY_RESULT);
-            line.append(String.format(java.util.Locale.ROOT, " period=%.1f", debugLastStamp == 0 ? 0 : (stamp - debugLastStamp) / 1e6));
-            debugLastStamp = stamp;
-            for (int stage = 1; stage < DEBUG_SLOTS; stage++) {
-                long elapsed = org.lwjgl.opengl.GL33.glGetQueryObjecti64(debugQueries[slot][stage], org.lwjgl.opengl.GL33.GL_QUERY_RESULT);
-                line.append(String.format(java.util.Locale.ROOT, " %s=%.2f", DEBUG_NAMES[stage], elapsed / 1e6));
-            }
-            line.append(String.format(java.util.Locale.ROOT, " cpu=%.1f blast=%.1f", (DEBUG_WALL[slot] - debugLastWall) / 1e6, VIEW.blast.x));
-            debugLastWall = DEBUG_WALL[slot];
-            System.out.println(line);
-        }
-        DEBUG_WALL[slot] = wall;
-        org.lwjgl.opengl.GL33.glQueryCounter(debugQueries[slot][0], org.lwjgl.opengl.GL33.GL_TIMESTAMP);
-    }
-
     private static TextureTarget[] targets() {
         return new TextureTarget[] {frame, volumes, hdr, noiseTile, BLOOM[0], BLOOM[1], BLOOM[2], BLOOM[3], BLOOM[4], STREAK[0], STREAK[1]};
     }
@@ -208,14 +171,18 @@ final class PlanetfallShader {
             frame = sized(frame, "frame", width, height);
             volumes = sized(volumes, "volumes", width / 2, height / 2);
             hdr = sized(hdr, "light", width, height);
-            for (int i = 0; i < BLOOM_LEVELS; i++) BLOOM[i] = sized(BLOOM[i], "bloom " + i, width >> (i + 1), height >> (i + 1));
-            for (int i = 0; i < STREAK.length; i++) STREAK[i] = sized(STREAK[i], "streak " + i, width >> 2, height >> 2);
+            boolean glowing = glow();
+            if (glowing) {
+                for (int i = 0; i < BLOOM_LEVELS; i++) BLOOM[i] = sized(BLOOM[i], "bloom " + i, width >> (i + 1), height >> (i + 1));
+                for (int i = 0; i < STREAK.length; i++) STREAK[i] = sized(STREAK[i], "streak " + i, width >> 2, height >> 2);
+            }
 
             Minecraft client = Minecraft.getInstance();
             float partialTick = client.getDeltaTracker().getGameTimeDeltaPartialTick(true);
             VIEW.reset(client.gameRenderer.getMainCamera());
             Scene current = scene;
             if (current != null) current.write(VIEW, partialTick);
+            if (!glowing) VIEW.post.set(0, 0, VIEW.post.z, VIEW.post.w);
             uniforms.beginFrame();
             steps.beginFrame();
             GpuBufferSlice view = uniforms.upload(VIEW);
@@ -229,62 +196,71 @@ final class PlanetfallShader {
             }
             TextureTarget tile = noiseTile;
 
-            String debug = String.valueOf(System.getenv("ARCANE_DEBUG")); // GPUDEBUG
-            boolean skipEffect = debug.equals("noeffect"), onlyEffect = debug.equals("onlyeffect"), skipVolume = debug.equals("novolume"), skipStreak = debug.equals("nostreak"); // GPUDEBUG
-            boolean skipBloom = onlyEffect || debug.equals("nobloom"); // GPUDEBUG
-            debugFrameStart(); // GPUDEBUG
-            debugBegin(1); // GPUDEBUG
             draw(frame, copy, transforms, pass -> pass.bindTexture("InSampler", main.getColorTextureView(), nearest));
-            debugEnd(); // GPUDEBUG
-            debugBegin(2); // GPUDEBUG
-            if (!onlyEffect && !skipVolume) draw(volumes, volume, transforms, pass -> { // GPUDEBUG
+            draw(volumes, volume, transforms, pass -> {
                 pass.setUniform("PlanetfallView", view);
                 pass.bindTexture("SceneDepth", main.getDepthTextureView(), nearest);
                 pass.bindTexture("NoiseTile", tile.getColorTextureView(), tiled);
             });
-            debugEnd(); // GPUDEBUG
-            debugBegin(3); // GPUDEBUG
-            if (!skipEffect) draw(hdr, effect, transforms, pass -> { // GPUDEBUG
+            draw(hdr, effect, transforms, pass -> {
                 pass.setUniform("PlanetfallView", view);
                 pass.bindTexture("InputColor", frame.getColorTextureView(), linear);
                 pass.bindTexture("SceneDepth", main.getDepthTextureView(), nearest);
                 pass.bindTexture("Volume", volumes.getColorTextureView(), linear);
                 pass.bindTexture("NoiseTile", tile.getColorTextureView(), tiled);
             });
-            debugEnd(); // GPUDEBUG
-            debugBegin(4); // GPUDEBUG
-            if (!skipBloom) draw(BLOOM[0], extract, transforms, pass -> pass.bindTexture("InSampler", hdr.getColorTextureView(), nearest)); // GPUDEBUG
-            for (int i = 1; i < BLOOM_LEVELS && !skipBloom; i++) { // GPUDEBUG
-                TextureTarget source = BLOOM[i - 1];
-                draw(BLOOM[i], down, transforms, pass -> pass.bindTexture("InSampler", source.getColorTextureView(), linear));
+            // Without the glow its strengths are 0 (above), so the composite adds none, and any texture can stand in.
+            TextureTarget bloomed = hdr, streaked = hdr;
+            if (glowing) {
+                draw(BLOOM[0], extract, transforms, pass -> pass.bindTexture("InSampler", hdr.getColorTextureView(), nearest));
+                for (int i = 1; i < BLOOM_LEVELS; i++) {
+                    TextureTarget source = BLOOM[i - 1];
+                    draw(BLOOM[i], down, transforms, pass -> pass.bindTexture("InSampler", source.getColorTextureView(), linear));
+                }
+                TextureTarget streakSource = BLOOM[1];
+                for (int i = 0; i < STREAK_SPREADS.length; i++) {
+                    TextureTarget source = i == 0 ? streakSource : STREAK[(i + 1) % 2];
+                    GpuBufferSlice spread = steps.upload(new Vector4f(STREAK_SPREADS[i], 0, 0, 0));
+                    draw(STREAK[i % 2], streak, transforms, pass -> {
+                        pass.setUniform("PlanetfallStep", spread);
+                        pass.bindTexture("InSampler", source.getColorTextureView(), linear);
+                    });
+                }
+                streaked = STREAK[(STREAK_SPREADS.length - 1) % 2];
+                for (int i = BLOOM_LEVELS - 1; i > 0; i--) {
+                    TextureTarget source = BLOOM[i];
+                    draw(BLOOM[i - 1], up, transforms, pass -> pass.bindTexture("InSampler", source.getColorTextureView(), linear));
+                }
+                bloomed = BLOOM[0];
             }
-            TextureTarget streakSource = BLOOM[1];
-            for (int i = 0; i < STREAK_SPREADS.length && !skipBloom && !skipStreak; i++) { // GPUDEBUG
-                TextureTarget source = i == 0 ? streakSource : STREAK[(i + 1) % 2];
-                GpuBufferSlice spread = steps.upload(new Vector4f(STREAK_SPREADS[i], 0, 0, 0));
-                draw(STREAK[i % 2], streak, transforms, pass -> {
-                    pass.setUniform("PlanetfallStep", spread);
-                    pass.bindTexture("InSampler", source.getColorTextureView(), linear);
-                });
-            }
-            TextureTarget streaked = STREAK[(STREAK_SPREADS.length - 1) % 2];
-            for (int i = BLOOM_LEVELS - 1; i > 0 && !skipBloom; i--) { // GPUDEBUG
-                TextureTarget source = BLOOM[i];
-                draw(BLOOM[i - 1], up, transforms, pass -> pass.bindTexture("InSampler", source.getColorTextureView(), linear));
-            }
-            debugEnd(); // GPUDEBUG
-            debugBegin(5); // GPUDEBUG
+            TextureTarget bloom = bloomed, lensStreak = streaked;
             draw(main, composite, transforms, pass -> {
                 pass.setUniform("PlanetfallView", view);
                 pass.bindTexture("InSampler", hdr.getColorTextureView(), nearest);
-                pass.bindTexture("Bloom", BLOOM[0].getColorTextureView(), linear);
-                pass.bindTexture("Streak", streaked.getColorTextureView(), linear);
+                pass.bindTexture("Bloom", bloom.getColorTextureView(), linear);
+                pass.bindTexture("Streak", lensStreak.getColorTextureView(), linear);
             });
-            debugEnd(); // GPUDEBUG
-            debugFrame++; // GPUDEBUG
         } catch (RuntimeException | LinkageError e) {
             fail(e);
         }
+    }
+
+    /**
+     * Whether to draw the glow. Not on Intel's integrated graphics: there, the bloom's chain of passes hung the GPU
+     * during a session's first Planetfall, about two runs in three, until Windows reset the driver and the game lost its
+     * window (UHD Graphics on an i5-11400H, driver 30.0.101.1340). Without the glow, eighteen runs in a row were clean;
+     * nothing else in the pass needed to change.
+     */
+    private static boolean glow() {
+        if (glow == null) {
+            var device = RenderSystem.getDevice();
+            String renderer = device.getRenderer();
+            boolean intel = (device.getVendor() + " " + renderer).toLowerCase(Locale.ROOT).contains("intel");
+            // Arc cards are discrete, with drivers of their own.
+            glow = !intel || renderer.contains("Arc");
+            if (!glow) ArcaneSpells.LOGGER.info("Planetfall draws without its glow on {}, whose drivers have hung drawing it", renderer);
+        }
+        return glow;
     }
 
     private static void build() {

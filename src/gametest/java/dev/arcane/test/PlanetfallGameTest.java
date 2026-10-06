@@ -74,7 +74,6 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
 
             server.runCommand("gamemode adventure @a");
             terrainUnchanged(context, server, "Adventure-mode Planetfall changed terrain");
-            if (System.getenv("ARCANE_DEBUG") != null) { context.waitTicks(100); return; } // GPUDEBUG
             server.runCommand("gamemode survival @a");
             server.runCommand("gamerule arcane_spells:terrain_damage false");
             terrainUnchanged(context, server, "Planetfall ignored the terrain_damage game rule");
@@ -239,7 +238,6 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
 
     /** Server teleport rotations can be overwritten by a queued client look packet; pose the actual render camera. */
     private static void capture(ClientGameTestContext context, String name, Vec3 target) {
-        context.runOnClient(client -> System.out.println("PLANETFALL FPS " + name + ": " + client.getFps())); // PERF
         context.runOnClient(client -> {
             Vec3 look = target.subtract(client.player.getEyePosition());
             float yaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z));

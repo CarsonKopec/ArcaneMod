@@ -334,9 +334,12 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
             LabelComponent branchTitle = label(Component.translatable("talent.arcane_spells." + key).withStyle(ChatFormatting.BOLD), accent);
             branchTitle.horizontalTextAlignment(HorizontalAlignment.CENTER);
             branch.child(branchTitle);
-            LabelComponent description = label(Component.translatable("talent.arcane_spells." + key + ".description"), MUTED);
-            // Give every branch the same header height so the three rank rows stay connected visually.
-            description.verticalSizing(Sizing.fixed(45));
+            // Give every branch the same header height so the three rank rows stay connected visually. The box has the
+            // fixed height, not the label: owo wraps a fixed-height label to its width from the layout before, which
+            // the first time is none, leaving one character per line.
+            FlowLayout description = UIContainers.verticalFlow(Sizing.fill(100), Sizing.fixed(45));
+            description.child(label(Component.translatable("talent.arcane_spells." + key + ".description"), MUTED)
+                    .id("description-" + key));
             branch.child(description);
             for (int target = 1; target <= talent.maxRank(); target++) {
                 int targetRank = target;
@@ -354,8 +357,8 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
                         .accent(accent).selected(() -> ArcaneProgression.get(minecraft.player).rank(talent) >= targetRank);
                 learn.id("learn-" + key + "-" + target);
                 learn.horizontalSizing(Sizing.fill(100));
-                learn.tooltip(Component.translatable("book.arcane_spells.learn_cost", talent.costForNextRank(target - 1)));
                 branch.child(learn);
+                Component[] shownTooltip = new Component[1];
                 liveViews.add(() -> {
                     var progression = ArcaneProgression.get(minecraft.player);
                     int rank = progression.rank(talent);
@@ -365,10 +368,14 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
                             && ClientPlayNetworking.canSend(LearnTalentPayload.TYPE));
                     Component title = Component.translatable(acquired ? "book.arcane_spells.rank_learned"
                             : "book.arcane_spells.rank_cost", targetRank, cost);
-                    if (!learn.getMessage().equals(title)) {
-                        learn.setMessage(title);
-                        learn.tooltip(acquired ? Component.translatable("book.arcane_spells.rank_learned_tooltip", targetRank)
-                                : Component.translatable("book.arcane_spells.learn_cost", cost));
+                    if (!learn.getMessage().equals(title)) learn.setMessage(title);
+                    // The tooltip changes without the title: learning the rank below makes this one the next.
+                    Component tooltip = acquired ? Component.translatable("book.arcane_spells.rank_learned_tooltip", targetRank)
+                            : rank < targetRank - 1 ? Component.translatable("book.arcane_spells.learn_after", cost, targetRank - 1)
+                            : Component.translatable("book.arcane_spells.learn_cost", cost);
+                    if (!tooltip.equals(shownTooltip[0])) {
+                        shownTooltip[0] = tooltip;
+                        learn.tooltip(tooltip);
                     }
                 });
             }

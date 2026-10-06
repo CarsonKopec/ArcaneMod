@@ -305,6 +305,10 @@ public final class LibraryUiGameTest implements FabricClientGameTest {
             for (int rank = 1; rank <= 3; rank++) {
                 inside(root.childById(UIComponent.class, "learn-" + talent + "-" + rank), branch, true);
             }
+            // Wrapped to its real width: wrapped to none, it is a character per line, far taller than its box.
+            UIComponent description = root.childById(UIComponent.class, "description-" + talent);
+            check(description != null && description.height() <= description.parent().height(),
+                    "Talent description overflows its box: " + talent);
         }
     }
 
