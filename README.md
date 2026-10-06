@@ -1,15 +1,21 @@
 # Arcane Spells
 
-A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are chosen from a radial spell wheel and paid for with a regenerating mana bar. The Arcane Staff casts five everyday spells: Arcane Bolt, Chain Lightning, Blink, Arcane Ward and Frost Nova. The endgame Astral Staff holds five devastating advanced spells: Celestial Judgment, Meteor Swarm, Singularity, Chrono Field and Astral Gate. [Nebulon](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/) supplies colored dynamic lighting, detailed rune circles and electrical arcs. No shader pack is required.
+A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are chosen from a radial spell wheel and paid for with a regenerating mana bar. The Arcane Staff casts five everyday spells: Arcane Bolt, Chain Lightning, Blink, Arcane Ward and Frost Nova. The endgame Astral Staff holds six devastating advanced spells: Celestial Judgment, Meteor Swarm, Singularity, Chrono Field, Astral Gate and Planetfall. [Nebulon](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/) supplies colored dynamic lighting, detailed rune circles and electrical arcs. No shader pack is required.
 
 ## Install
 
 1. Install Fabric Loader **0.19.5 or later** for Minecraft **1.21.11** (https://fabricmc.net/use/installer/). Minecraft needs Java 21 or newer.
-2. Put these three JARs in the instance's `mods` folder:
+2. Put these seven JARs in the instance's `mods` folder. Choose the **Fabric / Minecraft 1.21.11** files:
    - `arcane-spells-0.5.0.jar` (from `build/libs/`, not the `-sources` JAR)
    - [Fabric API 0.141.6+1.21.11](https://modrinth.com/mod/fabric-api/versions?g=1.21.11)
    - [Nebulon 0.1.2-beta+mc1.21.11.20260928.19](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/0.1.2-beta+mc1.21.11.20260928.19/nebulon-0.1.2-beta+mc1.21.11.20260928.19.jar)
-3. For multiplayer, install all three on the server **and** every client, with the same Arcane Spells version on both. 0.5 is not network-compatible with 0.4.
+   - [Player Animation Library 1.1.10+mc.1.21.11](https://modrinth.com/mod/player-animation-library/version/wJLdv4ZQ)
+   - [GeckoLib 5.4.5](https://modrinth.com/mod/geckolib/version/G1BvHQDL)
+   - [Cardinal Components API 7.3.2](https://modrinth.com/mod/cardinal-components-api/version/HZMLTuxY) (the complete release JAR)
+   - [owo-lib 0.13.0+1.21.11](https://modrinth.com/mod/owo-lib/version/33Ei8Thm)
+3. For multiplayer, install all seven on the server **and** every client, with the same Arcane Spells version on both. 0.5 is not network-compatible with 0.4.
+
+These libraries power player casting poses, animated 3D staffs, saved player progression, and the spell book and settings screens. Magical equipment slots remain pending a compatible Fabric library.
 
 ## Play
 
@@ -17,6 +23,11 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
 - Craft it with an amethyst shard (top right), a gold ingot (center) and a stick (bottom left).
 - The **Astral Staff** (`/give @s arcane_spells:astral_staff`) is its endgame upgrade: an Arcane Staff (center), a nether star (top right), two echo shards (top middle and middle right) and a netherite ingot (bottom left). It survives fire and lava. Each staff casts only its own spells.
 - **Choose a spell:** with the staff in hand, hold **R** (rebindable under Controls → Arcane Spells), point at a spell and release. Clicking also picks; Escape cancels. The staff remembers its spell, and its tooltip shows which.
+- **Spell book:** press **K** to browse every spell, select one for your held staff, inspect mastery and affinities, or spend skill points in the talent tree. Both book and wheel use owo-lib. The book's Settings button opens saved client options for player and staff animations.
+- The grimoire uses gilded controls with distinct hover, keyboard-focus, selected and locked states. Spell sigils, a live mana gauge, mastery gems and talent crests show your progress; the selection button stays visible while spell details scroll. Layout and text adapt to the window size.
+- **Practice and talents:** every five successful casts that spend mana earn one mastery rank and one skill point, up to ten ranks per spell. Free and Creative casts award no progress. Each talent has three ranks, costing 1, 2 and 3 points: Reservoir grants +20 maximum mana per rank, Recovery grants +0.5 mana per second, and Focus reduces new cooldowns by 5% per rank. Raising maximum mana does not refill it. Knowledge and talents survive death.
+- **Affinities and corruption:** paid casts grant school affinity XP based on mana spent. Astral casts increase corruption, which fades by one point every two seconds while not using an item. These values are saved and displayed as foundations for later spell interactions; they currently carry no damage penalty or additional spell locks.
+- **Casting visuals:** both staffs have animated 3D crystals and crowns, with idle, channel and successful-release animations. In third person, the player uses distinct Arcane and Astral casting poses, mirrored for the casting hand. Planetfall has its own: a gathering channel that settles into a held ready pose once fully charged, and its own release. Short or refused casts do not play a success gesture.
 - **Cast:** right-click. Arcane Bolt and Celestial Judgment are held to charge and fire on release; the other spells fire on click.
 - **Mana:** 100, refilling at 5 per second. Both are player attributes, `arcane_spells:max_mana` and `arcane_spells:mana_regen`, so gear, effects, other mods and `/attribute` can change them. Raising the maximum doesn't refill the pool. The bar sits above the food bar while you hold the staff or are refilling. The active spell shows in a slot beside the hotbar, dimmed when you can't afford it and with a cooldown sweep. A refused cast (no mana, or still recharging) fizzles and says why above the hotbar. Creative players cast for free; cooldowns still apply.
 - Every spell has its own sounds, with subtitles (Options → Accessibility → Show Subtitles).
@@ -38,6 +49,7 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
 | Singularity | 70 | 35 s | 1.5 s | A black hole hangs 6 blocks over ground up to 96 blocks away (at least 24) for 10 s. It drags in creatures (players under PvP rules), items, experience, projectiles and falling blocks within 32 blocks, crushes anything at its heart (10 damage every half second), and devours everything within 12 blocks of it, tearing blocks loose to fly into it. Then it collapses: up to 60 damage within 24 blocks, everything flung outwards, and a strength-8 explosion. Nothing caught takes fall damage while it's pulled. |
 | Chrono Field | 60 | 40 s | 1 s | Time stops in a 32-block dome around you for 15 s. Creatures you could hurt, projectiles (yours too) and lit TNT freeze where they are, as does anything that comes in. You move freely, and inside it fight with Speed II, Strength III and Haste II. Damage dealt to frozen creatures is held back, then lands all at once, three times as hard, when time resumes. |
 | Astral Gate | 50 | 15 s | 1 s | Opens gates at your feet and on solid ground with room to stand, up to 384 blocks away (at least 8), and you step through. **Look straight up** as you release to gate home instead, to your bed, anchor or world spawn, even from another dimension. Both gates stay open 20 s and work both ways, for anyone and anything that steps in: step out of a gate and back in to return. |
+| Planetfall | 100 | 120 s | 3 s | Drops a burning planet on ground up to 160 blocks away (at least 72): see below. |
 
 **Celestial Judgment** in full:
 
@@ -45,17 +57,45 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
 2. **The beam** (1.5 s). A pillar of light slams down and bores a 12-wide shaft from the surface (through trees and roofs) **all the way down to bedrock**. Anything in it takes 30 damage every half second and burns for 10 s.
 3. **The detonation.** Everything within 32 blocks takes up to 100 explosion damage and is hurled outwards. The ground is blasted into a crater roughly 48 wide and 16 deep, carved outwards over 1.5 s, its floor and walls scorched to blackstone, basalt and glowing magma. A fireball blooms, a shockwave races out, smoke rises, and the crater smoulders for 10 s.
 
-Blocks Celestial Judgment and Singularity break are vaporised rather than dropped (containers still spill what they held), and obsidian, anything as blast resistant, and anything unbreakable survive. Meteors, the Dread Star and the singularity's collapse break terrain like the Arcane Bolt, with vanilla explosions and drops. Every spell follows the bolt's rules for terrain, below, as they stood when it was cast. A server runs at most 8 Judgments, 8 swarms, 4 singularities, 4 chrono fields and 8 gates at once; more fizzle.
+**Planetfall** in full:
+
+1. **The channel** (3 s). As you channel, the sky starts to give way for you alone: it dims towards space and the stars come out, the view narrows and its edges darken.
+2. **The rift opens** (3 s). The sky turns to space, even at noon: nebulae, a galaxy's band, twinkling stars and a ringed giant hanging over the horizon. 150 blocks over the mark (a little beyond it, away from you) the sky tears open onto another universe: a ragged hole with a white-hot lip and a swirling throat, bending the world around its rim as a black hole would, with cracks of light running out across the sky as if it were glass. Far beyond it, the planet can be seen coming. A seal burns on the ground, and the view is drawn up towards the rift. Within 48 blocks of the mark gravity fails: creatures (players under PvP rules) float up, items and experience drift upwards, and up to 160 blocks of the ground tear loose and rise. If you are caught, your view drifts and sways.
+3. **The planet falls** (4 s). A ringed planet 40 blocks across, with obsidian seas, ash continents and amethyst highlands, comes through the rift spinning and falls faster and faster. As it heats, molten faults widen between its plates, a bow shock wraps it and a long wake of plasma streams behind it, and it lights the ground below orange. The view is drawn to it, widens and rolls. Anything it touches takes 1000 damage, and it ploughs through trees, hills and buildings in its way. In the second half of its fall, burning shards break off and streak down, each striking somewhere 24 to 48 blocks from the mark: up to 24 damage within 6 blocks, setting things alight, and a charged creeper's crater.
+4. **The impact.** A white flash, and for an instant the world inverts to stark silhouettes. Gravity returns and the floating ground is flung away. A dome of shocked air races outwards, bending the light as it goes: the pressure front reaches 72 blocks in 1.4 s and hits each creature once as it passes, for up to 400 damage (less the farther out) and a hurl outwards. The boom arrives with the front, not with the flash, so far away there is a silence first; the view is kicked as it hits. The planet shatters into tumbling blocks, slabs of the real ground are thrown out as the rupture spreads, a dust wall rolls outwards and a mushroom cloud rises. Over about 5 s a crater roughly 88 wide and 28 deep is torn out from the centre: terraced walls lined with blackstone, basalt and glowing magma, nine branching fissures running past the rim, banks of rubble heaped around it, and the planet's glowing core left at the bottom. The sky clears over 5 s.
+
+The sky, the rift, the planet, its light on the ground and the shock dome are drawn by a full-screen shader pass. With a shader pack on, they are drawn the older way instead, with rings of light and a planet built of blocks; the same happens if the pass ever fails, and the game log says so. Lower Particles settings give the shattered planet (and the planet itself, without the shader pass) fewer, larger blocks.
+
+Blocks Celestial Judgment, Singularity and Planetfall break are vaporised rather than dropped (containers still spill what they held), and obsidian, anything as blast resistant, and anything unbreakable survive. Meteors, the Dread Star and the singularity's collapse break terrain like the Arcane Bolt, with vanilla explosions and drops. Every spell follows the bolt's rules for terrain, below, as they stood when it was cast; Planetfall's rubble, too, only lands where the caster could build. A server runs at most 8 Judgments, 8 swarms, 4 singularities, 4 chrono fields, 8 gates and 2 Planetfalls at once; more fizzle.
 
 - Spells never hurt the caster, and Chain Lightning, Frost Nova and the bolt's direct hit pass over the caster's mount. PvP follows the server's rules.
 - Arcane Bolt breaks terrain using vanilla explosion resistance and drops (strength 3–6; TNT is 4). It can set off TNT but never starts fires. Blocks only break where the caster could break them by hand: in Adventure mode, under spawn protection and beyond the world border, the blast still hurts entities but leaves terrain (and TNT) alone.
 - **To stop spells breaking terrain at all,** for example on a shared server, run `/gamerule arcane_spells:terrain_damage false` (or switch off "Spells break terrain" under Miscellaneous in the world's game rules). Every spell still hurts, burns and throws creatures, but no spell breaks a block or sets off TNT, in any game mode. It's on by default.
-- Spell particles follow Video Settings → Particles: **All** shows everything, Decreased halves them and Minimal turns them off, leaving the lights and arcs. They appear within 64 blocks of the camera (192 for Celestial Judgment).
-- Celestial Judgment's screen shake follows Options → Accessibility → Screen Effect Scale (none at 0%), and its flashes follow Hide Lightning Flashes. Both, and the darkening, weaken with distance from the strike.
+- Spell particles follow Video Settings → Particles: **All** shows everything, Decreased halves them and Minimal turns them off, leaving the lights and arcs. They appear within 64 blocks of the camera (192 for the Astral Staff's spells).
+- Spells' screen shake (Celestial Judgment's and Planetfall's above all) follows Options → Accessibility → Screen Effect Scale (none at 0%), and their flashes follow Hide Lightning Flashes. Both, and the darkening, weaken with distance from the strike. Planetfall also works the camera: its roll, the pull of your view, the bending of the image and the darkened edges follow Screen Effect Scale, its widening and narrowing of the view follows FOV Effects, and its impact frame is skipped with Hide Lightning Flashes.
 
 ## Develop
 
 The build tools need **JDK 25**; the mod itself targets **Java 21**.
+
+### Library foundation
+
+Dependency versions are pinned in `gradle.properties`, with their Maven repositories and source-set setup in `build.gradle`. Keep the Fabric 1.21.11 releases: newer Minecraft 26.x artifacts are a different compatibility line.
+
+| Library | Pinned version | Intended role and official documentation |
+| --- | --- | --- |
+| Player Animation Library (PAL) | `1.1.10+mc.1.21.11` | Player casting poses and animation layers. [Setup and documentation](https://docs.zigythebird.com/pal/gettingstarted/how_to_add_lib_to_mod/). |
+| GeckoLib | `5.4.5` | Animated staff, spell entity and equipment models. [GeckoLib 5 documentation](https://github.com/bernie-g/geckolib/wiki). |
+| Cardinal Components API (CCA) | `7.3.2` | Saved mana, cooldowns, mastery, affinities, corruption and talents, synchronized to their owner. Development uses only `cardinal-components-base` and `cardinal-components-entity`; players install the complete release JAR linked above. [Development setup](https://ladysnake.org/wiki/cardinal-components-api/dev-install). |
+| owo-lib | `0.13.0+1.21.11` | Radial spell wheel, spell book, talent tree and generated client configuration screen. `annotationProcessor` and `clientAnnotationProcessor` generate configuration wrappers. [Official setup](https://github.com/wisp-forest/owo-lib). |
+
+`PlayerProgressionComponent` is the CCA authority for player state. Existing Fabric `arcane_spells:caster` attachment saves are imported lazily, including mana and cooldowns, then retired; existing CCA data takes precedence. Normal death resets mana and cooldowns as before, while retaining progression; lossless respawns preserve everything. Talent purchases are server validated, and their attribute bonuses are transient modifiers reapplied after loading. `CasterState` and `ArcaneSpellsApi` retain the shared access path for the HUD and add-ons.
+
+PAL's upper-body animations live in `assets/arcane_spells/player_animations/`. GeckoLib's staff geometry and animations live in `assets/arcane_spells/geckolib/`; regenerate geometry with `python tools/generate_staff_models.py`. Staff animation release packets are sent only after successful casts, and carry which set of poses to play, so changing the selected spell can't change a release already earned. Armor, grimoires, mobs and summons can use the same GeckoLib foundation but do not yet have new content or models.
+
+**Equipment slots remain pending.** [Curios 14.0.0 for Minecraft 1.21.11](https://modrinth.com/mod/curios/version/14.0.0%2B1.21.11) targets NeoForge and cannot load in this Fabric project. The official Fabric alternatives [Accessories](https://github.com/wisp-forest/accessories) and [Trinkets](https://github.com/emilyploszaj/trinkets) also have no published 1.21.11 release as of October 5, 2026. None is included or required; installing a release for another loader or Minecraft version does not provide compatible slots.
+
+### Build and test
 
 | Task | Command (Windows; use `./gradlew` elsewhere) |
 | --- | --- |
@@ -68,10 +108,13 @@ The spell icons (`textures/gui/sprites/spell/`), the Astral Staff and beam textu
 
 The client game tests run in a real client and save screenshots to `build/run/clientGameTest/screenshots/`:
 
+- `LibraryUiGameTest` opens the book with K, selects a spell, navigates progression and talents, resizes the window, toggles both generated settings, and preserves the R wheel's hold/release behavior. It captures both staff models and checks PAL's channel/release layers fade out.
+- `ProgressionGameTest` connects to a dedicated server and tests legacy mana/cooldown import, CCA save/load, owner-only synchronization, paid-cast mastery and affinity, server-validated talent purchases, attribute bonuses, and death versus lossless respawn copying.
 - `LightingGameTest` fires a real charge and bolt. It checks that a Nebulon light renders, that a bolt cast in Adventure mode or with `terrain_damage` off leaves a stone wall standing while a normal bolt destroys it, and that no light handles leak afterwards.
 - `SpellsGameTest` checks that every spell sound has a file and every icon loaded, then picks Chain Lightning on the spell wheel with simulated key and mouse input, then casts it with a real right-click. It checks that all five spells affect the world as described above, and that mana, cooldowns and an empty mana pool are enforced.
 - `JudgmentGameTest` checks that the Astral Staff holds Celestial Judgment (and the Arcane Staff never can), that a short channel, a mark too close and no mark at all are refused without cost, and that a strike in Adventure mode or with `terrain_damage` off leaves terrain alone. It then channels a real two-second right-click on a stone plateau, and checks the crater, that the shaft reaches bedrock without breaking it, that obsidian survives, that the walls are scorched, and who the strike killed, hurt and spared. Screenshots cover the channel and every phase, from a spectator's vantage point.
-- `AstralSpellsGameTest` checks that the Astral Staff holds all five spells and shows them on the wheel, then casts the other four on a stone plateau: Meteor Swarm cratering it and hitting pigs; Singularity dragging pigs and a dropped diamond in, eating the ground and crushing what it caught; Chrono Field freezing a wandering pig and an incoming arrow, holding back a blow until time resumes (then dealing it three times over) and letting both move on; and Astral Gate refusing a spot too close, carrying the caster and a pig standing in the gate 54 blocks away, bringing the caster back when they step out of the far gate and in again, and gating home to their respawn point when they look straight up. Chrono Field also checks the caster is empowered. Both Astral tests build an 81-block stone plateau (`Plateau`) wide enough for the crater.
+- `AstralSpellsGameTest` checks that the Astral Staff holds all six spells and shows them on the wheel, then casts the other four on a stone plateau: Meteor Swarm cratering it and hitting pigs; Singularity dragging pigs and a dropped diamond in, eating the ground and crushing what it caught; Chrono Field freezing a wandering pig and an incoming arrow, holding back a blow until time resumes (then dealing it three times over) and letting both move on; and Astral Gate refusing a spot too close, carrying the caster and a pig standing in the gate 54 blocks away, bringing the caster back when they step out of the far gate and in again, and gating home to their respawn point when they look straight up. Chrono Field also checks the caster is empowered. Both Astral tests build an 81-block stone plateau (`Plateau`) wide enough for the crater.
+- `PlanetfallGameTest` checks that a short channel is refused without cost, and that a strike in Adventure mode or with `terrain_damage` off leaves terrain alone. It then channels a real three-second right-click at a broad, deep stone plateau and checks the crater: deep enough, with obsidian, bedrock and the ground beyond its reach left standing, a chest's diamond spilled rather than lost, a scorched and molten lining, raised rubble, fissures past the rim and the glowing core. Two pigs far out check that the pressure front hits each once, the outer one later and more lightly; a pig at the mark must die; the screen pass must draw the falling planet (no block-display planet is built) and stop once it's over; and no client-only block displays may be left. Screenshots cover the channel and every phase, from a spectator's vantage points, including the planet looming overhead from the ground and the instant of impact.
 - `SpellApiGameTest` uses `TestAddon`, a stand-in for another mod written only against the API, with one spell (Ping), its own effect type and a listener on each event. It checks that Ping joins the wheel after the built-in spells, that the events can refuse a cast, change its cost and cooldown (shorter, longer or none) and see it happen, that setting a running cooldown keeps the HUD's sweep in proportion, that Ping's effect reaches a client renderer even when another renderer throws, that the mana API stays in bounds and syncs, that max mana and regeneration follow the attributes (by command and by modifier) without refilling or back-dating regeneration, and that saved staffs and cooldowns survive a mod's spells disappearing.
 - `DedicatedServerGameTest` starts a real dedicated server and connects to it. In singleplayer, packets pass between client and server in memory without being encoded; here every one is. It picks a spell on the wheel and casts with real clicks, then checks that the server got the pick, that the client's mana, cooldowns and staff match the server's, and that the client decodes where a bolt struck. It also checks that `terrain_damage`, set from the server console, keeps a wall standing, and that an Astral Gate home carries the caster from the Nether to their spawn point, with the client following. A dedicated server only runs with the [Minecraft EULA](https://aka.ms/MinecraftEULA) accepted, so `build.gradle` accepts it for test runs (`eula = true` in `fabricApi.configureTests`).
 
@@ -81,6 +124,8 @@ The client game tests run in a real client and save screenshots to `build/run/cl
 $env:GRADLE_USER_HOME = "$PWD\.gradle-home"; .\gradlew.bat build
 ```
 
+After changing dependencies while a dev client is still open on Windows, use `gradlew.bat --project-cache-dir build/validation-gradle-cache build` to avoid replacing the remapped JARs that the running client has locked. Use the same cache option for any test run that follows. Restart the dev client to load the new libraries.
+
 ### Project layout
 
 ```
@@ -88,7 +133,7 @@ src/main/java/dev/arcane/          common code (runs on server and client)
   ArcaneSpells.java                  entrypoint: wires everything up
   api/                               the API for other mods (see below)
   mixin/PlayerMixin.java             adds the mana attributes to players
-  registry/                          item, particle, data component, attachment, game rule, spell and effect registration
+  registry/                          item, particle, data component, attachment, game rule, damage type, spell and effect registration
   item/ArcaneStaffItem.java          both staffs: casts the selected spell from the staff's tag, charge/release or click
   spell/SpellTuning.java             ALL balance numbers: mana, costs, cooldowns, damage, ranges
   spell/SpellCasting.java            the one entry point: mana and cooldown checks, then the spell
@@ -98,10 +143,13 @@ src/main/java/dev/arcane/          common code (runs on server and client)
         ArcaneWard, FrostNova
   spell/MarkedSpell.java             every Astral spell's channel and aiming: the ring, full channel, where it lands
   spell/SpellTerrain.java            the terrain rules every spell shares: who may break what, explosions, vaporising
-  spell/CelestialJudgment,           Celestial Judgment: the strike's phases, terrain and damage
-        JudgmentStrike
+  spell/CelestialJudgment,           Celestial Judgment: the strike's phases, terrain and damage, and its crater's plan
+        JudgmentStrike, Crater
   spell/MeteorSwarm, Singularity,    the other Astral spells, each owning its swarms, holes, fields or gates
         ChronoField, AstralGate
+  spell/Planetfall, PlanetfallStrike Planetfall: the strike's phases, lifting and damage
+  spell/PlanetfallCrater             its crater, dug a column at a time within a fixed budget per tick
+  spell/PlanetfallTerrain            the crater's seeded shape and the impact's fronts, shared with the client
   network/                           the effect packet, the spell-wheel pick, and the broadcast helper
 src/client/java/dev/arcane/          client-only code
   api/client/                        client half of the API: effect renderers
@@ -114,10 +162,20 @@ src/client/java/dev/arcane/          client-only code
   client/fx/Fx.java                  their shared tools: shapes that update in place, lights, particles, trackers
   client/fx/ChannelFx.java           every Astral spell's channel ring
   client/fx/JudgmentFx, MeteorFx,    each Astral spell's visuals
-        SingularityFx, ChronoFx, GateFx
+        SingularityFx, ChronoFx, GateFx, PlanetfallFx
+  client/fx/PlanetfallShader.java    Planetfall's full-screen shader pass: space, the rift, the planet, the shock dome
+  client/fx/VoxelPlanet,             the planet's shattered blocks and the ground it throws up, as client-only block
+        PlanetfallDebris               displays (and the whole planet, without the shader pass)
+  client/fx/SpaceSky.java            turns the sky to space while a Planetfall's rift is open
   client/fx/ScreenEffects.java       screen shake, flash and darkening, within the accessibility settings
   client/particle/ArcaneSpark.java   the tinted glow particle
-  mixin/client/CameraMixin.java      turns the camera (never the aim) for screen shake
+  client/particle/PlanetfallCloud    Planetfall's billows of dust, smoke and fire
+  mixin/client/CameraMixin.java      turns the camera (never the aim) for screen shake and to draw the eye
+  mixin/client/GameRendererMixin     widens, narrows and rolls the view
+  mixin/client/SkyRendererMixin,     apply SpaceSky to the sky, stars and fog
+        FogRendererMixin
+src/main/resources/assets/arcane_spells/shaders/core/
+                                     Planetfall's screen pass (planetfall.fsh) and its frame copy
 src/main/resources/data/arcane_spells/tags/arcane_spells/spell/
                                      each staff's spells
 src/gametest/                        Fabric client game tests, and TestAddon, a sample addon they use
@@ -127,13 +185,15 @@ reference/                           local-only decompiled/library sources (giti
 
 ### How it works
 
-The server owns casting, mana, damage and collision. Mana and cooldowns are stored against game time, so nothing ticks per player and the client is only re-synced when a spell is cast. The staff's selected spell is an item component, set by the server when the wheel sends a pick.
+The server owns casting, mana, damage and collision. Mana regeneration and cooldowns are calculated from game time; CCA synchronizes state changes to the owning player. The progression component also checks talent attributes after loading and periodically reduces corruption. The staff's selected spell is an item component, set by the server when the wheel or book sends a pick.
 
 For each visual event the server sends one small `SpellEffectPayload` to players within 448 blocks who have that chunk loaded. Each client then builds its own particles and Nebulon effects from that message, so individual particles never cross the network. Active bolts, shockwaves and lights are capped, and every temporary light, arc and rune circle expires on its own. If Nebulon ever throws, the client logs it once and continues with particles only, rather than letting the error disconnect the player. Your own ward is drawn as rings at your feet in first person, since full-size rings around the camera would fill the screen.
 
 To rebalance, edit `SpellTuning`. To change the visuals, edit `SpellParticles` (particles) or `SpellLighting` (light and runes), or the Astral spells' own classes in `client/fx` (on the shared tools in `Fx`). To add a spell, write it the way another mod would (below), register it in `ModSpells` and list it in a staff's tag; its visual events go in `ModSpellEffects`.
 
-The Astral spells are too big for one message each: the server sends one per phase (Judgment's mark, beam and detonation; each meteor's launch and impact; a gate's opening and each crossing) and each client animates the rest. Its terrain work is spread over many ticks, a few hundred blocks at most in any one.
+The Astral spells are too big for one message each: the server sends one per phase (Judgment's mark, beam and detonation; each meteor's launch and impact; a gate's opening and each crossing; Planetfall's rift, fall and impact) and each client animates the rest. Planetfall's message carries a seed, so every client draws the same planet and the same crater shape the server digs. The planet, the rift and the space they hang in are drawn by a full-screen shader pass (`PlanetfallShader`), run from Nebulon's post-processing hook after the world and before the hand: it reads the world's depth, so terrain hides what is behind it, and it raytraces the planet and the shock dome rather than building them of geometry. It only runs while a Planetfall is in view. The shattered planet, its shards and the slabs of ground thrown at the impact are block displays that exist only on each client, within a fixed budget, and are removed when the animation ends. Each client also plays the impact's boom itself, when the shock front reaches it.
+
+Terrain work is spread over many ticks, a few hundred blocks at most in any one, except Planetfall's crater: it's far bigger, so it gets a fixed budget per tick (at most 2,048 blocks changed), simply takes longer in hilly ground, and skips unloaded chunks rather than loading them.
 
 ## API for other mods
 
@@ -182,6 +242,6 @@ To build against the mod, publish it with `gradlew.bat publishToMavenLocal` and 
 
 ## Status
 
-Nebulon is a beta dependency. A dedicated server with one player is covered by `DedicatedServerGameTest`; several players at once, shader packs, Sodium and heavy spell spam have not been tested. Two Nebulon 0.1.2 problems are worked around rather than fixed: its billboard renderer can stall the game when a frame draws billboards with several textures (so Celestial Judgment's beam is the only billboard, with one texture), and its volumetric fog softens the whole frame (so the storm is particles). Its additive rune circles also wash out to flat discs in daylight, so Judgment draws its seals' lines with crisp shapes and keeps the rune circles dim.
+Nebulon is a beta dependency. A dedicated server with one player is covered by `DedicatedServerGameTest`; several players at once, shader packs, Sodium and heavy spell spam have not been tested. Two Nebulon 0.1.2 problems are worked around rather than fixed: its billboard renderer can stall the game when a frame draws billboards with several textures (so Celestial Judgment's beam is the only billboard, with one texture), and its volumetric fog softens the whole frame (so the storm is particles). Its additive rune circles also wash out to flat discs in daylight, so Judgment draws its seals' lines with crisp shapes and keeps the rune circles dim. Its broad point lights leave coloured dither on surfaces, so Planetfall lights the ground from its own shader instead. And copying a texture (`copyTextureToTexture`) loses the colour on the tested setup, which breaks Nebulon's compositor and its scene snapshots, so Planetfall's shader pass copies the frame itself with a draw.
 
 Built from the Fabric example mod template (CC0-1.0).

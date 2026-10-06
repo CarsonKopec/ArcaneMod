@@ -3,7 +3,10 @@
 	"package": "dev.arcane.mixin.client",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"CameraMixin"
+		"CameraMixin",
+		"FogRendererMixin",
+		"GameRendererMixin",
+		"SkyRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

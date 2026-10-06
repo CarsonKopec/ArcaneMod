@@ -4,15 +4,12 @@ import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -48,8 +45,6 @@ final class JudgmentStrike {
     private static final int END = BLAST_AT + SpellTuning.JUDGMENT_CARVE_TICKS;
     /** The shaft is finished this many ticks before the detonation. */
     private static final int SHAFT_SLACK = 4;
-    /** The rim varies by up to this fraction of the radius. */
-    private static final double RIM_ROUGHNESS = 0.15;
 
     private final ServerLevel level;
     private final ServerPlayer caster;
@@ -59,8 +54,6 @@ final class JudgmentStrike {
     /** Read once at the cast, like the bolt: switching to Adventure mid-strike doesn't stop it. */
     private final boolean mayBuild;
     private final RandomSource random;
-    /** Phases of the three waves that roughen the rim. */
-    private final double[] rimPhases;
     private int age;
     private int shaftTop;
     private int shaftBottom;
@@ -77,7 +70,6 @@ final class JudgmentStrike {
         this.skyY = Math.min(level.getMaxY() - 1, impact.y + SpellTuning.JUDGMENT_SKY_HEIGHT);
         this.mayBuild = SpellTerrain.mayBreak(level, caster);
         this.random = level.getRandom();
-        this.rimPhases = new double[] {random.nextDouble() * Mth.TWO_PI, random.nextDouble() * Mth.TWO_PI, random.nextDouble() * Mth.TWO_PI};
         SpellEffects.send(level, ModSpellEffects.JUDGMENT_MARK, impact, skyOffset(), 1, SpellTuning.JUDGMENT_GATHER_TICKS, sourceId);
         level.playSound(null, impact.x, impact.y, impact.z, ModSounds.JUDGMENT_GATHER, SoundSource.PLAYERS, 6.0f, 1.0f);
     }
@@ -171,47 +163,9 @@ final class JudgmentStrike {
                 victim.push(away.x * push, 0.4 + 0.8 * falloff, away.z * push);
             }
         }
-        planCrater();
-    }
-
-    /**
-     * Every block in the crater, nearest the centre first so it grows outwards, and the shell of blocks just outside
-     * its floor and walls, to be scorched. The crater is an ellipsoid, shallower below the mark than it is wide.
-     */
-    private void planCrater() {
-        double radius = SpellTuning.JUDGMENT_CRATER_RADIUS;
-        int reach = Mth.ceil(radius * (1 + RIM_ROUGHNESS)) + 2;
-        BlockPos centre = BlockPos.containing(impact);
-        List<Spot> inside = new ArrayList<>();
-        List<BlockPos> outside = new ArrayList<>();
-        for (int dy = -Mth.ceil(SpellTuning.JUDGMENT_CRATER_DEPTH) - 2; dy <= reach; dy++) {
-            int y = centre.getY() + dy;
-            if (y < level.getMinY() || y > level.getMaxY()) continue;
-            for (int dx = -reach; dx <= reach; dx++) {
-                for (int dz = -reach; dz <= reach; dz++) {
-                    double x = centre.getX() + dx + 0.5 - impact.x, z = centre.getZ() + dz + 0.5 - impact.z;
-                    double rim = radius * (1 + RIM_ROUGHNESS * rim(Math.atan2(z, x)));
-                    double up = y + 0.5 - impact.y;
-                    double vertical = up < 0 ? SpellTuning.JUDGMENT_CRATER_DEPTH * rim / radius : rim;
-                    double d = Math.sqrt(Mth.square(x / rim) + Mth.square(z / rim) + Mth.square(up / vertical));
-                    BlockPos pos = new BlockPos(centre.getX() + dx, y, centre.getZ() + dz);
-                    if (d <= 1) {
-                        // Air needs no carving; skipping it keeps the per-tick budget for real blocks.
-                        if (!level.getBlockState(pos).isAir()) inside.add(new Spot(pos, d));
-                    } else if (d <= 1.2 && up <= 1) {
-                        outside.add(pos);
-                    }
-                }
-            }
-        }
-        inside.sort(Comparator.comparingDouble(Spot::distance));
-        crater = inside.stream().map(Spot::pos).toList();
-        shell = outside;
-    }
-
-    /** Smooth bumps around the rim, between -1 and 1. */
-    private double rim(double angle) {
-        return 0.6 * Math.sin(3 * angle + rimPhases[0]) + 0.3 * Math.sin(7 * angle + rimPhases[1]) + 0.1 * Math.sin(13 * angle + rimPhases[2]);
+        Crater plan = Crater.plan(level, impact, SpellTuning.JUDGMENT_CRATER_RADIUS, SpellTuning.JUDGMENT_CRATER_DEPTH, random);
+        crater = plan.blocks;
+        shell = plan.shell;
     }
 
     private void carveCrater() {
@@ -224,7 +178,8 @@ final class JudgmentStrike {
     private void scorch() {
         for (BlockPos pos : shell) {
             BlockState state = level.getBlockState(pos);
-            if (!isGround(state) || !SpellTerrain.mayVaporise(level, caster, mayBuild, pos, state) || !exposed(pos)) continue;
+            if (!SpellTerrain.isGround(state) || !SpellTerrain.mayVaporise(level, caster, mayBuild, pos, state)
+                    || !SpellTerrain.exposed(level, pos)) continue;
             float roll = random.nextFloat();
             BlockState seared = roll < 0.15f ? Blocks.MAGMA_BLOCK.defaultBlockState()
                     : roll < 0.5f ? Blocks.BLACKSTONE.defaultBlockState()
@@ -232,18 +187,6 @@ final class JudgmentStrike {
                     : null;
             if (seared != null) level.setBlock(pos, seared, Block.UPDATE_ALL);
         }
-    }
-
-    private static boolean isGround(BlockState state) {
-        return state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(BlockTags.DIRT) || state.is(BlockTags.SAND)
-                || state.is(Blocks.GRAVEL) || state.is(BlockTags.TERRACOTTA);
-    }
-
-    private boolean exposed(BlockPos pos) {
-        for (Direction direction : Direction.values()) {
-            if (level.getBlockState(pos.relative(direction)).isAir()) return true;
-        }
-        return false;
     }
 
     private void vaporise(BlockPos pos) {
@@ -261,10 +204,6 @@ final class JudgmentStrike {
             }
         }
         return positions;
-    }
-
-    /** A block in the crater, and how far through the crater it is: 0 at the centre, 1 at the edge. */
-    private record Spot(BlockPos pos, double distance) {
     }
 
     /** Lightning that only looks and sounds the part: no fire, no damage, no charged creepers. */

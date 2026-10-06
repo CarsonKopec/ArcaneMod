@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.client.gui.SpellWheelScreen;
-import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.ArcaneBolt;
@@ -75,7 +74,7 @@ public final class DedicatedServerGameTest implements FabricClientGameTest {
             server.runCommand(BUILD_WALL);
             server.runCommand("tp @a 0 -60 -6 0 0");
             server.runOnServer(s -> {
-                player(s).setAttached(ModAttachments.CASTER, CasterState.FULL);
+                CasterState.set(player(s), CasterState.FULL);
                 SpellCasting.select(player(s), ModSpells.ARCANE_BOLT);
             });
             context.waitTicks(3);
@@ -110,7 +109,7 @@ public final class DedicatedServerGameTest implements FabricClientGameTest {
             connection.getClientWorld().waitForChunksRender();
             server.runOnServer(s -> {
                 ServerPlayer player = player(s);
-                player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                CasterState.set(player, CasterState.FULL);
                 player.setXRot(-90);
                 check(SpellCasting.cast((ServerLevel) player.level(), player, ModSpells.ASTRAL_GATE, 1), "The gate home was refused in the Nether");
             });

@@ -275,6 +275,43 @@ def icon_astral_gate():
     return c
 
 
+def icon_planetfall():
+    """A planet plunging down to the left out of a starry sky: dark rock cut by lava cracks, a crystal ring, its leading
+    edge white-hot and a tail of fire streaming behind it."""
+    c = Canvas()
+    c.stroke([(15.6, 0.4), (10.4, 5.6)], 0.5, 3.0, [(0.4, "#FFE3A0"), (0.75, "#FF8A3D"), (1.0, "#C2271B")], alpha=50, alpha_end=255)
+    cx, cy, r = 7.4, 8.6, 4.9
+    tilt = -0.38
+    for y in range(16):
+        for x in range(16):
+            px, py = x + 0.5 - cx, y + 0.5 - cy
+            d = math.hypot(px, py)
+            # The ring, an ellipse tilted across the planet: in front of it below the planet's middle, behind it above.
+            rx_, ry_ = px * math.cos(tilt) + py * math.sin(tilt), -px * math.sin(tilt) + py * math.cos(tilt)
+            on_ring = abs((rx_ / 7.2) ** 2 + (ry_ / 1.7) ** 2 - 1) < 0.22
+            if on_ring and (ry_ > 0 or d > r):
+                c.put(x, y, hex_rgba("#F3D9FF" if ry_ > 0 else "#B98CE6"))
+                continue
+            if d > r:
+                continue
+            # White-hot along the leading edge (lower left), lava in the cracks, rock lit from the fire behind it.
+            lead = (-px + py) / (r * 1.414)
+            crack = abs(math.sin(px * 1.3 + py * 0.8 + 1.0)) < 0.2 or abs(math.sin(-px * 0.7 + py * 1.6 + 0.4)) < 0.16
+            if d > r - 1.3 and lead > 0.3:
+                color = "#FFF3D0" if lead > 0.75 else "#FFB347"
+            elif crack:
+                color = "#FF7A1F"
+            elif px - py > 2.0:
+                color = "#6B5A7E"
+            else:
+                color = "#3E3150"
+            c.put(x, y, hex_rgba(color))
+    for x, y in ((1, 1), (4, 0), (2, 4), (0, 7), (13, 12), (11, 15)):
+        c.put(x, y, hex_rgba("#FFFFFF"))
+    c.outline("#1A0F24")
+    return c
+
+
 ICON_MAKERS = {
     "arcane_bolt": icon_arcane_bolt,
     "chain_lightning": icon_chain_lightning,
@@ -286,6 +323,7 @@ ICON_MAKERS = {
     "singularity": icon_singularity,
     "chrono_field": icon_chrono_field,
     "astral_gate": icon_astral_gate,
+    "planetfall": icon_planetfall,
 }
 
 
@@ -700,6 +738,75 @@ def sound_wheel_select():
     return finish(out, peak=0.6)
 
 
+def sound_planetfall_rift():
+    """The sky tearing open: a ripping crack, a dissonant cosmic choir swelling over a growl that sinks, a hiss of
+    stars and the crackle of lightning across the rift."""
+    d = 3.6
+    t = times(d)
+    rip_t = times(0.7)
+    rip = place(d, band(noise(0.7), 700, 7000) * decay(0.7, 0.14) * (0.6 + 0.4 * np.sin(2 * math.pi * 90 * rip_t)), 0)
+    growl = np.sin(sweep(72, 30, d)) * (0.7 + 0.3 * np.sin(2 * math.pi * 3 * t)) * swell(d, 0.7, 2.6)
+    voices = np.zeros_like(t)
+    for f in (196.0, 207.65, 293.66, 311.13, 415.3):
+        for detune in (-0.005, 0.0, 0.006):
+            voices += signal.sawtooth(2 * math.pi * f * (1 + detune) * t + rng.uniform(0, 2 * math.pi))
+    choir = band(voices, 500, 760) + 0.6 * band(voices, 1000, 1300) + 0.3 * band(voices, 2300, 2700)
+    choir *= swell(d, 1.9, 1.4) * (0.85 + 0.15 * np.sin(2 * math.pi * 4.5 * t))
+    shimmer = band(noise(d), 6000, 11000) * swell(d, 2.0, 1.0)
+    sparks = crackle(d, 45, low=2000) * swell(d, 1.5, 1.5)
+    return finish(0.45 * s(rip) + 0.6 * s(growl) + 0.5 * s(choir) + 0.2 * s(shimmer) + 0.25 * s(sparks))
+
+
+def sound_planetfall_descent():
+    """A world falling: a roar of burning air building to the impact, a deep whistle falling in pitch as it nears, a
+    sub-bass swelling under it all and the crackle of fire."""
+    d = 4.2
+    t = times(d)
+    build = (t / d) ** 2
+    roar = band(noise(d), 120, 2200) * (0.75 + 0.25 * np.sin(2 * math.pi * 23 * t)) * build
+    whistle = np.sin(sweep(900, 240, d)) * (t / d) ** 1.5
+    sub = np.sin(sweep(46, 27, d)) * build
+    fire = crackle(d, 220, low=1200) * (t / d) ** 1.5
+    return finish(0.7 * s(roar) + 0.25 * s(whistle) + 0.6 * s(sub) + 0.3 * s(fire))
+
+
+def sound_planetfall_impact():
+    """The end of a world: a crack like the sky splitting, a boom sweeping down to nothing, a second as the ground gives
+    way, a long rolling rumble full of falling debris, and a ringing celestial chord as the dust settles."""
+    d = 9.0
+    crack = place(d, band(noise(0.4), low=1200) * decay(0.4, 0.06), 0)
+    boom = place(d, np.sin(sweep(80, 16, 2.4)) * decay(2.4, 0.9), 0)
+    second = place(d, np.sin(sweep(60, 18, 1.9)) * decay(1.9, 0.7), 0.9)
+    body = band(noise(d), high=1000) * decay(d, 1.0, attack=0.005)
+    tail = band(noise(d), high=120) * decay(d, 3.0, attack=0.1)
+    debris = crackle(d, 80, low=700) * decay(d, 2.5)
+    ring = sum(place(d, soft_bell(f, d - 1.2, 2.5), 1.0) for f in (1046.5, 1567.98, 2093.0, 2637.0))
+    return finish(0.45 * s(crack) + 0.8 * s(boom) + 0.55 * s(second) + 0.5 * s(body) + 0.6 * s(tail) + 0.25 * s(debris)
+                  + 0.1 * s(ring))
+
+
+def sound_planetfall_ringing():
+    """The ringing in your ears after a blast too close: a thin, high tone beating slowly against itself, over a
+    hiss, fading away as hearing returns."""
+    d = 4.5
+    t = times(d)
+    tone = np.sin(2 * math.pi * 3720 * t) + 0.7 * np.sin(2 * math.pi * 3727 * t) + 0.25 * np.sin(2 * math.pi * 7440 * t)
+    hiss = band(noise(d), 5000, 9000)
+    return finish(0.7 * s(tone * decay(d, 1.6, attack=0.25)) + 0.2 * s(hiss * decay(d, 0.9, attack=0.1)), peak=0.35)
+
+
+def sound_planetfall_shard():
+    """A burning shard tearing down out of the sky: a shriek falling in pitch, the roar of its fire building as it
+    nears, and the crackle of the burning rock."""
+    d = 1.4
+    t = times(d)
+    build = (t / d) ** 1.6
+    shriek = np.sin(sweep(1500, 360, d)) * build
+    roar = band(noise(d), 180, 2600) * (t / d) ** 2.2
+    fire = crackle(d, 170, low=1400) * build
+    return finish(0.45 * s(shriek) + 0.65 * s(roar) + 0.3 * s(fire))
+
+
 SOUND_MAKERS = {
     "spell/arcane_bolt_charge": sound_bolt_charge,
     "spell/arcane_bolt_cast": sound_bolt_cast,
@@ -726,6 +833,11 @@ SOUND_MAKERS = {
     "spell/chrono_field_end": sound_chrono_end,
     "spell/astral_gate_open": sound_gate_open,
     "spell/astral_gate_cross": sound_gate_cross,
+    "spell/planetfall_rift": sound_planetfall_rift,
+    "spell/planetfall_descent": sound_planetfall_descent,
+    "spell/planetfall_impact": sound_planetfall_impact,
+    "spell/planetfall_ringing": sound_planetfall_ringing,
+    "spell/planetfall_shard": sound_planetfall_shard,
 }
 
 

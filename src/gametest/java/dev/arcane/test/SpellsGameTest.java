@@ -5,7 +5,6 @@ import dev.arcane.ArcaneSpells;
 import dev.arcane.api.SpellRegistries;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.client.gui.SpellWheelScreen;
-import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.ArcaneWard;
 import dev.arcane.spell.CasterState;
@@ -145,7 +144,7 @@ public final class SpellsGameTest implements FabricClientGameTest {
             // Out of mana: the cast is refused and says why.
             server.runOnServer(s -> {
                 ServerPlayer player = player(s);
-                player.setAttached(ModAttachments.CASTER, new CasterState(0, s.overworld().getGameTime(), SpellTuning.BASE_MAX_MANA, SpellTuning.BASE_MANA_REGEN, Map.of()));
+                CasterState.set(player, new CasterState(0, s.overworld().getGameTime(), SpellTuning.BASE_MAX_MANA, SpellTuning.BASE_MANA_REGEN, Map.of()));
                 check(SpellCasting.blocker(player, ModSpells.ARCANE_BOLT) != null, "No reason given for an unaffordable cast");
                 check(!SpellCasting.cast(s.overworld(), player, ModSpells.ARCANE_BOLT, 1), "Cast without mana");
             });
@@ -161,7 +160,7 @@ public final class SpellsGameTest implements FabricClientGameTest {
     /** Casts with a full pool and no cooldowns, so each step stands alone. */
     private static boolean cast(MinecraftServer server, Spell spell) {
         ServerPlayer player = player(server);
-        player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+        CasterState.set(player, CasterState.FULL);
         return SpellCasting.cast(server.overworld(), player, spell, 1);
     }
 

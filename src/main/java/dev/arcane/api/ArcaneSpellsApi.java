@@ -3,7 +3,6 @@ package dev.arcane.api;
 import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.network.SpellEffects;
-import dev.arcane.registry.ModAttachments;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
 import java.util.List;
@@ -59,7 +58,7 @@ public final class ArcaneSpellsApi {
     /** Adds {@code amount} mana (negative drains it), kept between 0 and the maximum, and syncs it to the player. */
     public static void addMana(ServerPlayer player, float amount) {
         long now = player.level().getGameTime();
-        player.setAttached(ModAttachments.CASTER, CasterState.of(player).withMana(amount, now));
+        CasterState.set(player, CasterState.of(player).withMana(amount, now));
     }
 
     /** Ticks until {@code player} can cast {@code spell} again; 0 if they can now. */
@@ -81,7 +80,7 @@ public final class ArcaneSpellsApi {
      */
     public static void setCooldown(ServerPlayer player, Spell spell, int ticks) {
         long now = player.level().getGameTime();
-        player.setAttached(ModAttachments.CASTER, CasterState.of(player).withCooldown(spell, ticks, now));
+        CasterState.set(player, CasterState.of(player).withCooldown(spell, ticks, now));
     }
 
     /** What {@code spell} costs {@code player}, after {@link dev.arcane.api.event.SpellEvents#MODIFY_MANA_COST}. */

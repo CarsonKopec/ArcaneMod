@@ -8,15 +8,18 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 /**
- * Whole-screen feedback for the biggest spells: camera shake, a flash, and a darkening of the view. Each respects the
- * player's accessibility settings: shake scales with Screen Effect Scale (none at 0%), and there is no flash with
- * Hide Lightning Flashes on.
+ * Whole-screen feedback for the biggest spells: camera shake, a flash, a darkening of the view, and the camera itself
+ * widened or narrowed, rolled, and drawn towards something. Each respects the player's accessibility settings: shake,
+ * roll and the pull scale with Screen Effect Scale (none at 0%), the field of view with FOV Effects, and there is no
+ * flash with Hide Lightning Flashes on.
  *
  * <p>Shake is "trauma": a level that spells raise and that drains away by itself; the camera turns by its square, so
- * small amounts barely register and big ones hit hard. The camera itself is turned by {@code CameraMixin}, which never
- * moves the player's actual aim.
+ * small amounts barely register and big ones hit hard. Field of view, roll and pull are asked for every tick they
+ * should last, the strongest request winning, and ease towards it. The camera itself is turned by {@code CameraMixin},
+ * rolled and widened by {@code GameRendererMixin}; neither ever moves the player's actual aim.
  */
 public final class ScreenEffects {
     private static final Identifier OVERLAY = ArcaneSpells.id("screen_effects");
@@ -25,6 +28,10 @@ public final class ScreenEffects {
     /** Full trauma settles in two seconds. */
     private static final float TRAUMA_DECAY = 1 / 40f;
     private static final int FLASH_RGB = 0xFFF4DC;
+    /** The most the camera turns towards what it is drawn to, at full strength. */
+    private static final float MAX_PULL_DEGREES = 9.0f;
+    /** How much of the way to its target the field of view, roll and pull move each tick. */
+    private static final float EASE = 0.3f;
 
     private static float trauma;
     private static float previousTrauma;
@@ -37,6 +44,10 @@ public final class ScreenEffects {
     private static int tintRgb;
     private static int tintTargetRgb;
     private static int ticks;
+    private static float fov = 1, previousFov = 1, fovTarget = 1;
+    private static float roll, previousRoll, rollTarget;
+    private static float pull, previousPull, pullTarget;
+    private static Vec3 pullAt, pullTargetAt;
 
     private ScreenEffects() {
     }
@@ -67,8 +78,37 @@ public final class ScreenEffects {
         }
     }
 
+    /** Widens (above 1) or narrows the field of view by this factor, for this tick. */
+    public static void fov(float scale) {
+        if (Math.abs(scale - 1) > Math.abs(fovTarget - 1)) fovTarget = scale;
+    }
+
+    /** Rolls the camera this many degrees (clockwise is positive), for this tick. */
+    public static void roll(float degrees) {
+        if (Math.abs(degrees) > Math.abs(rollTarget)) rollTarget = degrees;
+    }
+
+    /** Draws the camera's gaze towards {@code at}, 0 to 1 of the way to its strongest, for this tick. */
+    public static void pull(Vec3 at, float strength) {
+        if (strength > pullTarget) {
+            pullTarget = Mth.clamp(strength, 0, 1);
+            pullTargetAt = at;
+        }
+    }
+
     public static void tick() {
         ticks++;
+        previousFov = fov;
+        fov += (fovTarget - fov) * EASE;
+        fovTarget = 1;
+        previousRoll = roll;
+        roll += (rollTarget - roll) * EASE;
+        rollTarget = 0;
+        previousPull = pull;
+        pull += (pullTarget - pull) * EASE * 0.5f;
+        if (pullTargetAt != null) pullAt = pullTargetAt;
+        pullTarget = 0;
+        pullTargetAt = null;
         previousTrauma = trauma;
         trauma = Math.max(0, trauma - TRAUMA_DECAY);
         previousFlash = flash;
@@ -84,6 +124,41 @@ public final class ScreenEffects {
 
     public static void clear() {
         trauma = previousTrauma = flash = previousFlash = tint = previousTint = tintTarget = 0;
+        fov = previousFov = fovTarget = 1;
+        roll = previousRoll = rollTarget = pull = previousPull = pullTarget = 0;
+        pullAt = pullTargetAt = null;
+    }
+
+    /** The factor to multiply the field of view by this frame. */
+    public static float fovScale(float partialTick) {
+        float scale = Mth.lerp(partialTick, previousFov, fov);
+        return 1 + (scale - 1) * Minecraft.getInstance().options.fovEffectScale().get().floatValue();
+    }
+
+    /** Degrees to roll the camera this frame. */
+    public static float rollDegrees(float partialTick) {
+        return Mth.lerp(partialTick, previousRoll, roll) * Minecraft.getInstance().options.screenEffectScale().get().floatValue();
+    }
+
+    /**
+     * Degrees to add to the camera's yaw and pitch this frame, turning it from {@code yaw}, {@code pitch} at
+     * {@code eye} towards what it is drawn to. Never more than a few degrees: something behind you draws it hardly
+     * at all, so the view is never swung round.
+     */
+    public static float[] pullDegrees(Vec3 eye, float yaw, float pitch, float partialTick) {
+        float strength = Mth.lerp(partialTick, previousPull, pull) * Minecraft.getInstance().options.screenEffectScale().get().floatValue();
+        if (strength <= 0.001f || pullAt == null) return null;
+        Vec3 to = pullAt.subtract(eye);
+        double horizontal = Math.sqrt(to.x * to.x + to.z * to.z);
+        float wantYaw = (float) (Mth.atan2(to.z, to.x) * Mth.RAD_TO_DEG) - 90;
+        float wantPitch = (float) -(Mth.atan2(to.y, horizontal) * Mth.RAD_TO_DEG);
+        float yawOff = Mth.wrapDegrees(wantYaw - yaw), pitchOff = wantPitch - pitch;
+        float off = (float) Math.sqrt(yawOff * yawOff + pitchOff * pitchOff);
+        // Fades out between 60 and 120 degrees off the view.
+        float within = Mth.clamp((120 - off) / 60, 0, 1);
+        float limit = MAX_PULL_DEGREES * strength * within;
+        float scale = off > limit && off > 0 ? limit / off : strength * within;
+        return new float[] {yawOff * scale, pitchOff * scale};
     }
 
     /** Degrees to add to the camera's yaw this frame. */

@@ -5,12 +5,19 @@ import dev.arcane.network.SelectSpellPayload;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
+import io.wispforest.owo.ui.base.BaseOwoScreen;
+import io.wispforest.owo.ui.base.BaseUIComponent;
+import io.wispforest.owo.ui.container.FlowLayout;
+import io.wispforest.owo.ui.container.UIContainers;
+import io.wispforest.owo.ui.core.OwoUIAdapter;
+import io.wispforest.owo.ui.core.OwoUIGraphics;
+import io.wispforest.owo.ui.core.Sizing;
+import io.wispforest.owo.ui.core.Surface;
 import java.util.List;
 import java.util.Locale;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -26,7 +33,7 @@ import net.minecraft.world.item.ItemStack;
  *
  * <p>Every spell the staff holds gets a slot, other mods' included; the ring widens past a dozen so slots never overlap.
  */
-public final class SpellWheelScreen extends Screen {
+public final class SpellWheelScreen extends BaseOwoScreen<FlowLayout> {
     private static final int MIN_RADIUS = 62;
     /** Centre-to-centre distance between neighbouring slots: a hovered slot is 26 wide. */
     private static final int SLOT_SPACING = 30;
@@ -50,6 +57,23 @@ public final class SpellWheelScreen extends Screen {
         this.spells = SpellCasting.spells(staff);
         this.sector = 2 * Math.PI / spells.size();
         this.radius = Math.max(MIN_RADIUS, (int) Math.ceil(SLOT_SPACING / sector));
+    }
+
+    @Override protected OwoUIAdapter<FlowLayout> createAdapter() {
+        return OwoUIAdapter.create(this, UIContainers::verticalFlow);
+    }
+
+    @Override protected void build(FlowLayout root) {
+        root.surface(Surface.flat(0x50000000));
+        // Keep the wheel's established geometry and hold/release handling inside one owo component.
+        // This avoids rectangular widget hitboxes changing which radial sector the player selects.
+        BaseUIComponent wheel = new BaseUIComponent() {
+            @Override public void draw(OwoUIGraphics graphics, int mouseX, int mouseY, float partialTicks, float delta) {
+                renderWheel(graphics, mouseX, mouseY);
+            }
+        };
+        wheel.sizing(Sizing.fill(100));
+        root.child(wheel);
     }
 
     @Override public boolean isPauseScreen() {
@@ -90,13 +114,7 @@ public final class SpellWheelScreen extends Screen {
         onClose();
     }
 
-    @Override public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // A light dim rather than the usual blur, so the world stays readable while choosing.
-        graphics.fill(0, 0, width, height, 0x50000000);
-    }
-
-    @Override public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
+    private void renderWheel(GuiGraphics graphics, int mouseX, int mouseY) {
         Player player = minecraft.player;
         if (player == null) return;
         int cx = width / 2, cy = height / 2;

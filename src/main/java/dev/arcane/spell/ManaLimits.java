@@ -1,7 +1,6 @@
 package dev.arcane.spell;
 
 import dev.arcane.api.SpellAttributes;
-import dev.arcane.registry.ModAttachments;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -18,12 +17,12 @@ public final class ManaLimits {
         ServerTickEvents.END_SERVER_TICK.register(server -> server.getPlayerList().getPlayers().forEach(ManaLimits::update));
     }
 
-    static void update(ServerPlayer player) {
+    public static void update(ServerPlayer player) {
         CasterState state = CasterState.of(player);
         float maxMana = (float) player.getAttributeValue(SpellAttributes.MAX_MANA);
         float manaRegen = (float) player.getAttributeValue(SpellAttributes.MANA_REGEN);
         if (maxMana != state.maxMana() || manaRegen != state.manaRegen()) {
-            player.setAttached(ModAttachments.CASTER, state.withLimits(maxMana, manaRegen, player.level().getGameTime()));
+            CasterState.set(player, state.withLimits(maxMana, manaRegen, player.level().getGameTime()));
         }
     }
 }

@@ -64,6 +64,24 @@ public final class ModSpellEffects {
      * 1 for the caster, less for anything following.
      */
     public static final SpellEffectType GATE_CROSSING = register("gate_crossing");
+    /**
+     * Planetfall {@code sourceId} began over {@code position}: the sky tears open at {@code position + direction}, and
+     * the planet starts to fall in {@code age} ticks. {@code power} seeds the planet's looks and the crater's shape, the
+     * same for everyone.
+     */
+    public static final SpellEffectType PLANETFALL_RIFT = register("planetfall_rift");
+    /**
+     * Planetfall {@code sourceId}'s planet began falling out of the rift, landing in {@code age} ticks. The rest is as
+     * for {@link #PLANETFALL_RIFT}, so a client that missed the rift can still draw the same planet.
+     */
+    public static final SpellEffectType PLANETFALL_FALL = register("planetfall_fall");
+    /** Planetfall {@code sourceId}'s planet struck {@code position}; the rest is as for {@link #PLANETFALL_RIFT}. */
+    public static final SpellEffectType PLANETFALL_IMPACT = register("planetfall_impact");
+    /**
+     * Shard {@code sourceId} broke off a falling planet at {@code position}, and strikes {@code position + direction}
+     * in {@code age} ticks. {@code power} is its size, about 1.
+     */
+    public static final SpellEffectType PLANETFALL_SHARD = register("planetfall_shard");
 
     private ModSpellEffects() {
     }

@@ -3,6 +3,9 @@ package dev.arcane.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.api.client.SpellEffectRenderers;
+import dev.arcane.client.animation.StaffCastingAnimations;
+import dev.arcane.client.render.StaffRenderers;
+import dev.arcane.client.gui.ArcaneScreens;
 import dev.arcane.client.fx.AstralFx;
 import dev.arcane.client.fx.ScreenEffects;
 import dev.arcane.client.fx.SpellLighting;
@@ -10,7 +13,9 @@ import dev.arcane.client.fx.SpellParticles;
 import dev.arcane.client.gui.SpellHud;
 import dev.arcane.client.gui.SpellWheelScreen;
 import dev.arcane.client.particle.ArcaneSpark;
+import dev.arcane.client.particle.PlanetfallCloud;
 import dev.arcane.network.SpellEffectPayload;
+import dev.arcane.network.StaffCastPayload;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.spell.SpellCasting;
 import net.fabricmc.api.ClientModInitializer;
@@ -34,10 +39,19 @@ public final class ArcaneClient implements ClientModInitializer {
         registerSpark(ModParticles.PINK, 0xF3B5FF);
         registerSpark(ModParticles.CYAN, 0x88F5FF);
         registerSpark(ModParticles.GOLD, 0xFFD27A);
+        ParticleFactoryRegistry.getInstance().register(ModParticles.PLANETFALL_DUST,
+                sprites -> new PlanetfallCloud.Provider(sprites, PlanetfallCloud.Kind.DUST));
+        ParticleFactoryRegistry.getInstance().register(ModParticles.PLANETFALL_SMOKE,
+                sprites -> new PlanetfallCloud.Provider(sprites, PlanetfallCloud.Kind.SMOKE));
+        ParticleFactoryRegistry.getInstance().register(ModParticles.PLANETFALL_FIRE,
+                sprites -> new PlanetfallCloud.Provider(sprites, PlanetfallCloud.Kind.FIRE));
 
         spellWheel = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.arcane_spells.spell_wheel",
                 InputConstants.Type.KEYSYM, InputConstants.KEY_R, KeyMapping.Category.register(ArcaneSpells.id("spells"))));
         SpellHud.register();
+        ArcaneScreens.register();
+        StaffCastingAnimations.register();
+        StaffRenderers.register();
 
         // Lights first, as they were before the particles.
         SpellLighting.register();
@@ -47,6 +61,8 @@ public final class ArcaneClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(SpellEffectPayload.TYPE, (payload, context) -> {
             if (context.client().level != null) SpellEffectRenderers.render(payload.effect(), context.client().level);
         });
+        ClientPlayNetworking.registerGlobalReceiver(StaffCastPayload.TYPE, (payload, context) ->
+                StaffCastingAnimations.playRelease(payload.entityId(), payload.hand(), payload.profile()));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.level == null) {
                 clearEffects();

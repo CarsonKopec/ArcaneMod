@@ -83,6 +83,26 @@
 		"subtitle": "subtitles.arcane_spells.spell.astral_gate.cross",
 		"sounds": ["arcane_spells:spell/astral_gate_cross"]
 	},
+	"spell.planetfall.rift": {
+		"subtitle": "subtitles.arcane_spells.spell.planetfall.rift",
+		"sounds": ["arcane_spells:spell/planetfall_rift"]
+	},
+	"spell.planetfall.descent": {
+		"subtitle": "subtitles.arcane_spells.spell.planetfall.descent",
+		"sounds": ["arcane_spells:spell/planetfall_descent"]
+	},
+	"spell.planetfall.impact": {
+		"subtitle": "subtitles.arcane_spells.spell.planetfall.impact",
+		"sounds": ["arcane_spells:spell/planetfall_impact"]
+	},
+	"spell.planetfall.ringing": {
+		"subtitle": "subtitles.arcane_spells.spell.planetfall.ringing",
+		"sounds": ["arcane_spells:spell/planetfall_ringing"]
+	},
+	"spell.planetfall.shard": {
+		"subtitle": "subtitles.arcane_spells.spell.planetfall.shard",
+		"sounds": ["arcane_spells:spell/planetfall_shard"]
+	},
 	"spell.celestial_judgment.blast": {
 		"subtitle": "subtitles.arcane_spells.spell.celestial_judgment.blast",
 		"sounds": ["arcane_spells:spell/celestial_judgment_blast"]

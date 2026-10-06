@@ -152,6 +152,10 @@ final class Fx {
         /** Advances a tick; returns true once it's over. */
         boolean tick();
 
+        /** Non-Nebulon resources must still be released if its renderer has failed. */
+        default void releaseLocal() {
+        }
+
         /** Lets go of its Nebulon handles. */
         void release();
     }
@@ -178,14 +182,18 @@ final class Fx {
             for (Iterator<T> it = live.values().iterator(); it.hasNext(); ) {
                 T animation = it.next();
                 if (animation.tick()) {
-                    SpellLighting.guarded(animation::release);
+                    animation.releaseLocal();
+                    SpellLighting.cleanup(animation::release);
                     it.remove();
                 }
             }
         }
 
         void clear() {
-            live.values().forEach(animation -> SpellLighting.guarded(animation::release));
+            live.values().forEach(animation -> {
+                animation.releaseLocal();
+                SpellLighting.cleanup(animation::release);
+            });
             live.clear();
             world = null;
         }
@@ -273,8 +281,11 @@ final class Fx {
         }
 
         void clear() {
-            begin();
-            end();
+            used = 0;
+            while (!handles.isEmpty()) {
+                EffectHandle<SdfPlane> handle = handles.removeLast();
+                SpellLighting.cleanup(handle::remove);
+            }
         }
     }
 }

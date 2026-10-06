@@ -16,7 +16,13 @@
 		],
 		"client": [
 			"dev.arcane.client.ArcaneClient"
+		],
+		"cardinal-components-entity": [
+			"dev.arcane.progression.ArcaneProgression"
 		]
+	},
+	"custom": {
+		"cardinal-components": ["arcane_spells:progression"]
 	},
 	"mixins": [
 		"arcane_spells.mixins.json",
@@ -30,6 +36,11 @@
 		"minecraft": "~1.21.11",
 		"java": ">=21",
 		"fabric-api": ">=${fabric_api_version}",
-		"nebulon": "~${nebulon_version}"
+		"nebulon": "~${nebulon_version}",
+		"player_animation_library": "~${player_animation_version}",
+		"geckolib": "~${geckolib_version}",
+		"cardinal-components-base": "~${cca_version}",
+		"cardinal-components-entity": "~${cca_version}",
+		"owo": "~${owo_version}"
 	}
 }

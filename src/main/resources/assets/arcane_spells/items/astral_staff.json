@@ -1,1 +1,9 @@
-{"model":{"type":"minecraft:model","model":"arcane_spells:item/astral_staff"}}
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "arcane_spells:item/astral_staff",
+    "model": {
+      "type": "geckolib:geckolib"
+    }
+  }
+}

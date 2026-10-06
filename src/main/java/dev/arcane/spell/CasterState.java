@@ -4,7 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.arcane.api.SpellRegistries;
 import dev.arcane.api.spell.Spell;
-import dev.arcane.registry.ModAttachments;
+import dev.arcane.progression.ArcaneProgression;
 import io.netty.buffer.ByteBuf;
 import java.util.HashMap;
 import java.util.Map;
@@ -61,7 +61,12 @@ public record CasterState(float manaAt, long manaTick, float maxMana, float mana
             CasterState::new);
 
     public static CasterState of(Player player) {
-        return player.getAttachedOrElse(ModAttachments.CASTER, FULL);
+        return ArcaneProgression.get(player).casterState();
+    }
+
+    /** Updates the server-owned component and synchronizes the owner's HUD. Client writes are ignored. */
+    public static void set(Player player, CasterState state) {
+        ArcaneProgression.get(player).setCasterState(state);
     }
 
     /** Mana at game time {@code now}, regenerating linearly up to the maximum. */

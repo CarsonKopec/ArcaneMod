@@ -1,6 +1,5 @@
 package dev.arcane.test;
 
-import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModItems;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
@@ -62,7 +61,7 @@ public final class JudgmentGameTest implements FabricClientGameTest {
             // Refusals, none of which may cost anything: a short channel, a mark too close, and nothing to mark.
             server.runOnServer(s -> {
                 ServerPlayer player = player(s);
-                player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                CasterState.set(player, CasterState.FULL);
                 check(!SpellCasting.cast(s.overworld(), player, ModSpells.CELESTIAL_JUDGMENT, 0.5f), "A half channel was cast");
                 player.teleportTo(0.5, -43, 6.5);
                 player.lookAt(EntityAnchorArgument.Anchor.EYES, MARK.offset(0, 0, -16).getCenter());
@@ -87,7 +86,7 @@ public final class JudgmentGameTest implements FabricClientGameTest {
             server.runCommand("summon minecraft:pig 29.5 -43 40.5 {NoAI:1b}");
             server.runCommand("summon minecraft:pig 0 -60 110 {NoAI:1b}");
             server.runCommand(CASTER_AT);
-            server.runOnServer(s -> player(s).setAttached(ModAttachments.CASTER, CasterState.FULL));
+            server.runOnServer(s -> CasterState.set(player(s), CasterState.FULL));
             context.waitTicks(5);
             context.getInput().holdMouse(GLFW_MOUSE_BUTTON_RIGHT);
             context.waitTicks(24);
@@ -151,7 +150,7 @@ public final class JudgmentGameTest implements FabricClientGameTest {
         context.waitTicks(2);
         server.runOnServer(s -> {
             ServerPlayer player = player(s);
-            player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+            CasterState.set(player, CasterState.FULL);
             // Aimed here, in the same tick: the client's own rotation may not have caught up with the teleport.
             player.lookAt(EntityAnchorArgument.Anchor.EYES, MARK.getBottomCenter().add(0, 1, 0));
             check(SpellCasting.cast(s.overworld(), player, ModSpells.CELESTIAL_JUDGMENT, 1),

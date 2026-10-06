@@ -6,7 +6,9 @@ import dev.arcane.api.event.SpellEvents;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.api.spell.SpellContext;
 import dev.arcane.item.ArcaneStaffItem;
-import dev.arcane.registry.ModAttachments;
+import dev.arcane.item.StaffCastingProfile;
+import dev.arcane.api.SpellTags;
+import dev.arcane.network.StaffCastPayload;
 import dev.arcane.registry.ModComponents;
 import dev.arcane.registry.ModSpells;
 import java.util.Comparator;
@@ -18,6 +20,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 /** The one way into a spell: checks mana and cooldown, casts, then charges for it. */
 public final class SpellCasting {
@@ -96,15 +100,38 @@ public final class SpellCasting {
 
     /** Casts {@code spell}; on success spends its mana and starts its cooldown. {@code power} only matters for charged spells. */
     public static boolean cast(ServerLevel level, ServerPlayer caster, Spell spell, float power) {
+        return cast(level, caster, spell, power, null);
+    }
+
+    /** Staff use supplies its actual hand; API casts may omit it. */
+    public static boolean cast(ServerLevel level, ServerPlayer caster, Spell spell, float power, InteractionHand hand) {
         if (blocker(caster, spell) != null) return false;
         // Priced before casting, so the spell can't change what it costs.
         float cost = manaCost(caster, spell);
         int cooldown = cooldown(caster, spell);
         SpellContext context = new SpellContext(level, caster, spell.charged() ? power : 1);
         if (!spell.cast(context)) return false;
-        caster.setAttached(ModAttachments.CASTER, CasterState.of(caster).afterCast(spell, cost, cooldown, level.getGameTime()));
+        CasterState.set(caster, CasterState.of(caster).afterCast(spell, cost, cooldown, caster.level().getGameTime()));
         SpellEvents.AFTER_CAST.invoker().afterCast(spell, context, cost);
+        animateCast(caster, spell, hand);
         return true;
+    }
+
+    private static void animateCast(ServerPlayer player, Spell spell, InteractionHand sourceHand) {
+        // Prefer the hand actually channeling, then the main-hand-first selection used by the wheel.
+        InteractionHand preferred = sourceHand != null ? sourceHand
+                : player.isUsingItem() ? player.getUsedItemHand() : InteractionHand.MAIN_HAND;
+        for (InteractionHand hand : new InteractionHand[]{preferred,
+                preferred == InteractionHand.MAIN_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND}) {
+            ItemStack stack = player.getItemInHand(hand);
+            if (!holds(stack, spell)) continue;
+            ArcaneStaffItem.triggerCastAnimation(player, stack);
+            boolean astral = ((ArcaneStaffItem) stack.getItem()).spells().equals(SpellTags.ASTRAL_STAFF);
+            StaffCastPayload payload = new StaffCastPayload(player.getId(), hand, StaffCastingProfile.of(spell, astral));
+            ServerPlayNetworking.send(player, payload);
+            for (ServerPlayer observer : PlayerLookup.tracking(player)) ServerPlayNetworking.send(observer, payload);
+            return;
+        }
     }
 
     /**

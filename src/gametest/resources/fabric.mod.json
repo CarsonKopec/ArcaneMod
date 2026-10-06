@@ -8,12 +8,7 @@
 			"dev.arcane.test.TestAddon"
 		],
 		"fabric-client-gametest": [
-			"dev.arcane.test.LightingGameTest",
-			"dev.arcane.test.SpellsGameTest",
-			"dev.arcane.test.SpellApiGameTest",
-			"dev.arcane.test.JudgmentGameTest",
-			"dev.arcane.test.AstralSpellsGameTest",
-			"dev.arcane.test.DedicatedServerGameTest"
+			"dev.arcane.test.PlanetfallGameTest"
 		]
 	},
 	"depends": {

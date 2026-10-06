@@ -3,7 +3,6 @@ package dev.arcane.test;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.client.gui.SpellWheelScreen;
-import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.ChronoField;
@@ -52,11 +51,11 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
             game.getClientWorld().waitForChunksRender();
             context.waitTicks(10);
 
-            // The staff holds all five Astral spells, in order, and the wheel shows them.
+            // The staff holds all six Astral spells, in order, and the wheel shows them.
             server.runOnServer(s -> {
                 List<Spell> held = SpellCasting.spells(SpellCasting.heldStaff(player(s)));
                 check(held.equals(List.of(ModSpells.CELESTIAL_JUDGMENT, ModSpells.METEOR_SWARM, ModSpells.SINGULARITY,
-                        ModSpells.CHRONO_FIELD, ModSpells.ASTRAL_GATE)), "Astral Staff holds " + held);
+                        ModSpells.CHRONO_FIELD, ModSpells.ASTRAL_GATE, ModSpells.PLANETFALL)), "Astral Staff holds " + held);
             });
             context.getInput().holdKey(InputConstants.KEY_R);
             context.waitForScreen(SpellWheelScreen.class);
@@ -221,7 +220,7 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
         // Looking straight up opens a gate home, to the respawn point.
         server.runOnServer(s -> {
             ServerPlayer player = player(s);
-            player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+            CasterState.set(player, CasterState.FULL);
             player.setXRot(-90);
             check(SpellCasting.cast(s.overworld(), player, ModSpells.ASTRAL_GATE, 1), "The gate home was refused");
         });
@@ -232,7 +231,7 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
     /** Casts {@code spell} at {@code at} from wherever the caster stands, aimed in the same tick, with a full pool. */
     private static boolean castAt(MinecraftServer server, Spell spell, Vec3 at) {
         ServerPlayer player = player(server);
-        player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+        CasterState.set(player, CasterState.FULL);
         player.lookAt(EntityAnchorArgument.Anchor.EYES, at);
         return SpellCasting.cast(server.overworld(), player, spell, 1);
     }

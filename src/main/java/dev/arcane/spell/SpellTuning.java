@@ -217,6 +217,66 @@ public final class SpellTuning {
     public static final double GATE_RADIUS = 2;
     public static final int MAX_ACTIVE_GATES = 8;
 
+    // Planetfall (Astral Staff): the ultimate
+
+    /** A whole base pool. */
+    public static final float PLANETFALL_MANA = 100;
+    /** 2 minutes. */
+    public static final int PLANETFALL_COOLDOWN_TICKS = 2400;
+    /** 3 s: the longest channel of any spell. */
+    public static final int PLANETFALL_CHARGE_TICKS = 60;
+    public static final double PLANETFALL_RANGE = 160;
+    /** Well outside the crater and the falling planet. */
+    public static final double PLANETFALL_MIN_DISTANCE = 72;
+    /** The rift opens this high above the mark, and {@link #PLANETFALL_RIFT_LEAD} blocks beyond it, away from the caster. */
+    public static final double PLANETFALL_RIFT_HEIGHT = 150;
+    public static final double PLANETFALL_RIFT_LEAD = 45;
+    /** 3 s: the sky tears open and gravity fails beneath it. */
+    public static final int PLANETFALL_RIFT_TICKS = 60;
+    /** 4 s: the planet falls out of the rift, slowly at first. */
+    public static final int PLANETFALL_FALL_TICKS = 80;
+    public static final double PLANETFALL_PLANET_RADIUS = 20;
+    /** At impact the planet's centre is this fraction of its radius above the mark: most of it is buried. */
+    public static final double PLANETFALL_SINK = 0.35;
+    /** Anything the planet itself touches on the way down. */
+    public static final float PLANETFALL_CRUSH_DAMAGE = 1000;
+    /** The impact: up to this much damage at the mark, falling to none at the edge of its radius. */
+    public static final double PLANETFALL_IMPACT_RADIUS = 72;
+    public static final float PLANETFALL_IMPACT_DAMAGE = 400;
+    public static final double PLANETFALL_IMPACT_KNOCKBACK = 5.0;
+    public static final double PLANETFALL_CRATER_RADIUS = 44;
+    public static final double PLANETFALL_CRATER_DEPTH = 28;
+    /** The air-pressure front reaches the edge in 1.4 seconds; entities are struck once as it passes. */
+    public static final int PLANETFALL_PRESSURE_TICKS = 28;
+    /** The slower earth rupture reaches the tips of the fracture field in 3.2 seconds. */
+    public static final int PLANETFALL_RUPTURE_TICKS = 64;
+    /** Nominal settling time; exceptionally dense terrain finishes under the same fixed work budget. */
+    public static final int PLANETFALL_CARVE_TICKS = 96;
+    /** Within this radius of the mark, gravity fails while the planet comes: creatures float and ground tears loose. */
+    public static final double PLANETFALL_LIFT_RADIUS = 48;
+    /** At most this many blocks torn loose to float, a few each tick. */
+    public static final int PLANETFALL_LIFTED_BLOCKS = 160;
+    public static final int PLANETFALL_LIFT_PER_TICK = 2;
+    /** The rim thrown up around the crater: its width and nominal height before asymmetric collapse. */
+    public static final double PLANETFALL_RIM_WIDTH = 10;
+    public static final double PLANETFALL_RIM_HEIGHT = 8;
+    /**
+     * From this far through its fall, burning shards break off the planet's leading face, one every
+     * {@link #PLANETFALL_SHED_INTERVAL_TICKS}, each streaking down to crater the ground somewhere in the lift radius.
+     */
+    public static final float PLANETFALL_SHED_FROM = 0.4f;
+    public static final int PLANETFALL_SHED_INTERVAL_TICKS = 3;
+    /** Shards land no nearer the mark than this, and no further than {@link #PLANETFALL_LIFT_RADIUS}. */
+    public static final double PLANETFALL_SHARD_MIN_DISTANCE = 24;
+    public static final double PLANETFALL_SHARD_SPEED = 5;
+    public static final float PLANETFALL_SHARD_DAMAGE = 24;
+    public static final double PLANETFALL_SHARD_BLAST_RADIUS = 6;
+    /** A charged creeper's crater; TNT is 4. */
+    public static final float PLANETFALL_SHARD_TERRAIN_STRENGTH = 5;
+    /** The planet's core, left glowing at the bottom of the crater. */
+    public static final double PLANETFALL_CORE_RADIUS = 4.5;
+    public static final int MAX_ACTIVE_PLANETFALLS = 2;
+
     /** Blocks at least this blast resistant survive spells that vaporise terrain, as obsidian (1200) does. */
     public static final float VAPORISE_RESISTANCE_LIMIT = 1200;
 

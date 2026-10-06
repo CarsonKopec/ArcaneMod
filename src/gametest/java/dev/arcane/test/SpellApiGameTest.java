@@ -8,7 +8,6 @@ import dev.arcane.api.ArcaneSpellsApi;
 import dev.arcane.api.SpellAttributes;
 import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.spell.Spell;
-import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModItems;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
@@ -49,7 +48,7 @@ public final class SpellApiGameTest implements FabricClientGameTest {
 
             // Registration: built-in spells first, then the addon's. The addon's data adds Ping to the Arcane Staff's tag.
             List<Spell> spells = ArcaneSpellsApi.spells();
-            check(spells.size() == 11 && spells.getFirst() == ModSpells.ARCANE_BOLT && spells.getLast() == TestAddon.PING,
+            check(spells.size() == 12 && spells.getFirst() == ModSpells.ARCANE_BOLT && spells.getLast() == TestAddon.PING,
                     "Unexpected spell order " + spells);
             List<Spell> onStaff = ArcaneSpellsApi.spells(new ItemStack(ModItems.ARCANE_STAFF));
             check(onStaff.size() == 6 && onStaff.getLast() == TestAddon.PING && !onStaff.contains(ModSpells.CELESTIAL_JUDGMENT),
@@ -58,7 +57,7 @@ public final class SpellApiGameTest implements FabricClientGameTest {
             // Casting: the cost listener halves the price, and the after-cast listener sees what was charged.
             server.runOnServer(s -> {
                 ServerPlayer player = player(s);
-                player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                CasterState.set(player, CasterState.FULL);
                 check(ArcaneSpellsApi.cast(player, TestAddon.PING, 1), "Ping was refused");
                 check(TestAddon.lastCast == TestAddon.PING, "AFTER_CAST did not fire");
                 float expected = TestAddon.PING_MANA / 2;
@@ -75,7 +74,7 @@ public final class SpellApiGameTest implements FabricClientGameTest {
             // A refusal from ALLOW_CAST: reason given, nothing spent, other spells unaffected.
             server.runOnServer(s -> {
                 ServerPlayer player = player(s);
-                player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                CasterState.set(player, CasterState.FULL);
                 TestAddon.silenced = true;
                 try {
                     Component reason = ArcaneSpellsApi.castBlocker(player, TestAddon.PING);
@@ -108,7 +107,7 @@ public final class SpellApiGameTest implements FabricClientGameTest {
                 ServerPlayer player = player(s);
                 check(player.getAttribute(SpellAttributes.MAX_MANA) != null && player.getAttribute(SpellAttributes.MANA_REGEN) != null,
                         "Players have no mana attributes");
-                player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                CasterState.set(player, CasterState.FULL);
             });
             server.runCommand("attribute @p arcane_spells:max_mana base set 150");
             context.waitTicks(3);
@@ -151,7 +150,7 @@ public final class SpellApiGameTest implements FabricClientGameTest {
             // Cooldown modifiers apply to every spell, at cast time; 0 means none at all.
             server.runOnServer(s -> {
                 ServerPlayer player = player(s);
-                player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                CasterState.set(player, CasterState.FULL);
                 TestAddon.cooldownScale = 0.5f;
                 try {
                     int halved = TestAddon.PING_COOLDOWN_TICKS / 2;
@@ -167,14 +166,14 @@ public final class SpellApiGameTest implements FabricClientGameTest {
                     check(CasterState.of(player).cooldownFraction(TestAddon.PING, now) == 1, "A fresh cooldown's sweep isn't full");
 
                     TestAddon.cooldownScale = 0;
-                    player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                    CasterState.set(player, CasterState.FULL);
                     check(ArcaneSpellsApi.cast(player, TestAddon.PING, 1), "Ping was refused");
                     check(ArcaneSpellsApi.cast(player, TestAddon.PING, 1), "A zero cooldown still blocked a recast");
                     check(!CasterState.of(player).cooldowns().containsKey(TestAddon.PING), "A zero cooldown was stored");
 
                     // Lengthened past the base: the old clamp would have cut this short.
                     TestAddon.cooldownScale = 3;
-                    player.setAttached(ModAttachments.CASTER, CasterState.FULL);
+                    CasterState.set(player, CasterState.FULL);
                     check(ArcaneSpellsApi.cast(player, TestAddon.PING, 1), "Ping was refused");
                     int tripled = TestAddon.PING_COOLDOWN_TICKS * 3;
                     check(ArcaneSpellsApi.cooldownLeft(player, TestAddon.PING) == tripled,

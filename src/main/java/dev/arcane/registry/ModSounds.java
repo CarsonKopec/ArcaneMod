@@ -35,6 +35,12 @@ public final class ModSounds {
     public static final SoundEvent CHRONO_END = register("spell.chrono_field.end");
     public static final SoundEvent GATE_OPEN = register("spell.astral_gate.open");
     public static final SoundEvent GATE_CROSS = register("spell.astral_gate.cross");
+    public static final SoundEvent PLANETFALL_RIFT = register("spell.planetfall.rift");
+    public static final SoundEvent PLANETFALL_DESCENT = register("spell.planetfall.descent");
+    public static final SoundEvent PLANETFALL_IMPACT = register("spell.planetfall.impact");
+    /** The ringing in a near observer's ears after the boom. */
+    public static final SoundEvent PLANETFALL_RINGING = register("spell.planetfall.ringing");
+    public static final SoundEvent PLANETFALL_SHARD = register("spell.planetfall.shard");
     /** A refused or failed cast. */
     public static final SoundEvent FIZZLE = register("spell.fizzle");
     public static final SoundEvent WHEEL_SELECT = register("ui.spell_wheel.select");

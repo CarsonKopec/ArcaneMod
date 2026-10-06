@@ -6,6 +6,39 @@ plugins {
 repositories {
 	// Nebulon (dynamic lights, rune circles, arcs)
 	maven { url = 'https://maven.riftrealms.de/releases' }
+	mavenCentral()
+	maven {
+		name = 'PlayerAnimationLibrary'
+		url = 'https://repo.redlance.org/public'
+		content {
+			includeGroup 'com.zigythebird'
+			includeGroup 'com.zigythebird.playeranim'
+		}
+	}
+	maven {
+		name = 'GeckoLib'
+		url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+		content { includeGroup 'software.bernie.geckolib' }
+	}
+	maven {
+		name = 'Ladysnake'
+		url = 'https://maven.ladysnake.org/releases'
+		content { includeGroup 'org.ladysnake.cardinal-components-api' }
+	}
+	maven {
+		name = 'WispForest'
+		url = 'https://maven.wispforest.io'
+		content {
+			includeGroup 'io.wispforest'
+			includeGroup 'io.wispforest.endec'
+			includeGroup 'blue.endless'
+		}
+	}
+	maven {
+		name = 'OwoKdlParser'
+		url = 'https://jitpack.io'
+		content { includeGroup 'com.github.kdl-org' }
+	}
 }
 
 loom {
@@ -26,6 +59,23 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	modImplementation "de.nexusrealms:nebulon:${project.nebulon_version}"
+
+	// These are external runtime mods, matching the existing Fabric API/Nebulon install model.
+	// Keep Fabric modules on the explicitly selected fabric_api_version rather than mixing older builds.
+	modImplementation("com.zigythebird.playeranim:PlayerAnimationLibFabric:${project.player_animation_version}") {
+		exclude group: 'net.fabricmc.fabric-api'
+	}
+	modImplementation "software.bernie.geckolib:geckolib-fabric-${project.minecraft_version}:${project.geckolib_version}"
+	modImplementation("org.ladysnake.cardinal-components-api:cardinal-components-base:${project.cca_version}") {
+		exclude group: 'net.fabricmc.fabric-api'
+	}
+	modImplementation("org.ladysnake.cardinal-components-api:cardinal-components-entity:${project.cca_version}") {
+		exclude group: 'net.fabricmc.fabric-api'
+	}
+	modImplementation "io.wispforest:owo-lib:${project.owo_version}"
+	// owo-config generates wrappers from annotated models in either source set.
+	annotationProcessor "io.wispforest:owo-lib:${project.owo_version}"
+	clientAnnotationProcessor "io.wispforest:owo-lib:${project.owo_version}"
 }
 
 processResources {
@@ -36,6 +86,10 @@ processResources {
 		// rejects its next minor release, which may break the API.
 		fabric_api_version: project.fabric_api_version,
 		nebulon_version   : project.nebulon_version,
+		player_animation_version: project.player_animation_version,
+		geckolib_version  : project.geckolib_version,
+		cca_version       : project.cca_version,
+		owo_version       : project.owo_version,
 	]
 	inputs.properties props
 

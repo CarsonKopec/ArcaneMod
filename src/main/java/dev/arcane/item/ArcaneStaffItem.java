@@ -18,6 +18,16 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.level.Level;
+import software.bernie.geckolib.animatable.GeoItem;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
+import software.bernie.geckolib.animation.AnimationController;
+import software.bernie.geckolib.animation.RawAnimation;
+import software.bernie.geckolib.animation.object.PlayState;
+import software.bernie.geckolib.constant.dataticket.DataTicket;
+import software.bernie.geckolib.util.GeckoLibUtil;
+
+import java.util.function.Supplier;
 
 /**
  * Casts the staff's selected spell: charged spells are held and fire on release, the rest fire on click. All spell
@@ -26,11 +36,22 @@ import net.minecraft.world.level.Level;
  * <p>Each staff holds the spells in its tag (see {@link dev.arcane.api.SpellTags}). Other mods may use or extend it for
  * staffs of their own: any instance opens the spell wheel and shows the HUD.
  */
-public class ArcaneStaffItem extends Item {
+public class ArcaneStaffItem extends Item implements GeoItem {
     private static final int USE_DURATION = 72000;
     private static final int FIZZLE_INTERVAL_TICKS = 10;
     /** Client only: when the last refused cast fizzled. */
     private static long lastFizzle;
+
+    /** Render inputs supplied by the client without introducing client classes into the common item. */
+    public static final DataTicket<Boolean> STAFF_ANIMATIONS = DataTicket.create("arcane_spells:staff_animations", Boolean.class);
+    public static final DataTicket<Boolean> CHANNELING = DataTicket.create("arcane_spells:staff_channeling", Boolean.class);
+    public static final DataTicket<Float> CHANNEL_POWER = DataTicket.create("arcane_spells:staff_channel_power", Float.class);
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.staff.idle");
+    private static final RawAnimation CHANNEL = RawAnimation.begin().thenLoop("animation.staff.channel");
+    private static final RawAnimation RELEASE = RawAnimation.begin().thenPlay("animation.staff.release");
+
+    private final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
+    private Supplier<Object> clientRenderProvider;
 
     private final TagKey<Spell> spells;
     private final int glowColor;
@@ -43,6 +64,48 @@ public class ArcaneStaffItem extends Item {
         super(properties);
         this.spells = spells;
         this.glowColor = glowColor;
+        GeoItem.registerSyncedAnimatable(this);
+    }
+
+    @Override public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return animationCache;
+    }
+
+    @Override public boolean isPerspectiveAware() {
+        return true;
+    }
+
+    /** Installed during client initialization; the server never loads or instantiates a renderer. */
+    public void setClientRenderProvider(Supplier<Object> provider) {
+        clientRenderProvider = provider;
+    }
+
+    @Override public Object getRenderProvider() {
+        return clientRenderProvider == null ? GeoItem.super.getRenderProvider() : clientRenderProvider.get();
+    }
+
+    @Override public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<ArcaneStaffItem>("staff", 4, animation -> {
+            if (!animation.getDataOrDefault(STAFF_ANIMATIONS, true)) {
+                animation.controller().reset();
+                return PlayState.STOP;
+            }
+            if (animation.controller().isTriggeredAnimation("release")) {
+                animation.setControllerSpeed(1);
+                if (!animation.controller().hasAnimationFinished()) return PlayState.CONTINUE;
+                animation.controller().stopTriggeredAnimation();
+            }
+            boolean channeling = animation.getDataOrDefault(CHANNELING, false);
+            animation.setControllerSpeed(channeling ? 1 + animation.getDataOrDefault(CHANNEL_POWER, 0f) * 0.75f : 1);
+            return animation.setAndContinue(channeling ? CHANNEL : IDLE);
+        }).triggerableAnim("release", RELEASE).receiveTriggeredAnimations());
+    }
+
+    /** Called once by the shared successful-cast hook, so refused/short casts never pulse. */
+    public static void triggerCastAnimation(ServerPlayer player, ItemStack stack) {
+        if (stack.getItem() instanceof ArcaneStaffItem staff) {
+            staff.triggerAnim(player, GeoItem.getOrAssignId(stack, player.level()), "staff", "release");
+        }
     }
 
     public TagKey<Spell> spells() {
@@ -77,7 +140,7 @@ public class ArcaneStaffItem extends Item {
             return InteractionResult.CONSUME;
         }
         if (level instanceof ServerLevel server && player instanceof ServerPlayer caster) {
-            SpellCasting.cast(server, caster, spell, 1);
+            SpellCasting.cast(server, caster, spell, 1, hand);
         }
         return InteractionResult.SUCCESS;
     }
@@ -96,7 +159,7 @@ public class ArcaneStaffItem extends Item {
             return false;
         }
         Spell spell = SpellCasting.selected(stack);
-        return SpellCasting.cast(server, player, spell, power(spell, charged));
+        return SpellCasting.cast(server, player, spell, power(spell, charged), player.getUsedItemHand());
     }
 
     private static float power(Spell spell, int chargedTicks) {

@@ -2,8 +2,10 @@ package dev.arcane.spell;
 
 import dev.arcane.registry.ModGameRules;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Explosion;
@@ -56,6 +58,20 @@ final class SpellTerrain {
     static boolean mayVaporise(ServerLevel level, ServerPlayer caster, boolean mayBuild, BlockPos pos, BlockState state) {
         return mayBuild && !state.isAir() && state.getDestroySpeed(level, pos) >= 0
                 && state.getBlock().getExplosionResistance() < SpellTuning.VAPORISE_RESISTANCE_LIMIT && level.mayInteract(caster, pos);
+    }
+
+    /** Natural ground, which spells may scorch or reshape: stone, dirt, sand, gravel and terracotta. */
+    static boolean isGround(BlockState state) {
+        return state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(BlockTags.DIRT) || state.is(BlockTags.SAND)
+                || state.is(Blocks.GRAVEL) || state.is(BlockTags.TERRACOTTA);
+    }
+
+    /** Whether the block at {@code pos} has air on any side. */
+    static boolean exposed(ServerLevel level, BlockPos pos) {
+        for (Direction direction : Direction.values()) {
+            if (level.getBlockState(pos.relative(direction)).isAir()) return true;
+        }
+        return false;
     }
 
     /** Removes the block without drops; a container still spills what it held. */

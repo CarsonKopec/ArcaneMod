@@ -14,13 +14,19 @@ public final class AstralFx {
         SingularityFx.register();
         ChronoFx.register();
         GateFx.register();
+        PlanetfallFx.register();
     }
 
     public static void tick(Minecraft client) {
         for (Fx.Tracker<?> tracker : Fx.TRACKERS) tracker.tick(client.level);
+        PlanetfallFx.tick(client);
+        SpaceSky.tick();
+        PlanetfallShader.tick();
     }
 
     public static void clear() {
         for (Fx.Tracker<?> tracker : Fx.TRACKERS) tracker.clear();
+        SpaceSky.clear();
+        PlanetfallShader.clear();
     }
 }

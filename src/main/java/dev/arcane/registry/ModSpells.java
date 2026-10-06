@@ -12,6 +12,7 @@ import dev.arcane.spell.ChainLightning;
 import dev.arcane.spell.ChronoField;
 import dev.arcane.spell.FrostNova;
 import dev.arcane.spell.MeteorSwarm;
+import dev.arcane.spell.Planetfall;
 import dev.arcane.spell.Singularity;
 import net.minecraft.core.Registry;
 
@@ -28,6 +29,7 @@ public final class ModSpells {
     public static final Spell SINGULARITY = register("singularity", new Singularity());
     public static final Spell CHRONO_FIELD = register("chrono_field", new ChronoField());
     public static final Spell ASTRAL_GATE = register("astral_gate", new AstralGate());
+    public static final Spell PLANETFALL = register("planetfall", new Planetfall());
 
     private ModSpells() {
     }

@@ -2,6 +2,9 @@ package dev.arcane;
 
 import dev.arcane.network.SelectSpellPayload;
 import dev.arcane.network.SpellEffectPayload;
+import dev.arcane.network.LearnTalentPayload;
+import dev.arcane.network.StaffCastPayload;
+import dev.arcane.progression.ArcaneProgression;
 import dev.arcane.registry.ModAttachments;
 import dev.arcane.registry.ModComponents;
 import dev.arcane.registry.ModGameRules;
@@ -17,6 +20,7 @@ import dev.arcane.spell.CelestialJudgment;
 import dev.arcane.spell.ChronoField;
 import dev.arcane.spell.ManaLimits;
 import dev.arcane.spell.MeteorSwarm;
+import dev.arcane.spell.Planetfall;
 import dev.arcane.spell.Singularity;
 import dev.arcane.spell.SpellCasting;
 import net.fabricmc.api.ModInitializer;
@@ -46,9 +50,14 @@ public final class ArcaneSpells implements ModInitializer {
         ModItems.register();
         ModParticles.register();
         PayloadTypeRegistry.playS2C().register(SpellEffectPayload.TYPE, SpellEffectPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(StaffCastPayload.TYPE, StaffCastPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SelectSpellPayload.TYPE, SelectSpellPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(LearnTalentPayload.TYPE, LearnTalentPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(SelectSpellPayload.TYPE,
                 (payload, context) -> SpellCasting.select(context.player(), payload.spell()));
+        ServerPlayNetworking.registerGlobalReceiver(LearnTalentPayload.TYPE,
+                (payload, context) -> ArcaneProgression.get(context.player()).learnTalent(payload.talent()));
+        ArcaneProgression.register();
         ArcaneBolt.register();
         ArcaneWard.register();
         CelestialJudgment.register();
@@ -56,6 +65,7 @@ public final class ArcaneSpells implements ModInitializer {
         Singularity.register();
         ChronoField.register();
         AstralGate.register();
+        Planetfall.register();
         ManaLimits.register();
     }
 }

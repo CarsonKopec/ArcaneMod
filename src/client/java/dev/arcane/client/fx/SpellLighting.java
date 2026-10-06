@@ -318,6 +318,15 @@ public final class SpellLighting {
         return disabled;
     }
 
+    /** Cleanup must still run after rendering fails; one broken handle must not strand the other effects. */
+    static void cleanup(Runnable action) {
+        try {
+            action.run();
+        } catch (RuntimeException | LinkageError e) {
+            if (!disabled) guarded(() -> { throw e; });
+        }
+    }
+
     private static final class Glow {
         final PointLightHandle light;
         EffectHandle<MagicCircle> circle;
