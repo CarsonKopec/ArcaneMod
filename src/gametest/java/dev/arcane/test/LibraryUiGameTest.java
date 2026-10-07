@@ -7,6 +7,7 @@ import dev.arcane.client.animation.StaffCastingAnimations;
 import dev.arcane.client.config.ArcaneClientSettings;
 import dev.arcane.client.gui.SpellBookScreen;
 import dev.arcane.client.gui.SpellWheelScreen;
+import dev.arcane.client.gui.TalentTree;
 import dev.arcane.item.StaffCastingProfile;
 import dev.arcane.progression.ArcaneProgression;
 import dev.arcane.progression.ArcaneTalent;
@@ -20,6 +21,7 @@ import io.wispforest.owo.ui.core.OwoUIAdapter;
 import io.wispforest.owo.ui.core.ParentUIComponent;
 import io.wispforest.owo.ui.core.UIComponent;
 import java.util.ArrayList;
+import java.util.List;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
@@ -87,8 +89,10 @@ public final class LibraryUiGameTest implements FabricClientGameTest {
             click(context, "book-tab-talents");
             context.runOnClient(client -> {
                 assertBookBounds(client.screen, true);
-                ButtonComponent rank = root(client.screen).childById(ButtonComponent.class, "learn-reservoir-1");
-                check(rank != null && !rank.active(), "A new player can buy a talent without skill points");
+                check(tree(client.screen).state(ArcaneTalent.RESERVOIR, 1) == TalentTree.State.UNAFFORDABLE,
+                        "A new player can buy a talent without skill points");
+                check(tree(client.screen).state(ArcaneTalent.WELLSPRING, 1) == TalentTree.State.LOCKED,
+                        "A capstone is open before its branch is complete");
             });
             context.takeScreenshot("libraries-book-talents");
 
@@ -101,32 +105,34 @@ public final class LibraryUiGameTest implements FabricClientGameTest {
                 }
             });
             context.waitTicks(5);
-            click(context, "learn-reservoir-1");
-            click(context, "learn-recovery-1");
+            clickNode(context, ArcaneTalent.RESERVOIR, 1);
+            clickNode(context, ArcaneTalent.RECOVERY, 1);
+            // A capstone whose branch isn't complete: clicking it must do nothing.
+            clickNode(context, ArcaneTalent.WELLSPRING, 1);
             server.runOnServer(s -> {
                 var progression = ArcaneProgression.get(s.getPlayerList().getPlayers().getFirst());
                 check(progression.rank(ArcaneTalent.RESERVOIR) == 1 && progression.rank(ArcaneTalent.RECOVERY) == 1,
                         "Grimoire talent purchases did not reach the server");
+                check(progression.rank(ArcaneTalent.WELLSPRING) == 0, "A locked capstone was bought");
                 check(progression.skillPoints() == 2, "Grimoire talent purchases spent the wrong number of points");
             });
             context.runOnClient(client -> {
-                var root = root(client.screen);
-                check(!root.childById(ButtonComponent.class, "learn-reservoir-1").active(), "Learned talent is still purchasable");
-                check(root.childById(ButtonComponent.class, "learn-reservoir-2").active(), "Affordable next talent is disabled");
-                check(!root.childById(ButtonComponent.class, "learn-reservoir-3").active(), "Talent prerequisite can be skipped");
+                TalentTree tree = tree(client.screen);
+                check(tree.state(ArcaneTalent.RESERVOIR, 1) == TalentTree.State.LEARNED, "A learned rank doesn't show as learned");
+                check(tree.state(ArcaneTalent.RESERVOIR, 2) == TalentTree.State.AVAILABLE, "The affordable next rank isn't available");
+                check(tree.state(ArcaneTalent.RESERVOIR, 3) == TalentTree.State.LOCKED, "A rank can be skipped");
             });
-            hover(context, "learn-reservoir-2");
+            hoverNode(context, ArcaneTalent.RESERVOIR, 2);
             context.takeScreenshot("libraries-book-talents-earned");
 
             context.getInput().resizeWindow(640, 480);
             context.waitTicks(3);
             context.runOnClient(client -> assertBookBounds(client.screen, true));
-            context.takeScreenshot("libraries-book-compact");
-            reveal(context, "learn-reservoir-3");
             context.getInput().setCursorPos(1, 1);
             context.waitTicks(3);
-            context.runOnClient(client -> assertBookBounds(client.screen, true));
-            context.takeScreenshot("libraries-book-compact-lower-ranks");
+            context.takeScreenshot("libraries-book-compact");
+            hoverNode(context, ArcaneTalent.WELLSPRING, 1);
+            context.takeScreenshot("libraries-book-compact-locked");
             context.getInput().resizeWindow(originalSize[0], originalSize[1]);
             context.waitTicks(3);
 
@@ -292,24 +298,50 @@ public final class LibraryUiGameTest implements FabricClientGameTest {
         inside(root.childById(UIComponent.class, "book-done"), frame, true);
         if (!talents) return;
         UIComponent page = root.childById(UIComponent.class, "book-page");
-        previousRight = -1;
-        int branchWidth = -1;
-        for (String talent : new String[] {"reservoir", "recovery", "focus"}) {
-            UIComponent branch = root.childById(UIComponent.class, "branch-" + talent);
-            // Branches scroll vertically; their horizontal bounds must always fit the viewport.
-            inside(branch, page, false);
-            check(branch.x() >= previousRight, "Talent branches overlap: " + talent);
-            check(branchWidth < 0 || branch.width() == branchWidth, "Talent branches have unequal widths");
-            previousRight = branch.x() + branch.width();
-            branchWidth = branch.width();
-            for (int rank = 1; rank <= 3; rank++) {
-                inside(root.childById(UIComponent.class, "learn-" + talent + "-" + rank), branch, true);
+        TalentTree tree = tree(screen);
+        inside(tree, page, true);
+        // Every node is on the page, and none overlaps another.
+        List<int[]> placed = new ArrayList<>();
+        for (ArcaneTalent talent : ArcaneTalent.values()) {
+            for (int rank = 1; rank <= talent.maxRank(); rank++) {
+                int[] node = tree.bounds(talent, rank);
+                check(node[0] >= tree.x() && node[1] >= tree.y() && node[0] + node[2] <= tree.x() + tree.width()
+                        && node[1] + node[2] <= tree.y() + tree.height(), "Talent node off the page: " + talent + " " + rank);
+                for (int[] other : placed) {
+                    check(node[0] >= other[0] + other[2] || other[0] >= node[0] + node[2] || node[1] >= other[1] + other[2]
+                            || other[1] >= node[1] + node[2], "Talent nodes overlap: " + talent + " " + rank);
+                }
+                placed.add(node);
             }
-            // Wrapped to its real width: wrapped to none, it is a character per line, far taller than its box.
-            UIComponent description = root.childById(UIComponent.class, "description-" + talent);
-            check(description != null && description.height() <= description.parent().height(),
-                    "Talent description overflows its box: " + talent);
         }
+    }
+
+    private static TalentTree tree(Screen screen) {
+        TalentTree tree = root(screen).childById(TalentTree.class, "talent-tree");
+        check(tree != null, "The talents page has no tree");
+        return tree;
+    }
+
+    /** A real click on a node of the talent tree. */
+    private static void clickNode(ClientGameTestContext context, ArcaneTalent talent, int rank) {
+        context.runOnClient(client -> {
+            int[] node = tree(client.screen).bounds(talent, rank);
+            MouseButtonEvent click = new MouseButtonEvent(node[0] + node[2] / 2.0, node[1] + node[2] / 2.0, new MouseButtonInfo(0, 0));
+            client.screen.mouseClicked(click, false);
+            client.screen.mouseReleased(click);
+        });
+        context.waitTicks(5);
+    }
+
+    private static void hoverNode(ClientGameTestContext context, ArcaneTalent talent, int rank) {
+        double[] cursor = context.computeOnClient(client -> {
+            int[] node = tree(client.screen).bounds(talent, rank);
+            // TestInput uses physical window coordinates; owo components use scaled GUI coordinates.
+            return new double[] {(node[0] + node[2] / 2.0) * client.getWindow().getScreenWidth() / client.screen.width,
+                    (node[1] + node[2] / 2.0) * client.getWindow().getScreenHeight() / client.screen.height};
+        });
+        context.getInput().setCursorPos(cursor[0], cursor[1]);
+        context.waitTicks(8);
     }
 
     private static void inside(UIComponent child, UIComponent parent, boolean vertical) {

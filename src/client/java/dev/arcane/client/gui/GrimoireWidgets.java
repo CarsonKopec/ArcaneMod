@@ -1,7 +1,6 @@
 package dev.arcane.client.gui;
 
 import dev.arcane.api.spell.Spell;
-import dev.arcane.progression.ArcaneTalent;
 import dev.arcane.progression.SpellSchool;
 import io.wispforest.owo.ui.base.BaseUIComponent;
 import io.wispforest.owo.ui.core.OwoUIGraphics;
@@ -83,53 +82,6 @@ public final class GrimoireWidgets {
                     graphics.fill(cx + 9, cy + 12, cx + 12, cy + 13, GrimoireTheme.GOLD);
                 }
                 SpellIcons.draw(graphics, spell, cx - 8, cy - 8);
-            }
-        };
-    }
-
-    public static BaseUIComponent talent(ArcaneTalent talent, IntSupplier rank) {
-        final int accent = switch (talent) {
-            case RESERVOIR -> GrimoireTheme.VIOLET;
-            case RECOVERY -> GrimoireTheme.CYAN;
-            case FOCUS -> GrimoireTheme.GOLD;
-        };
-        return new Decoration(28) {
-            @Override public void draw(OwoUIGraphics graphics, int mouseX, int mouseY, float partialTicks, float delta) {
-                if (width < 25) return;
-                int learned = Math.clamp(rank.getAsInt(), 0, talent.maxRank());
-                int cx = x + width / 2;
-                int cy = y + 11;
-                int color = learned > 0 ? accent : GrimoireTheme.MUTED;
-                sideRules(graphics, x, width, cx, cy, 16, color);
-                ring(graphics, cx, cy, 10, alpha(color, learned > 0 ? 110 : 50));
-                switch (talent) {
-                    case RESERVOIR -> {
-                        diamondOutline(graphics, cx, cy, 7, color);
-                        line(graphics, cx, cy - 7, cx, cy + 7, alpha(color, 160));
-                        line(graphics, cx - 6, cy, cx, cy + 3, color);
-                        line(graphics, cx, cy + 3, cx + 6, cy, color);
-                    }
-                    case RECOVERY -> {
-                        line(graphics, cx - 4, cy + 6, cx + 3, cy - 6, color);
-                        GrimoireTheme.diamond(graphics, cx - 3, cy - 2, 2, color);
-                        GrimoireTheme.diamond(graphics, cx + 3, cy + 1, 2, color);
-                        GrimoireTheme.diamond(graphics, cx + 2, cy - 5, 2, color);
-                        line(graphics, cx - 6, cy + 6, cx + 3, cy + 6, alpha(color, 110));
-                    }
-                    case FOCUS -> {
-                        line(graphics, cx - 7, cy, cx, cy - 4, color);
-                        line(graphics, cx, cy - 4, cx + 7, cy, color);
-                        line(graphics, cx + 7, cy, cx, cy + 4, color);
-                        line(graphics, cx, cy + 4, cx - 7, cy, color);
-                        GrimoireTheme.diamond(graphics, cx, cy, 2, color);
-                        graphics.fill(cx, cy - 8, cx + 1, cy - 6, GrimoireTheme.GOLD);
-                        graphics.fill(cx, cy + 7, cx + 1, cy + 9, GrimoireTheme.GOLD);
-                    }
-                }
-                for (int i = 0; i < 3; i++) {
-                    GrimoireTheme.diamond(graphics, cx + (i - 1) * 7, y + 25, 1,
-                            i < learned ? GrimoireTheme.GOLD : DORMANT);
-                }
             }
         };
     }

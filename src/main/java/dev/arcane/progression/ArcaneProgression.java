@@ -1,7 +1,9 @@
 package dev.arcane.progression;
 
 import dev.arcane.ArcaneSpells;
+import dev.arcane.api.ArcaneSpellsApi;
 import dev.arcane.api.event.SpellEvents;
+import dev.arcane.spell.SpellTuning;
 import net.minecraft.world.entity.player.Player;
 import org.ladysnake.cca.api.v3.component.ComponentKey;
 import org.ladysnake.cca.api.v3.component.ComponentRegistry;
@@ -22,10 +24,28 @@ public final class ArcaneProgression implements EntityComponentInitializer {
     }
 
     public static void register() {
-        SpellEvents.AFTER_CAST.register((spell, context, spent) -> get(context.caster()).recordCast(spell, spent));
-        SpellEvents.MODIFY_COOLDOWN.register((player, spell, ticks) -> ticks * (1 - 0.05f * get(player).rank(ArcaneTalent.FOCUS)));
-        // Practice in a school makes its spells cheaper. Both sides: the HUD shows what a spell costs.
-        SpellEvents.MODIFY_MANA_COST.register((player, spell, cost) ->
-                cost * (1 - get(player).affinityDiscount(SpellSchool.of(spell)) / 100f));
+        SpellEvents.AFTER_CAST.register((spell, context, spent) -> {
+            PlayerProgressionComponent progression = get(context.caster());
+            progression.recordCast(spell, spent);
+            if (progression.rank(ArcaneTalent.ECHO) > 0 && spent > 0) {
+                ArcaneSpellsApi.addMana(context.caster(), spent * SpellTuning.ECHO_REFUND);
+            }
+        });
+        // Cost and cooldown listeners run on both sides: the HUD and wheel show both.
+        SpellEvents.MODIFY_COOLDOWN.register((player, spell, ticks) -> {
+            PlayerProgressionComponent progression = get(player);
+            float cut = 0.05f * progression.rank(ArcaneTalent.FOCUS);
+            if (progression.rank(ArcaneTalent.TEMPO) > 0 && SpellSchool.of(spell) == SpellSchool.ASTRAL) {
+                cut += SpellTuning.TEMPO_ASTRAL_COOLDOWN_CUT;
+            }
+            return ticks * (1 - cut);
+        });
+        // Practice in a school makes its spells cheaper, and Wellspring makes every spell cheaper.
+        SpellEvents.MODIFY_MANA_COST.register((player, spell, cost) -> {
+            PlayerProgressionComponent progression = get(player);
+            float cut = progression.affinityDiscount(SpellSchool.of(spell)) / 100f;
+            if (progression.rank(ArcaneTalent.WELLSPRING) > 0) cut += SpellTuning.WELLSPRING_COST_CUT;
+            return cost * (1 - cut);
+        });
     }
 }

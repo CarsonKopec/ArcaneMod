@@ -319,77 +319,18 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
     }
 
     private void buildTalents() {
-        FlowLayout content = scrollingPage();
-        content.child(label(Component.translatable("book.arcane_spells.talents_intro"), MUTED));
-        content.child(liveLabel(liveViews, () -> Component.translatable("book.arcane_spells.skill_points",
-                ArcaneProgression.get(minecraft.player).skillPoints()), ACCENT));
-        FlowLayout branches = UIContainers.horizontalFlow(Sizing.fill(100), Sizing.content());
-        branches.gap(6);
-        branches.horizontalAlignment(HorizontalAlignment.CENTER);
-        for (ArcaneTalent talent : ArcaneTalent.values()) {
-            int accent = talentColor(talent);
-            FlowLayout branch = card(Sizing.expand(100 / ArcaneTalent.values().length), accent);
-            String key = talent.name().toLowerCase(Locale.ROOT);
-            branch.id("branch-" + key);
-            branch.child(GrimoireWidgets.talent(talent, () -> ArcaneProgression.get(minecraft.player).rank(talent)));
-            LabelComponent branchTitle = label(Component.translatable("talent.arcane_spells." + key).withStyle(ChatFormatting.BOLD), accent);
-            branchTitle.horizontalTextAlignment(HorizontalAlignment.CENTER);
-            branch.child(branchTitle);
-            // Give every branch the same header height so the three rank rows stay connected visually. The box has the
-            // fixed height, not the label: owo wraps a fixed-height label to its width from the layout before, which
-            // the first time is none, leaving one character per line.
-            FlowLayout description = UIContainers.verticalFlow(Sizing.fill(100), Sizing.fixed(45));
-            description.child(label(Component.translatable("talent.arcane_spells." + key + ".description"), MUTED)
-                    .id("description-" + key));
-            branch.child(description);
-            for (int target = 1; target <= talent.maxRank(); target++) {
-                int targetRank = target;
-                if (target > 1) {
-                    branch.child(new BaseUIComponent() {
-                        { sizing(Sizing.fill(100), Sizing.fixed(7)); }
-                        @Override public void draw(OwoUIGraphics graphics, int mouseX, int mouseY, float partialTicks, float delta) {
-                            int color = ArcaneProgression.get(minecraft.player).rank(talent) >= targetRank - 1 ? accent : 0xFF44374F;
-                            graphics.fill(x + width / 2, y, x + width / 2 + 1, y + height, color);
-                            GrimoireTheme.diamond(graphics, x + width / 2, y + height / 2, 2, color);
-                        }
-                    });
-                }
-                GrimoireButton learn = new GrimoireButton(Component.empty(), () -> learn(talent, targetRank))
-                        .accent(accent).selected(() -> ArcaneProgression.get(minecraft.player).rank(talent) >= targetRank);
-                learn.id("learn-" + key + "-" + target);
-                learn.horizontalSizing(Sizing.fill(100));
-                branch.child(learn);
-                Component[] shownTooltip = new Component[1];
-                liveViews.add(() -> {
-                    var progression = ArcaneProgression.get(minecraft.player);
-                    int rank = progression.rank(talent);
-                    boolean acquired = rank >= targetRank;
-                    int cost = talent.costForNextRank(targetRank - 1);
-                    learn.active(pendingTalent == null && rank == targetRank - 1 && progression.skillPoints() >= cost
-                            && ClientPlayNetworking.canSend(LearnTalentPayload.TYPE));
-                    Component title = Component.translatable(acquired ? "book.arcane_spells.rank_learned"
-                            : "book.arcane_spells.rank_cost", targetRank, cost);
-                    if (!learn.getMessage().equals(title)) learn.setMessage(title);
-                    // The tooltip changes without the title: learning the rank below makes this one the next.
-                    Component tooltip = acquired ? Component.translatable("book.arcane_spells.rank_learned_tooltip", targetRank)
-                            : rank < targetRank - 1 ? Component.translatable("book.arcane_spells.learn_after", cost, targetRank - 1)
-                            : Component.translatable("book.arcane_spells.learn_cost", cost);
-                    if (!tooltip.equals(shownTooltip[0])) {
-                        shownTooltip[0] = tooltip;
-                        learn.tooltip(tooltip);
-                    }
-                });
-            }
-            branches.child(branch);
-        }
-        content.child(branches);
+        TalentTree tree = new TalentTree(() -> ArcaneProgression.get(minecraft.player),
+                () -> pendingTalent == null && ClientPlayNetworking.canSend(LearnTalentPayload.TYPE), this::learn);
+        tree.id("talent-tree");
+        pageContainer.child(tree);
     }
 
     private void learn(ArcaneTalent talent, int targetRank) {
         if (minecraft.player == null || pendingTalent != null || !ClientPlayNetworking.canSend(LearnTalentPayload.TYPE)) return;
         var progression = ArcaneProgression.get(minecraft.player);
         int rank = progression.rank(talent);
-        if (rank != targetRank - 1 || rank >= talent.maxRank() || progression.skillPoints() < talent.costForNextRank(rank)) return;
+        if (rank != targetRank - 1 || rank >= talent.maxRank() || !progression.unlocked(talent)
+                || progression.skillPoints() < talent.costForNextRank(rank)) return;
         // Prevent a double-click from submitting two purchases before the first server response arrives.
         pendingTalent = talent;
         pendingRank = rank;
@@ -420,14 +361,6 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
         card.gap(4);
         card.surface(GrimoireTheme.card(accent));
         return card;
-    }
-
-    private static int talentColor(ArcaneTalent talent) {
-        return switch (talent) {
-            case RESERVOIR -> GrimoireTheme.VIOLET;
-            case RECOVERY -> GrimoireTheme.CYAN;
-            case FOCUS -> GrimoireTheme.GOLD;
-        };
     }
 
     private static int schoolColor(SpellSchool school) {

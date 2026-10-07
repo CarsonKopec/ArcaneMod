@@ -94,8 +94,13 @@ public final class PlayerProgressionComponent implements AutoSyncedComponent, Se
 
     public int skillPoints() {
         int earned = casts.values().stream().mapToInt(count -> Math.min(10, count / 5)).sum();
-        int spent = talents.values().stream().mapToInt(rank -> rank * (rank + 1) / 2).sum();
+        int spent = talents.entrySet().stream().mapToInt(entry -> entry.getKey().totalCost(entry.getValue())).sum();
         return Math.max(0, earned - spent);
+    }
+
+    /** Whether every talent {@code talent} requires is complete, so it can be learned. */
+    public boolean unlocked(ArcaneTalent talent) {
+        return talent.requires().stream().allMatch(required -> rank(required) >= required.maxRank());
     }
 
     /** Called only after a successful paid cast. Creative/free/failed casts never award progress. */
@@ -104,7 +109,7 @@ public final class PlayerProgressionComponent implements AutoSyncedComponent, Se
                 || !Float.isFinite(manaSpent) || manaSpent <= 0) return;
         casts.put(spell.id(), Math.min(MAX_COUNTER, casts(spell) + 1));
         SpellSchool school = SpellSchool.of(spell);
-        int experience = Math.clamp((long) Math.ceil(manaSpent), 1, MAX_COUNTER);
+        int experience = Math.clamp((long) Math.ceil(manaSpent) * (rank(ArcaneTalent.ARCHMAGE) > 0 ? 2 : 1), 1, MAX_COUNTER);
         affinities.put(school, Math.min(MAX_COUNTER, affinity(school) + experience));
         if (school == SpellSchool.ASTRAL) corruption = Math.min(100, corruption + Math.max(1, experience / 25));
         sync();
@@ -114,7 +119,7 @@ public final class PlayerProgressionComponent implements AutoSyncedComponent, Se
     public boolean learnTalent(ArcaneTalent talent) {
         if (!(owner instanceof ServerPlayer) || !owner.isAlive() || owner.isSpectator() || owner.isUsingItem()) return false;
         int rank = rank(talent);
-        if (rank >= talent.maxRank() || skillPoints() < talent.costForNextRank(rank)) return false;
+        if (rank >= talent.maxRank() || !unlocked(talent) || skillPoints() < talent.costForNextRank(rank)) return false;
         talents.put(talent, rank + 1);
         attributesDirty = true;
         applyAttributes();

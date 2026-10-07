@@ -24,6 +24,12 @@ public final class SpellTuning {
     public static final int AFFINITY_XP_PER_PERCENT = 500;
     /** The most affinity takes off a school's mana costs, in percent. */
     public static final int AFFINITY_MAX_PERCENT = 10;
+    /** Wellspring, Reservoir's capstone: how much less every spell costs. */
+    public static final float WELLSPRING_COST_CUT = 0.05f;
+    /** Echo, Recovery's capstone: the share of every spell's mana that comes back. */
+    public static final float ECHO_REFUND = 0.1f;
+    /** Tempo, Focus's capstone: how much shorter Astral spells' new cooldowns are. */
+    public static final float TEMPO_ASTRAL_COOLDOWN_CUT = 0.1f;
 
     // Arcane Bolt
 

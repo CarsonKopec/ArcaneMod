@@ -3,6 +3,7 @@ package dev.arcane.test;
 import com.mojang.authlib.GameProfile;
 import dev.arcane.api.ArcaneSpellsApi;
 import dev.arcane.api.event.SpellEvents;
+import dev.arcane.api.spell.Spell;
 import dev.arcane.network.LearnTalentPayload;
 import dev.arcane.progression.ArcaneProgression;
 import dev.arcane.progression.ArcaneTalent;
@@ -14,6 +15,7 @@ import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -153,10 +155,65 @@ public final class ProgressionGameTest implements FabricClientGameTest {
                                 && CasterState.of(client.player).equals(before) && progression.casts(TestAddon.PING) == 51,
                         "Client-only writes changed authoritative progression");
             });
+            // The tree beyond the branches: capstones need their branch complete, Archmage all three capstones.
+            server.runOnServer(s -> checkCapstones(player(s)));
         } finally {
             freeCast.set(false);
             TestAddon.silenced = false;
         }
+    }
+
+    private static void checkCapstones(ServerPlayer owner) {
+        PlayerProgressionComponent progression = ArcaneProgression.get(owner);
+        // Fifty points to spend: five more spells practised to full mastery.
+        for (Spell spell : List.of(ModSpells.ARCANE_BOLT, ModSpells.CHAIN_LIGHTNING, ModSpells.BLINK, ModSpells.FROST_NOVA,
+                ModSpells.ARCANE_WARD)) {
+            for (int cast = 0; cast < 50; cast++) progression.recordCast(spell, 1);
+        }
+        check(progression.skillPoints() == 50, "Practice did not earn ten points a spell: " + progression.skillPoints());
+        check(!progression.learnTalent(ArcaneTalent.ECHO), "Echo was learned before Recovery was complete");
+        check(!progression.learnTalent(ArcaneTalent.ARCHMAGE), "Archmage was learned before the capstones");
+
+        // Wellspring: Reservoir is complete, so it opens; every spell then costs 5% less, on top of affinity.
+        float before = SpellCasting.manaCost(owner, ModSpells.FROST_NOVA);
+        check(progression.learnTalent(ArcaneTalent.WELLSPRING), "Wellspring was refused with Reservoir complete");
+        check(Math.abs(SpellCasting.manaCost(owner, ModSpells.FROST_NOVA) - before * 0.95f) < 1.0e-3f,
+                "Wellspring did not cut costs by 5%: " + before + " to " + SpellCasting.manaCost(owner, ModSpells.FROST_NOVA));
+
+        check(progression.learnTalent(ArcaneTalent.RECOVERY) && progression.learnTalent(ArcaneTalent.RECOVERY)
+                && progression.learnTalent(ArcaneTalent.ECHO), "Recovery's branch and Echo were refused");
+        check(progression.learnTalent(ArcaneTalent.FOCUS) && progression.learnTalent(ArcaneTalent.TEMPO),
+                "Focus's last rank and Tempo were refused");
+        check(progression.learnTalent(ArcaneTalent.ARCHMAGE), "Archmage was refused with every capstone learned");
+        check(!progression.learnTalent(ArcaneTalent.ARCHMAGE), "Archmage was learned twice");
+        // 4 + 5 + 4 + 3 + 4 + 6 points.
+        check(progression.skillPoints() == 24, "The tree's prices were wrong: " + progression.skillPoints() + " points left");
+
+        // Echo: a tenth of what a spell cost comes back.
+        long now = owner.level().getGameTime();
+        ArcaneSpellsApi.setCooldown(owner, TestAddon.PING, 0);
+        CasterState.set(owner, new CasterState(50, now, ArcaneSpellsApi.maxMana(owner), ArcaneSpellsApi.manaRegen(owner), Map.of()));
+        float cost = SpellCasting.manaCost(owner, TestAddon.PING);
+        check(ArcaneSpellsApi.cast(owner, TestAddon.PING, 1), "Ping was refused");
+        check(Math.abs(ArcaneSpellsApi.mana(owner) - (50 - cost * 0.9f)) < 1.0e-3f,
+                "Echo did not refund a tenth of " + cost + ": " + ArcaneSpellsApi.mana(owner));
+
+        // Tempo: Astral cooldowns 10% shorter, on top of Focus's 15%; other schools only Focus's.
+        int meteor = SpellCasting.cooldown(owner, ModSpells.METEOR_SWARM);
+        check(Math.abs(meteor - SpellTuning.METEOR_COOLDOWN_TICKS * 0.75f) <= 1, "Tempo did not shorten Astral cooldowns: " + meteor);
+        int blink = SpellCasting.cooldown(owner, ModSpells.BLINK);
+        check(Math.abs(blink - SpellTuning.BLINK_COOLDOWN_TICKS * 0.85f) <= 1, "Tempo shortened a non-Astral cooldown: " + blink);
+
+        // Archmage: affinity comes twice as fast.
+        int storm = progression.affinity(SpellSchool.STORM);
+        progression.recordCast(ModSpells.CHAIN_LIGHTNING, 30);
+        check(progression.affinity(SpellSchool.STORM) == storm + 60, "Archmage did not double affinity");
+
+        // The new talents are saved like the old.
+        PlayerProgressionComponent loaded = new PlayerProgressionComponent(owner);
+        loaded.readData(TagValueInput.create(ProblemReporter.DISCARDING, owner.registryAccess(), save(owner, progression)));
+        check(loaded.rank(ArcaneTalent.ARCHMAGE) == 1 && loaded.rank(ArcaneTalent.ECHO) == 1 && loaded.skillPoints() == 24,
+                "The capstones were not saved");
     }
 
     private static void checkMigration(ServerPlayer owner) {
