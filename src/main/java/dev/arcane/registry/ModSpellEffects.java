@@ -83,6 +83,16 @@ public final class ModSpellEffects {
      */
     public static final SpellEffectType PLANETFALL_SHARD = register("planetfall_shard");
 
+    /**
+     * Entity {@code sourceId}'s corruption lashed back at them, at {@code position}: {@code power} is how corrupt they
+     * were, 0 to 1.
+     */
+    public static final SpellEffectType BACKLASH = register("backlash");
+    /** A spell shattered the ice on a frozen target at {@code position}. */
+    public static final SpellEffectType SHATTER = register("shatter");
+    /** Lightning surged through a wet target at {@code position}. */
+    public static final SpellEffectType CONDUCTION = register("conduction");
+
     private ModSpellEffects() {
     }
 

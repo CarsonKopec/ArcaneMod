@@ -1,0 +1,32 @@
+{
+	"parent": "arcane_spells:first_spell",
+	"criteria": {
+		"brew": {
+			"trigger": "minecraft:brewed_potion",
+			"conditions": {
+				"potion": "arcane_spells:mana"
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:potion",
+			"components": {
+				"minecraft:potion_contents": {
+					"potion": "arcane_spells:mana"
+				}
+			}
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.brew_mana.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.brew_mana.description"
+		}
+	},
+	"requirements": [
+		[
+			"brew"
+		]
+	]
+}

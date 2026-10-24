@@ -1,6 +1,7 @@
 package dev.arcane.spell;
 
 import dev.arcane.ArcaneSpells;
+import dev.arcane.api.SpellAttributes;
 import dev.arcane.api.SpellRegistries;
 import dev.arcane.api.event.SpellEvents;
 import dev.arcane.api.spell.Spell;
@@ -67,6 +68,25 @@ public final class SpellCasting {
         return ItemStack.EMPTY;
     }
 
+    /**
+     * The staff {@code player} casts {@code spell} with: the one they're channelling, if it holds the spell, else the first
+     * hand's, main hand first, that holds it; {@link ItemStack#EMPTY} if neither does (an API cast).
+     */
+    public static ItemStack castingStaff(Player player, Spell spell) {
+        if (player.isUsingItem() && holds(player.getUseItem(), spell)) return player.getUseItem();
+        for (InteractionHand hand : InteractionHand.values()) {
+            ItemStack stack = player.getItemInHand(hand);
+            if (holds(stack, spell)) return stack;
+        }
+        return ItemStack.EMPTY;
+    }
+
+    /** What {@code spell}'s damage is multiplied by when {@code player} casts it now, after other mods' adjustments. */
+    public static float spellPower(Player player, Spell spell) {
+        float power = (float) player.getAttributeValue(SpellAttributes.SPELL_POWER);
+        return Math.max(0, SpellEvents.MODIFY_SPELL_POWER.invoker().modify(player, spell, power));
+    }
+
     /** The spell's cost after other mods' adjustments. Creative players cast for free; cooldowns still apply. */
     public static float manaCost(Player player, Spell spell) {
         if (player.getAbilities().instabuild) return 0;
@@ -109,7 +129,7 @@ public final class SpellCasting {
         // Priced before casting, so the spell can't change what it costs.
         float cost = manaCost(caster, spell);
         int cooldown = cooldown(caster, spell);
-        SpellContext context = new SpellContext(level, caster, spell.charged() ? power : 1);
+        SpellContext context = new SpellContext(level, caster, spell.charged() ? power : 1, spellPower(caster, spell));
         if (!spell.cast(context)) return false;
         CasterState.set(caster, CasterState.of(caster).afterCast(spell, cost, cooldown, caster.level().getGameTime()));
         SpellEvents.AFTER_CAST.invoker().afterCast(spell, context, cost);

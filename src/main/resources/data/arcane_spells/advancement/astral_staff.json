@@ -1,0 +1,32 @@
+{
+	"parent": "arcane_spells:root",
+	"criteria": {
+		"staff": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "arcane_spells:astral_staff"
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "arcane_spells:astral_staff"
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.astral_staff.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.astral_staff.description"
+		},
+		"frame": "goal"
+	},
+	"requirements": [
+		[
+			"staff"
+		]
+	]
+}

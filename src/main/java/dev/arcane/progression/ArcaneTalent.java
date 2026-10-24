@@ -1,13 +1,16 @@
 package dev.arcane.progression;
 
+import com.mojang.serialization.Codec;
 import java.util.List;
+import java.util.Locale;
+import net.minecraft.util.StringRepresentable;
 
 /**
  * The talent tree, bought with spell mastery points. Three branches of three ranks each, priced 1, 2 and 3 points; each
  * branch, once complete, opens its capstone; and the three capstones together open Archmage at the crown. Only ever
  * appended to: the order is the network id.
  */
-public enum ArcaneTalent {
+public enum ArcaneTalent implements StringRepresentable {
     /** +20 max mana per rank. */
     RESERVOIR(3, 0),
     /** +0.5 mana per second per rank. */
@@ -22,6 +25,9 @@ public enum ArcaneTalent {
     TEMPO(1, 4, FOCUS),
     /** Affinity XP comes twice as fast. */
     ARCHMAGE(1, 6, WELLSPRING, ECHO, TEMPO);
+
+    /** By lower-case name, as in advancements: {@code "archmage"}. */
+    public static final Codec<ArcaneTalent> CODEC = StringRepresentable.fromEnum(ArcaneTalent::values);
 
     private final int maxRank;
     private final int price;
@@ -52,5 +58,9 @@ public enum ArcaneTalent {
     /** The talents that must be complete, every rank, before this one can be learned. */
     public List<ArcaneTalent> requires() {
         return requires;
+    }
+
+    @Override public String getSerializedName() {
+        return name().toLowerCase(Locale.ROOT);
     }
 }

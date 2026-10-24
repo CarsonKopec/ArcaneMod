@@ -1,5 +1,6 @@
 package dev.arcane.test;
 
+import dev.arcane.progression.ArcaneProgression;
 import dev.arcane.registry.ModItems;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
@@ -86,7 +87,11 @@ public final class JudgmentGameTest implements FabricClientGameTest {
             server.runCommand("summon minecraft:pig 29.5 -43 40.5 {NoAI:1b}");
             server.runCommand("summon minecraft:pig 0 -60 110 {NoAI:1b}");
             server.runCommand(CASTER_AT);
-            server.runOnServer(s -> CasterState.set(player(s), CasterState.FULL));
+            server.runOnServer(s -> {
+                CasterState.set(player(s), CasterState.FULL);
+                // The two strikes above built corruption, whose power would kill the edge pig: strike at the spell's own.
+                ArcaneProgression.get(player(s)).setCorruption(0);
+            });
             context.waitTicks(5);
             context.getInput().holdMouse(GLFW_MOUSE_BUTTON_RIGHT);
             context.waitTicks(24);

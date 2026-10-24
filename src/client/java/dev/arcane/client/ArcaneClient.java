@@ -8,6 +8,7 @@ import dev.arcane.client.render.StaffRenderers;
 import dev.arcane.client.render.TrinketRenderers;
 import dev.arcane.client.gui.ArcaneScreens;
 import dev.arcane.client.fx.AstralFx;
+import dev.arcane.client.fx.CorruptionFx;
 import dev.arcane.client.fx.ScreenEffects;
 import dev.arcane.client.fx.SpellLighting;
 import dev.arcane.client.fx.SpellParticles;
@@ -59,6 +60,7 @@ public final class ArcaneClient implements ClientModInitializer {
         SpellLighting.register();
         SpellParticles.register();
         AstralFx.register();
+        CorruptionFx.register();
         ScreenEffects.register();
         ClientPlayNetworking.registerGlobalReceiver(SpellEffectPayload.TYPE, (payload, context) -> {
             if (context.client().level != null) SpellEffectRenderers.render(payload.effect(), context.client().level);
@@ -75,6 +77,7 @@ public final class ArcaneClient implements ClientModInitializer {
             SpellLighting.tick(client);
             SpellParticles.tick(client.level);
             AstralFx.tick(client);
+            CorruptionFx.tick();
             ScreenEffects.tick();
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clearEffects());
@@ -101,6 +104,7 @@ public final class ArcaneClient implements ClientModInitializer {
         SpellParticles.clear();
         SpellLighting.clear();
         AstralFx.clear();
+        CorruptionFx.clear();
         ScreenEffects.clear();
     }
 }

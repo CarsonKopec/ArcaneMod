@@ -41,7 +41,7 @@ public final class CelestialJudgment extends MarkedSpell {
             context.level().playSound(null, context.caster().blockPosition(), ModSounds.FIZZLE, SoundSource.PLAYERS, 0.6f, 1.0f);
             return false;
         }
-        ACTIVE.add(new JudgmentStrike(context.level(), context.caster(), mark, nextSourceId--));
+        ACTIVE.add(new JudgmentStrike(context.level(), context.caster(), mark, context.spellPower(), nextSourceId--));
         return true;
     }
 }

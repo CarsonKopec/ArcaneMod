@@ -5,6 +5,8 @@ import dev.arcane.ArcaneSpells;
 import dev.arcane.api.SpellAttributes;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.registry.ModAttachments;
+import dev.arcane.registry.ModEffects;
+import dev.arcane.registry.ModTriggers;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.ManaLimits;
 import dev.arcane.spell.SpellTuning;
@@ -84,8 +86,18 @@ public final class PlayerProgressionComponent implements AutoSyncedComponent, Se
         return Math.min(SpellTuning.AFFINITY_MAX_PERCENT, affinity(school) / SpellTuning.AFFINITY_XP_PER_PERCENT);
     }
 
+    /** 0 to {@link SpellTuning#CORRUPTION_MAX}: see {@link Corruption}. */
     public int corruption() {
         return corruption;
+    }
+
+    /** Server only: sets corruption, kept between 0 and the maximum. */
+    public void setCorruption(int value) {
+        if (!(owner instanceof ServerPlayer)) return;
+        int clamped = Math.clamp(value, 0, SpellTuning.CORRUPTION_MAX);
+        if (clamped == corruption) return;
+        corruption = clamped;
+        sync();
     }
 
     public int rank(ArcaneTalent talent) {
@@ -107,12 +119,15 @@ public final class PlayerProgressionComponent implements AutoSyncedComponent, Se
     public void recordCast(Spell spell, float manaSpent) {
         if (!(owner instanceof ServerPlayer) || owner.isSpectator() || owner.getAbilities().instabuild
                 || !Float.isFinite(manaSpent) || manaSpent <= 0) return;
+        int masteryBefore = mastery(spell);
         casts.put(spell.id(), Math.min(MAX_COUNTER, casts(spell) + 1));
         SpellSchool school = SpellSchool.of(spell);
         int experience = Math.clamp((long) Math.ceil(manaSpent) * (rank(ArcaneTalent.ARCHMAGE) > 0 ? 2 : 1), 1, MAX_COUNTER);
         affinities.put(school, Math.min(MAX_COUNTER, affinity(school) + experience));
-        if (school == SpellSchool.ASTRAL) corruption = Math.min(100, corruption + Math.max(1, experience / 25));
+        // From the mana itself, not the affinity it earned: Archmage doesn't double it.
+        if (school == SpellSchool.ASTRAL) corruption = Math.min(SpellTuning.CORRUPTION_MAX, corruption + Corruption.buildup(manaSpent));
         sync();
+        if (masteryBefore < 10 && mastery(spell) == 10) ModTriggers.MASTER_SPELL.trigger((ServerPlayer) owner, spell);
     }
 
     /** Network requests contain only the branch: price, points, limits and effects are decided here. */
@@ -124,14 +139,26 @@ public final class PlayerProgressionComponent implements AutoSyncedComponent, Se
         attributesDirty = true;
         applyAttributes();
         sync();
+        ModTriggers.LEARN_TALENT.trigger((ServerPlayer) owner, talent);
         return true;
+    }
+
+    /** Server only: forgets every talent, giving back the points spent on them. */
+    public void resetTalents() {
+        if (!(owner instanceof ServerPlayer)) return;
+        talents.replaceAll((talent, rank) -> 0);
+        attributesDirty = true;
+        applyAttributes();
+        sync();
     }
 
     @Override public void serverTick() {
         casterState();
         if (attributesDirty) applyAttributes();
-        // Corruption is tracked for future spell interactions; it currently has no hidden damage penalty.
-        if (corruption > 0 && owner.tickCount % 40 == 0 && !owner.isUsingItem()) {
+        // Corruption fades while the caster rests; under Clarity, fast and whatever they're doing.
+        boolean clarity = owner.hasEffect(ModEffects.CLARITY);
+        int interval = clarity ? SpellTuning.CLARITY_DECAY_TICKS : SpellTuning.CORRUPTION_DECAY_TICKS;
+        if (corruption > 0 && owner.tickCount % interval == 0 && (clarity || !owner.isUsingItem())) {
             corruption--;
             sync();
         }
@@ -171,7 +198,7 @@ public final class PlayerProgressionComponent implements AutoSyncedComponent, Se
         talents.clear();
         Map<String, Integer> savedTalents = input.read("talents", COUNTERS_CODEC).orElse(Map.of());
         for (ArcaneTalent talent : ArcaneTalent.values()) talents.put(talent, Math.min(talent.maxRank(), savedTalents.getOrDefault(key(talent), 0)));
-        corruption = Math.clamp(input.getIntOr("corruption", 0), 0, 100);
+        corruption = Math.clamp(input.getIntOr("corruption", 0), 0, SpellTuning.CORRUPTION_MAX);
         attributesDirty = true;
     }
 

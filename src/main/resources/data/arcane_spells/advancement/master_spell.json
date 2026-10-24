@@ -1,0 +1,24 @@
+{
+	"parent": "arcane_spells:first_spell",
+	"criteria": {
+		"master": {
+			"trigger": "arcane_spells:master_spell"
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:experience_bottle"
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.master_spell.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.master_spell.description"
+		}
+	},
+	"requirements": [
+		[
+			"master"
+		]
+	]
+}

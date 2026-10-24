@@ -12,6 +12,8 @@ import net.minecraft.world.level.Level;
 public final class ModDamageTypes {
     /** Crushed by, or caught in the impact of, a falling planet. */
     public static final ResourceKey<DamageType> PLANETFALL = ResourceKey.create(Registries.DAMAGE_TYPE, ArcaneSpells.id("planetfall"));
+    /** A caster's own corruption, lashing back at them through an Astral spell. Armour doesn't stop it. */
+    public static final ResourceKey<DamageType> ASTRAL_BACKLASH = ResourceKey.create(Registries.DAMAGE_TYPE, ArcaneSpells.id("astral_backlash"));
 
     private ModDamageTypes() {
     }
@@ -19,5 +21,10 @@ public final class ModDamageTypes {
     /** Damage of type {@code type} dealt by {@code attacker}. */
     public static DamageSource source(Level level, ResourceKey<DamageType> type, Entity attacker) {
         return new DamageSource(level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(type), attacker);
+    }
+
+    /** Damage of type {@code type} that nobody dealt. */
+    public static DamageSource source(Level level, ResourceKey<DamageType> type) {
+        return new DamageSource(level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(type));
     }
 }

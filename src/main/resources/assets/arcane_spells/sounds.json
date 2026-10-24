@@ -111,6 +111,18 @@
 		"subtitle": "subtitles.arcane_spells.spell.fizzle",
 		"sounds": ["arcane_spells:spell/fizzle"]
 	},
+	"spell.astral.backlash": {
+		"subtitle": "subtitles.arcane_spells.spell.astral.backlash",
+		"sounds": ["arcane_spells:spell/astral_backlash"]
+	},
+	"spell.reaction.shatter": {
+		"subtitle": "subtitles.arcane_spells.spell.reaction.shatter",
+		"sounds": ["arcane_spells:spell/shatter"]
+	},
+	"spell.reaction.conduction": {
+		"subtitle": "subtitles.arcane_spells.spell.reaction.conduction",
+		"sounds": ["arcane_spells:spell/conduction"]
+	},
 	"ui.spell_wheel.select": {
 		"sounds": ["arcane_spells:ui/spell_wheel_select"]
 	}

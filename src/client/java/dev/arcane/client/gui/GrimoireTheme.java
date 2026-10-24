@@ -15,6 +15,8 @@ public final class GrimoireTheme {
     public static final int GOLD = 0xFFCEAC69;
     public static final int VIOLET = 0xFFAF8CEE;
     public static final int CYAN = 0xFF79D7DB;
+    /** Corruption past the point where it can lash back. */
+    public static final int ROSE = 0xFFE07BC4;
 
     private GrimoireTheme() {
     }

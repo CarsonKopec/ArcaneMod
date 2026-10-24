@@ -49,6 +49,8 @@ final class JudgmentStrike {
     private final ServerLevel level;
     private final ServerPlayer caster;
     private final Vec3 impact;
+    /** What its damage is multiplied by, fixed at the cast. */
+    private final float spellPower;
     private final int sourceId;
     private final double skyY;
     /** Read once at the cast, like the bolt: switching to Adventure mid-strike doesn't stop it. */
@@ -62,10 +64,11 @@ final class JudgmentStrike {
     private List<BlockPos> shell = List.of();
     private int carved;
 
-    JudgmentStrike(ServerLevel level, ServerPlayer caster, Vec3 impact, int sourceId) {
+    JudgmentStrike(ServerLevel level, ServerPlayer caster, Vec3 impact, float spellPower, int sourceId) {
         this.level = level;
         this.caster = caster;
         this.impact = impact;
+        this.spellPower = spellPower;
         this.sourceId = sourceId;
         this.skyY = Math.min(level.getMaxY() - 1, impact.y + SpellTuning.JUDGMENT_SKY_HEIGHT);
         this.mayBuild = SpellTerrain.mayBreak(level, caster);
@@ -132,7 +135,7 @@ final class JudgmentStrike {
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, column, e -> SpellTargets.canHarm(caster, e))) {
             Vec3 at = victim.getBoundingBox().getCenter();
             if (Mth.square(at.x - impact.x) + Mth.square(at.z - impact.z) > reach * reach) continue;
-            if (victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), SpellTuning.JUDGMENT_BEAM_DAMAGE)) {
+            if (victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), SpellTuning.JUDGMENT_BEAM_DAMAGE * spellPower)) {
                 victim.igniteForSeconds(SpellTuning.JUDGMENT_BEAM_FIRE_SECONDS);
             }
         }
@@ -156,7 +159,7 @@ final class JudgmentStrike {
             double distance = at.distanceTo(impact);
             if (distance > radius) continue;
             float falloff = (float) (1 - distance / radius);
-            if (victim.hurtServer(level, level.damageSources().explosion(caster, caster), SpellTuning.JUDGMENT_BLAST_DAMAGE * falloff)) {
+            if (victim.hurtServer(level, level.damageSources().explosion(caster, caster), SpellTuning.JUDGMENT_BLAST_DAMAGE * falloff * spellPower)) {
                 Vec3 away = new Vec3(at.x - impact.x, 0, at.z - impact.z);
                 away = away.lengthSqr() < 1.0e-6 ? Vec3.ZERO : away.normalize();
                 double push = SpellTuning.JUDGMENT_BLAST_KNOCKBACK * falloff;

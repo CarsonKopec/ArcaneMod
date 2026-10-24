@@ -22,17 +22,20 @@ final class SpellBolt {
     private final boolean mayBuild;
     private final Vec3 direction;
     private final float power;
+    /** What its damage is multiplied by. */
+    private final float spellPower;
     private final int sourceId;
     private Vec3 position;
     private int age;
 
-    SpellBolt(ServerLevel level, ServerPlayer owner, Vec3 position, Vec3 direction, float power, int sourceId) {
+    SpellBolt(ServerLevel level, ServerPlayer owner, Vec3 position, Vec3 direction, float power, float spellPower, int sourceId) {
         this.level = level;
         this.owner = owner;
         this.mayBuild = SpellTerrain.mayBreak(level, owner);
         this.position = position;
         this.direction = direction;
         this.power = power;
+        this.spellPower = spellPower;
         this.sourceId = sourceId;
     }
 
@@ -79,7 +82,8 @@ final class SpellBolt {
             if (!direct && (distance > radius || !SpellTargets.clearPath(level, blast, victim.getEyePosition(), owner))) continue;
 
             float falloff = (float) Math.max(0, 1 - distance / radius);
-            float damage = direct ? SpellTuning.directHitDamage(power) : SpellTuning.splashDamage(power, falloff);
+            float damage = spellPower * (direct ? SpellTuning.directHitDamage(power) : SpellTuning.splashDamage(power, falloff));
+            damage = SpellReactions.shatter(level, victim, damage);
             if (victim.hurtServer(level, level.damageSources().indirectMagic(owner, owner), damage)) {
                 Vec3 push = victim.position().subtract(blast).normalize().scale(falloff * (0.6 + power));
                 victim.push(push.x, 0.25 + falloff * 0.45, push.z);

@@ -28,6 +28,7 @@ public final class TestAddon implements ModInitializer {
     public static volatile float cooldownScale = 1;
     public static volatile Spell lastCast;
     public static volatile float lastManaSpent;
+    public static volatile SpellContext lastContext;
 
     @Override public void onInitialize() {
         SpellEvents.ALLOW_CAST.register((caster, spell) -> silenced && spell == PING ? Component.literal("Silenced") : null);
@@ -37,6 +38,7 @@ public final class TestAddon implements ModInitializer {
         SpellEvents.AFTER_CAST.register((spell, context, manaSpent) -> {
             lastCast = spell;
             lastManaSpent = manaSpent;
+            lastContext = context;
         });
     }
 

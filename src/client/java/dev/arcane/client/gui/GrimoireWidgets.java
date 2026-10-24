@@ -2,6 +2,7 @@ package dev.arcane.client.gui;
 
 import dev.arcane.api.spell.Spell;
 import dev.arcane.progression.SpellSchool;
+import dev.arcane.spell.SpellTuning;
 import io.wispforest.owo.ui.base.BaseUIComponent;
 import io.wispforest.owo.ui.core.OwoUIGraphics;
 import io.wispforest.owo.ui.core.Sizing;
@@ -35,6 +36,25 @@ public final class GrimoireWidgets {
                     graphics.fill(x + 1 + start, y + 1, x + 1 + end, y + 4, color);
                     graphics.fill(x + 1 + start, y + 1, x + 1 + end, y + 2, blend(color, GrimoireTheme.TEXT, .28));
                 }
+            }
+        };
+    }
+
+    /** Corruption out of its maximum: violet, turning rose past the backlash threshold, which is notched in gold. */
+    public static BaseUIComponent corruption(IntSupplier corruption) {
+        return new Decoration(5) {
+            @Override public void draw(OwoUIGraphics graphics, int mouseX, int mouseY, float partialTicks, float delta) {
+                if (width < 3) return;
+                graphics.fill(x, y, x + width, y + 5, DORMANT);
+                graphics.fill(x + 1, y + 1, x + width - 1, y + 4, INK);
+                int inner = width - 2;
+                int value = Math.clamp(corruption.getAsInt(), 0, SpellTuning.CORRUPTION_MAX);
+                int filled = inner * value / SpellTuning.CORRUPTION_MAX;
+                int threshold = inner * SpellTuning.BACKLASH_THRESHOLD / SpellTuning.CORRUPTION_MAX;
+                if (filled > 0) graphics.fill(x + 1, y + 1, x + 1 + Math.min(filled, threshold), y + 4, GrimoireTheme.VIOLET);
+                if (filled > threshold) graphics.fill(x + 1 + threshold, y + 1, x + 1 + filled, y + 4, GrimoireTheme.ROSE);
+                graphics.fill(x + 1, y + 1, x + 1 + filled, y + 2, 0x40FFFFFF);
+                graphics.fill(x + 1 + threshold, y, x + 2 + threshold, y + 5, GrimoireTheme.GOLD);
             }
         };
     }

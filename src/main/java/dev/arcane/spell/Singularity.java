@@ -62,7 +62,8 @@ public final class Singularity extends MarkedSpell {
             context.level().playSound(null, context.caster().blockPosition(), ModSounds.FIZZLE, SoundSource.PLAYERS, 0.6f, 1.0f);
             return false;
         }
-        HOLES.add(new Hole(context.level(), context.caster(), mark.add(0, SpellTuning.SINGULARITY_LIFT, 0), nextSourceId--));
+        HOLES.add(new Hole(context.level(), context.caster(), mark.add(0, SpellTuning.SINGULARITY_LIFT, 0), context.spellPower(),
+                nextSourceId--));
         return true;
     }
 
@@ -72,6 +73,8 @@ public final class Singularity extends MarkedSpell {
         final Vec3 center;
         final int id;
         final boolean mayBuild;
+        /** What its damage is multiplied by, fixed at the cast. */
+        final float spellPower;
         /** The ground within reach, nearest first: the order it's eaten in. */
         final List<BlockPos> meal;
         /** Blocks it has torn loose, still flying in. */
@@ -79,10 +82,11 @@ public final class Singularity extends MarkedSpell {
         int eaten;
         int age;
 
-        Hole(ServerLevel level, ServerPlayer caster, Vec3 center, int id) {
+        Hole(ServerLevel level, ServerPlayer caster, Vec3 center, float spellPower, int id) {
             this.level = level;
             this.caster = caster;
             this.center = center;
+            this.spellPower = spellPower;
             this.id = id;
             this.mayBuild = SpellTerrain.mayBreak(level, caster);
             this.meal = meal(center);
@@ -148,7 +152,7 @@ public final class Singularity extends MarkedSpell {
             double radius = SpellTuning.SINGULARITY_CRUSH_RADIUS;
             for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(radius), this::caught)) {
                 if (victim.getBoundingBox().getCenter().distanceTo(center) <= radius) {
-                    victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), SpellTuning.SINGULARITY_CRUSH_DAMAGE);
+                    victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), SpellTuning.SINGULARITY_CRUSH_DAMAGE * spellPower);
                 }
             }
         }
@@ -195,7 +199,8 @@ public final class Singularity extends MarkedSpell {
                 if (distance > radius) continue;
                 float falloff = (float) (1 - distance / radius);
                 if (entity instanceof LivingEntity victim
-                        && !victim.hurtServer(level, level.damageSources().explosion(caster, caster), SpellTuning.SINGULARITY_COLLAPSE_DAMAGE * falloff)) {
+                        && !victim.hurtServer(level, level.damageSources().explosion(caster, caster),
+                                SpellTuning.SINGULARITY_COLLAPSE_DAMAGE * falloff * spellPower)) {
                     continue;
                 }
                 Vec3 away = at.subtract(center);

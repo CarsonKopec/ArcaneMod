@@ -88,6 +88,14 @@ public final class ArcaneSpellsApi {
         return SpellCasting.manaCost(player, spell);
     }
 
+    /**
+     * What {@code spell}'s damage would be multiplied by if {@code player} cast it now: their
+     * {@linkplain SpellAttributes#SPELL_POWER spell power}, after {@link dev.arcane.api.event.SpellEvents#MODIFY_SPELL_POWER}.
+     */
+    public static float spellPower(Player player, Spell spell) {
+        return SpellCasting.spellPower(player, spell);
+    }
+
     /** Why {@code player} can't cast {@code spell} right now, or null if they can. */
     public static Component castBlocker(Player player, Spell spell) {
         return SpellCasting.blocker(player, spell);

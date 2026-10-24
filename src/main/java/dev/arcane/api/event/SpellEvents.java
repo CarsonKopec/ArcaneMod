@@ -45,6 +45,18 @@ public final class SpellEvents {
                 return ticks;
             });
 
+    /**
+     * Adjusts what a spell's damage is multiplied by when a player casts it, starting from their
+     * {@linkplain dev.arcane.api.SpellAttributes#SPELL_POWER spell power}. Runs on both sides, like {@link #ALLOW_CAST},
+     * since the spell book shows it. Listeners run in turn, each given the previous one's result; below 0 counts as 0.
+     * The result is fixed when the spell is cast, and spells read it as {@link SpellContext#spellPower()}.
+     */
+    public static final Event<ModifySpellPower> MODIFY_SPELL_POWER = EventFactory.createArrayBacked(ModifySpellPower.class,
+            listeners -> (caster, spell, power) -> {
+                for (ModifySpellPower listener : listeners) power = listener.modify(caster, spell, power);
+                return power;
+            });
+
     /** Server only: a spell was cast, and its mana and cooldown have been charged. */
     public static final Event<AfterCast> AFTER_CAST = EventFactory.createArrayBacked(AfterCast.class, listeners -> (spell, context, manaSpent) -> {
         for (AfterCast listener : listeners) listener.afterCast(spell, context, manaSpent);
@@ -67,6 +79,11 @@ public final class SpellEvents {
     @FunctionalInterface
     public interface ModifyCooldown {
         float modify(Player caster, Spell spell, float ticks);
+    }
+
+    @FunctionalInterface
+    public interface ModifySpellPower {
+        float modify(Player caster, Spell spell, float power);
     }
 
     @FunctionalInterface

@@ -3,6 +3,7 @@ package dev.arcane.progression;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.api.ArcaneSpellsApi;
 import dev.arcane.api.event.SpellEvents;
+import dev.arcane.registry.ModTriggers;
 import dev.arcane.spell.SpellTuning;
 import net.minecraft.world.entity.player.Player;
 import org.ladysnake.cca.api.v3.component.ComponentKey;
@@ -24,8 +25,14 @@ public final class ArcaneProgression implements EntityComponentInitializer {
     }
 
     public static void register() {
+        Corruption.register();
         SpellEvents.AFTER_CAST.register((spell, context, spent) -> {
             PlayerProgressionComponent progression = get(context.caster());
+            ModTriggers.CAST_SPELL.trigger(context.caster(), spell);
+            // Before this cast builds corruption: the spell's power came from what there was when it was cast.
+            if (SpellSchool.of(spell) == SpellSchool.ASTRAL && spent > 0 && !context.caster().getAbilities().instabuild) {
+                Corruption.rollBacklash(context.level(), context.caster());
+            }
             progression.recordCast(spell, spent);
             if (progression.rank(ArcaneTalent.ECHO) > 0 && spent > 0) {
                 ArcaneSpellsApi.addMana(context.caster(), spent * SpellTuning.ECHO_REFUND);

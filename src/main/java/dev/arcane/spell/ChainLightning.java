@@ -16,7 +16,10 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-/** Lightning that strikes the creature under the caster's aim, then leaps to the nearest unstruck one, weakening each time. */
+/**
+ * Lightning that strikes the creature under the caster's aim, then leaps to the nearest unstruck one, weakening each
+ * time. Frozen targets shatter, and wet ones conduct it: see {@link SpellReactions}.
+ */
 public final class ChainLightning extends Spell {
     public ChainLightning() {
         super(new Properties().manaCost(SpellTuning.CHAIN_MANA).cooldown(SpellTuning.CHAIN_COOLDOWN_TICKS).color(0xFF7EE8FF));
@@ -41,16 +44,22 @@ public final class ChainLightning extends Spell {
             return true;
         }
         Set<LivingEntity> struck = new HashSet<>();
-        float damage = SpellTuning.CHAIN_DAMAGE;
+        float damage = SpellTuning.CHAIN_DAMAGE * context.spellPower();
         for (int jump = 0; target != null && jump < SpellTuning.CHAIN_MAX_TARGETS; jump++) {
             Vec3 at = target.getBoundingBox().getCenter();
-            SpellEffects.send(level, ModSpellEffects.CHAIN, from, at.subtract(from), damage / SpellTuning.CHAIN_DAMAGE, jump, caster.getId());
-            target.hurtServer(level, level.damageSources().indirectMagic(caster, caster), damage);
+            // The arc's brightness falls with each leap, whatever the caster's spell power.
+            float strength = (float) Math.pow(SpellTuning.CHAIN_DAMAGE_FALLOFF, jump);
+            SpellEffects.send(level, ModSpellEffects.CHAIN, from, at.subtract(from), strength, jump, caster.getId());
+            // Each leap weakens from the last one's own damage, so a reaction doesn't carry on down the chain.
+            boolean wet = SpellReactions.wet(target);
+            float dealt = SpellReactions.conduct(level, target, SpellReactions.shatter(level, target, damage));
+            target.hurtServer(level, level.damageSources().indirectMagic(caster, caster), dealt);
             level.playSound(null, at.x, at.y, at.z, ModSounds.CHAIN_HIT, SoundSource.PLAYERS, 0.6f, 1.0f + jump * 0.08f);
             struck.add(target);
             from = at;
             damage *= SpellTuning.CHAIN_DAMAGE_FALLOFF;
-            target = nextJump(level, caster, at, struck);
+            double range = SpellTuning.CHAIN_JUMP_RANGE * (wet ? SpellTuning.CONDUCTION_MULTIPLIER : 1);
+            target = nextJump(level, caster, at, struck, range);
         }
         return true;
     }
@@ -70,11 +79,11 @@ public final class ChainLightning extends Spell {
         return nearest;
     }
 
-    /** The closest unstruck target within leaping range that the lightning can reach without passing through a wall. */
-    private static LivingEntity nextJump(ServerLevel level, ServerPlayer caster, Vec3 from, Set<LivingEntity> struck) {
+    /** The closest unstruck target within {@code range} that the lightning can reach without passing through a wall. */
+    private static LivingEntity nextJump(ServerLevel level, ServerPlayer caster, Vec3 from, Set<LivingEntity> struck, double range) {
         LivingEntity nearest = null;
-        double nearestDistance = SpellTuning.CHAIN_JUMP_RANGE * SpellTuning.CHAIN_JUMP_RANGE;
-        for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(from, from).inflate(SpellTuning.CHAIN_JUMP_RANGE),
+        double nearestDistance = range * range;
+        for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(from, from).inflate(range),
                 e -> !struck.contains(e) && SpellTargets.canTarget(caster, e))) {
             Vec3 center = entity.getBoundingBox().getCenter();
             double distance = from.distanceToSqr(center);

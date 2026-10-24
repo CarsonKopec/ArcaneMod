@@ -6,7 +6,9 @@ import dev.arcane.network.LearnTalentPayload;
 import dev.arcane.network.SelectSpellPayload;
 import dev.arcane.progression.ArcaneProgression;
 import dev.arcane.progression.ArcaneTalent;
+import dev.arcane.progression.Corruption;
 import dev.arcane.progression.SpellSchool;
+import dev.arcane.registry.ModEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
@@ -241,6 +243,14 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
         details.child(label(spell.charged()
                 ? Component.translatable("book.arcane_spells.channel", decimal(spell.fullChargeTicks() / 20f))
                 : Component.translatable("book.arcane_spells.instant"), MUTED));
+        LabelComponent power = liveLabel(spellViews, () -> Component.translatable("book.arcane_spells.spell_power",
+                multiplier(SpellCasting.spellPower(minecraft.player, spell))), TEXT);
+        power.id("book-spell-power");
+        details.child(power);
+        if (SpellSchool.of(spell) == SpellSchool.ASTRAL) {
+            details.child(liveLabel(spellViews, () -> Component.translatable("book.arcane_spells.builds_corruption",
+                    Corruption.buildup(SpellCasting.manaCost(minecraft.player, spell))), GrimoireTheme.VIOLET));
+        }
         details.child(liveLabel(spellViews, () -> Component.translatable("book.arcane_spells.mastery",
                 ArcaneProgression.get(minecraft.player).mastery(spell), ArcaneProgression.get(minecraft.player).casts(spell)), ACCENT));
         details.child(GrimoireWidgets.mastery(() -> ArcaneProgression.get(minecraft.player).mastery(spell)));
@@ -282,9 +292,14 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
                 ArcaneProgression.get(minecraft.player).skillPoints()), ACCENT));
         overview.child(points);
         FlowLayout corruption = card(Sizing.expand(50), GrimoireTheme.VIOLET);
+        corruption.id("corruption-card");
         corruption.child(label(Component.translatable("book.arcane_spells.astral_echo"), MUTED));
         corruption.child(liveLabel(liveViews, () -> Component.translatable("book.arcane_spells.corruption",
                 ArcaneProgression.get(minecraft.player).corruption()), GrimoireTheme.VIOLET));
+        corruption.child(GrimoireWidgets.corruption(() -> ArcaneProgression.get(minecraft.player).corruption()));
+        corruption.child(liveLabel(liveViews, () -> Component.translatable("book.arcane_spells.corruption_power",
+                percent(Corruption.spellPower(ArcaneProgression.get(minecraft.player).corruption()))), TEXT));
+        corruption.child(liveLabel(liveViews, this::backlashRisk, GrimoireTheme.ROSE));
         overview.child(corruption);
         content.child(overview);
         content.child(label(Component.translatable("book.arcane_spells.affinities").withStyle(ChatFormatting.BOLD), ACCENT));
@@ -389,6 +404,16 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
         if (!label.text().equals(text)) label.text(text);
     }
 
+    /** What the caster risks with their next Astral spell. */
+    private Component backlashRisk() {
+        Player player = minecraft.player;
+        if (player.hasEffect(ModEffects.CLARITY)) return Component.translatable("book.arcane_spells.backlash_clarity");
+        float chance = Corruption.backlashChance(player);
+        if (chance <= 0) return Component.translatable("book.arcane_spells.backlash_none", SpellTuning.BACKLASH_THRESHOLD);
+        int corruption = ArcaneProgression.get(player).corruption();
+        return Component.translatable("book.arcane_spells.backlash_chance", percent(chance), decimal(Corruption.backlashDamage(corruption)));
+    }
+
     /** The school's affinity XP, out of what the next percent off its costs needs, while there is one to come. */
     private Component affinityProgress(SpellSchool school) {
         var progression = ArcaneProgression.get(minecraft.player);
@@ -413,6 +438,15 @@ public final class SpellBookScreen extends BaseOwoScreen<FlowLayout> {
 
     private static String decimal(float value) {
         return String.format(Locale.ROOT, "%.1f", value);
+    }
+
+    /** {@code fraction} as a whole percentage, without the sign: 0.315 is "32". */
+    private static String percent(float fraction) {
+        return String.format(Locale.ROOT, "%.0f", fraction * 100);
+    }
+
+    private static String multiplier(float value) {
+        return String.format(Locale.ROOT, "%.2f", value);
     }
 
     private enum Page {

@@ -1,0 +1,8 @@
+{
+	"replace": false,
+	"values": [
+		"arcane_spells:potency",
+		"arcane_spells:thrift",
+		"arcane_spells:celerity"
+	]
+}

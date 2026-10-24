@@ -49,7 +49,7 @@ public final class Planetfall extends MarkedSpell {
         Vec3 away = new Vec3(mark.x - caster.getX(), 0, mark.z - caster.getZ());
         away = away.lengthSqr() < 1.0e-6 ? new Vec3(0, 0, 1) : away.normalize();
         Vec3 rift = away.scale(SpellTuning.PLANETFALL_RIFT_LEAD).add(0, SpellTuning.PLANETFALL_RIFT_HEIGHT, 0);
-        ACTIVE.add(new PlanetfallStrike(context.level(), caster, mark, rift, nextSourceId--));
+        ACTIVE.add(new PlanetfallStrike(context.level(), caster, mark, rift, context.spellPower(), nextSourceId--));
         return true;
     }
 

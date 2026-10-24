@@ -1,0 +1,63 @@
+{
+	"parent": "arcane_spells:first_spell",
+	"criteria": {
+		"arcane_bolt": {
+			"trigger": "arcane_spells:cast_spell",
+			"conditions": {
+				"spell": "arcane_spells:arcane_bolt"
+			}
+		},
+		"chain_lightning": {
+			"trigger": "arcane_spells:cast_spell",
+			"conditions": {
+				"spell": "arcane_spells:chain_lightning"
+			}
+		},
+		"blink": {
+			"trigger": "arcane_spells:cast_spell",
+			"conditions": {
+				"spell": "arcane_spells:blink"
+			}
+		},
+		"arcane_ward": {
+			"trigger": "arcane_spells:cast_spell",
+			"conditions": {
+				"spell": "arcane_spells:arcane_ward"
+			}
+		},
+		"frost_nova": {
+			"trigger": "arcane_spells:cast_spell",
+			"conditions": {
+				"spell": "arcane_spells:frost_nova"
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:writable_book"
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.spell_weaver.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.spell_weaver.description"
+		}
+	},
+	"requirements": [
+		[
+			"arcane_bolt"
+		],
+		[
+			"chain_lightning"
+		],
+		[
+			"blink"
+		],
+		[
+			"arcane_ward"
+		],
+		[
+			"frost_nova"
+		]
+	]
+}

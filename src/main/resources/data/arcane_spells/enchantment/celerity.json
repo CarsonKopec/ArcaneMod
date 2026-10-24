@@ -1,0 +1,20 @@
+{
+	"anvil_cost": 4,
+	"description": {
+		"translate": "enchantment.arcane_spells.celerity"
+	},
+	"max_cost": {
+		"base": 60,
+		"per_level_above_first": 10
+	},
+	"max_level": 3,
+	"min_cost": {
+		"base": 10,
+		"per_level_above_first": 10
+	},
+	"slots": [
+		"hand"
+	],
+	"supported_items": "#arcane_spells:enchantable/staff",
+	"weight": 2
+}

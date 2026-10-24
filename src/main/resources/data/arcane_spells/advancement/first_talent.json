@@ -1,0 +1,24 @@
+{
+	"parent": "arcane_spells:first_spell",
+	"criteria": {
+		"learn": {
+			"trigger": "arcane_spells:learn_talent"
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:book"
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.first_talent.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.first_talent.description"
+		}
+	},
+	"requirements": [
+		[
+			"learn"
+		]
+	]
+}

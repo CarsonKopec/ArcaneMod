@@ -28,7 +28,8 @@ These libraries power player casting poses, animated 3D staffs, saved player pro
 - The grimoire uses gilded controls with distinct hover, keyboard-focus, selected and locked states. Spell sigils, a live mana gauge and mastery gems show your progress; the selection button stays visible while spell details scroll. Layout and text adapt to the window size.
 - **Talent tree:** the Talents page is a tree that grows from a sigil showing your unspent points. Each rank is a node; hover one for its effect, price or requirement, and click it, or reach it with the arrow keys and press Enter, to learn it. Nodes you can afford pulse gold, learned nodes light up in their branch's colour, and light runs along the branches as far as you have grown.
 - **Practice and talents:** every five successful casts that spend mana earn one mastery rank and one skill point, up to ten ranks per spell. Free and Creative casts award no progress. The tree has three branches of three ranks, costing 1, 2 and 3 points: Reservoir grants +20 maximum mana per rank, Recovery grants +0.5 mana per second, and Focus reduces new cooldowns by 5% per rank. A complete branch opens its capstone, for 4 points: Wellspring (after Reservoir) takes 5% off every spell's mana cost, Echo (after Recovery) returns a tenth of the mana each spell spent, and Tempo (after Focus) makes Astral spells' new cooldowns 10% shorter. All three capstones open Archmage, for 6 points, which doubles affinity XP. The whole tree costs 36 points. Raising maximum mana does not refill it. Knowledge and talents survive death.
-- **Affinities and corruption:** paid casts grant affinity XP in the spell's school (Arcane, Storm, Frost or Astral), one per point of mana spent. Every 500 XP takes 1% off that school's mana costs, up to 10% at 5,000; the grimoire's Progression page shows each school's discount and when the next comes. Astral casts also build corruption, which fades by one point every two seconds while not using an item. Corruption is saved and shown, but has no effect yet.
+- **Affinities:** paid casts grant affinity XP in the spell's school (Arcane, Storm, Frost or Astral), one per point of mana spent. Every 500 XP takes 1% off that school's mana costs, up to 10% at 5,000; the grimoire's Progression page shows each school's discount and when the next comes.
+- **Corruption**, the Astral Staff's price and its power: every paid Astral cast builds a quarter of the mana it spent as corruption (at least 1; Celestial Judgment builds 23), up to 100. Each point makes Astral spells hit 0.5% harder, up to +50% at 100. From 50 on, a paid Astral cast may lash back at its caster, a 1% chance for each point over 50 (so 50% at 100). The spell still goes off, but the backlash deals 2 damage plus 0.1 per point of corruption (7 to 12) through armour, darkens the caster's sight for 4 s and burns off 30 corruption. It can kill. Corruption fades by one point every two seconds while not using an item. While there is any, a slim violet bar above the mana bar shows it, with a notch at 50; past the notch the bar throbs pink and a violet haze closes in at the edges of the screen (following Screen Effect Scale). The grimoire's Progression page shows your corruption, the power it adds and your backlash risk, and each Astral spell's page shows the corruption it builds. Free and Creative casts build none and never backlash.
 - **Casting visuals:** both staffs have animated 3D crystals and crowns, with idle, channel and successful-release animations. In third person, the player uses distinct Arcane and Astral casting poses, mirrored for the casting hand. Planetfall has its own: a gathering channel that settles into a held ready pose once fully charged, and its own release. Short or refused casts do not play a success gesture.
 - **Cast:** right-click. Arcane Bolt and Celestial Judgment are held to charge and fire on release; the other spells fire on click.
 - **Trinkets:** three magical trinkets, worn in Trinkets' slots. Right-click one to put it on, or place it in its slot in the inventory: one ring slot sits beside the player, and the other ring, necklace and belt slots open from the off-hand, chestplate and leggings slots. Worn, the amulet hangs at the wearer's chest and the charm at the right hip; rings are too small to show.
@@ -36,6 +37,14 @@ These libraries power player casting poses, animated 3D staffs, saved player pro
   - **Astral Amulet** (necklace): +1 mana per second. Craft four gold nuggets over an eye of ender.
   - **Chrono Charm** (belt): new spell cooldowns are 15% shorter. Craft string over an amethyst shard, a clock and another amethyst shard.
 - **Mana:** 100, refilling at 5 per second. Both are player attributes, `arcane_spells:max_mana` and `arcane_spells:mana_regen`, so gear, effects, other mods and `/attribute` can change them. Raising the maximum doesn't refill the pool. The bar sits above the food bar while you hold the staff or are refilling. The active spell shows in a slot beside the hotbar, dimmed when you can't afford it and with a cooldown sweep. A refused cast (no mana, or still recharging) fizzles and says why above the hotbar. Creative players cast for free; cooldowns still apply.
+- **Spell power:** every spell's damage is multiplied by the caster's spell power, 1 by default. It is a player attribute too, `arcane_spells:spell_power`, and Potency and corruption add to it. A spell keeps the power it was cast with. Each spell's page in the grimoire shows it.
+- **Staff enchantments:** both staffs take three enchantments, each up to level III, from the enchanting table, books on an anvil, loot and librarians, as vanilla's do. **Potency** makes the staff's spells hit 10% harder per level, **Thrift** makes them cost 8% less mana per level and **Celerity** makes their new cooldowns 8% shorter per level. They apply to the spells the enchanted staff casts.
+- **Potions:** brewed from an Awkward Potion, like vanilla's, and each also comes as a splash or lingering potion and a tipped arrow.
+  - **Potion of Mana** (amethyst shard): restores 40 mana at once; glowstone makes it 80. A splash restores less the farther from its centre.
+  - **Potion of Arcane Flow** (lapis lazuli): +2.5 mana per second for 3 minutes; redstone makes it 8 minutes, glowstone +5 for 90 s.
+  - **Potion of Clarity** (glow ink sac): for 90 s (4 minutes with redstone), corruption drains ten times as fast, even while you cast, and no Astral spell backlashes.
+- **`/arcane`** (operators): `/arcane mana get|set|add|fill`, `/arcane corruption get|set|add`, `/arcane cooldowns reset` and `/arcane talents reset` (which gives back the points spent), each for one or more players.
+- **Advancements:** an Arcane Spells tab of 12, from taking up a staff and casting your first spell, through casting every Arcane Staff spell, mastering a spell, learning Archmage, enchanting a staff and brewing a Potion of Mana, to the Astral Staff, Planetfall, a backlash and purging corruption with Clarity.
 - Every spell has its own sounds, with subtitles (Options → Accessibility → Show Subtitles).
 
 | Spell | Mana | Cooldown | Effect |
@@ -45,6 +54,8 @@ These libraries power player casting poses, animated 3D staffs, saved player pro
 | Blink | 20 | 3 s | Teleports up to 16 blocks along your aim, stopping short of walls. Fails, without cost, if there's no room at least 2 blocks away. Resets fall damage. |
 | Arcane Ward | 40 | 15 s | An 8 s shell that absorbs 16 damage from attacks, projectiles and explosions (not falls, fire or hunger), and turns incoming projectiles back on their shooter. The hit that breaks it is still fully absorbed. |
 | Frost Nova | 35 | 8 s | Everything within 6 blocks takes 4 damage (10 for blazes and other heat-loving mobs), Slowness III for 5 s and is frozen solid, as in powder snow (strays, snow golems and anyone wearing leather don't freeze). |
+
+**The Arcane Staff's spells play off one another.** **Shatter:** Arcane Bolt (direct hit or splash) and Chain Lightning hit a creature frozen solid, by Frost Nova or powder snow, half again as hard, and break the ice. **Conduction:** Chain Lightning hits a creature in water or rain half again as hard, and leaps half again as far from it (10.5 blocks). A frozen, wet creature takes both. Each leap is still 20% weaker than the last before any reaction, so a reaction's bonus doesn't carry down the chain.
 
 **The Astral Staff's spells** are all channelled: hold right-click while a ring, in the spell's colour, marks where it will land (red where it can't), and an arc sweeps round the ring as the channel fills. Once the circle closes, release to cast. Releasing early, aiming at nothing, or marking somewhere too close to yourself casts nothing and costs nothing.
 
@@ -124,6 +135,7 @@ The client game tests run in a real client and save screenshots to `build/run/cl
 - `AstralSpellsGameTest` checks that the Astral Staff holds all six spells and shows them on the wheel, then casts the other four on a stone plateau: Meteor Swarm cratering it and hitting pigs; Singularity dragging pigs and a dropped diamond in, eating the ground and crushing what it caught; Chrono Field freezing a wandering pig and an incoming arrow, holding back a blow until time resumes (then dealing it three times over) and letting both move on; and Astral Gate refusing a spot too close, carrying the caster and a pig standing in the gate 54 blocks away, bringing the caster back when they step out of the far gate and in again, and gating home to their respawn point when they look straight up. Chrono Field also checks the caster is empowered. Both Astral tests build an 81-block stone plateau (`Plateau`) wide enough for the crater.
 - `PlanetfallGameTest` checks that a short channel is refused without cost, and that a strike in Adventure mode or with `terrain_damage` off leaves terrain alone. It then channels a real three-second right-click at a broad, deep stone plateau and checks the crater: deep enough, with obsidian, bedrock and the ground beyond its reach left standing, a chest's diamond spilled rather than lost, a scorched and molten lining, raised rubble, fissures past the rim and the glowing core. Two pigs far out check that the pressure front hits each once, the outer one later and more lightly; a pig at the mark must die; the screen pass must draw the falling planet (no block-display planet is built) and stop once it's over; and no client-only block displays may be left. Screenshots cover the channel and every phase, from a spectator's vantage points, including the planet looming overhead from the ground and the instant of impact.
 - `SpellApiGameTest` uses `TestAddon`, a stand-in for another mod written only against the API, with one spell (Ping), its own effect type and a listener on each event. It checks that Ping joins the wheel after the built-in spells, that the events can refuse a cast, change its cost and cooldown (shorter, longer or none) and see it happen, that setting a running cooldown keeps the HUD's sweep in proportion, that Ping's effect reaches a client renderer even when another renderer throws, that the mana API stays in bounds and syncs, that max mana and regeneration follow the attributes (by command and by modifier) without refilling or back-dating regeneration, and that saved staffs and cooldowns survive a mod's spells disappearing.
+- `ArcanaGameTest` covers the mechanics around the spells. It checks that Potency, Thrift and Celerity fit only staffs, come from the enchanting table and change damage, costs and cooldowns; that Shatter and Conduction hit frozen and wet pigs harder, and Shatter breaks the ice; that corruption adds power to Astral spells only, and that a real Astral cast builds it; that a backlash at the maximum hurts through diamond armour, darkens the view and burns off corruption, and happens about half the time there but never under Clarity, on free casts or below the threshold; that corruption fades, and fast under Clarity; that the potions brew, Mana restores 40 and 80, and Arcane Flow II adds 5 mana a second; that `/arcane` sets mana and corruption and resets cooldowns and talents; and that all 12 advancements load and are earned. It photographs the corruption bar and haze, the grimoire's corruption card and an Astral spell's page, the new effects in the inventory, and the advancement tab.
 - `DedicatedServerGameTest` starts a real dedicated server and connects to it. In singleplayer, packets pass between client and server in memory without being encoded; here every one is. It picks a spell on the wheel and casts with real clicks, then checks that the server got the pick, that the client's mana, cooldowns and staff match the server's, and that the client decodes where a bolt struck. It also checks that `terrain_damage`, set from the server console, keeps a wall standing, and that an Astral Gate home carries the caster from the Nether to their spawn point, with the client following. A dedicated server only runs with the [Minecraft EULA](https://aka.ms/MinecraftEULA) accepted, so `build.gradle` accepts it for test runs (`eula = true` in `fabricApi.configureTests`).
 
 **Offline/fast builds on this machine:** `.gradle-home/` is a pre-warmed Gradle home (Gradle 9.7.1 plus Loom's Minecraft 1.21.11 files). To reuse it instead of downloading everything into `~/.gradle`, set `GRADLE_USER_HOME` first:
@@ -140,12 +152,17 @@ After changing dependencies while a dev client is still open on Windows, use `gr
 src/main/java/dev/arcane/          common code (runs on server and client)
   ArcaneSpells.java                  entrypoint: wires everything up
   api/                               the API for other mods (see below)
-  mixin/PlayerMixin.java             adds the mana attributes to players
-  registry/                          item, particle, data component, attachment, game rule, damage type, spell and effect registration
+  mixin/PlayerMixin.java             adds the mana and spell power attributes to players
+  command/ArcaneCommand.java         /arcane: mana, corruption, cooldowns and talents, for operators
+  registry/                          item, particle, data component, attachment, game rule, damage type, spell and effect
+                                       registration; status effects, potions and brewing, enchantments, advancement triggers
+  progression/                       mastery, affinities, talents and corruption, saved and synced with CCA
+  progression/Corruption.java        corruption's spell power and backlash
   item/ArcaneStaffItem.java          both staffs: casts the selected spell from the staff's tag, charge/release or click
   item/ArcaneTrinketItem.java        the trinkets: worn in Trinkets' slots, with an attribute bonus while worn
   spell/SpellTuning.java             ALL balance numbers: mana, costs, cooldowns, damage, ranges
-  spell/SpellCasting.java            the one entry point: mana and cooldown checks, then the spell
+  spell/SpellCasting.java            the one entry point: mana and cooldown checks, spell power, then the spell
+  spell/SpellReactions.java          Shatter and Conduction
   spell/CasterState.java             a player's mana and cooldowns (saved, synced to that player)
   spell/ArcaneBolt.java, SpellBolt   Arcane Bolt: charging, server-side simulation, collision and blast
   spell/ChainLightning, Blink,       the other spells
@@ -164,7 +181,7 @@ src/client/java/dev/arcane/          client-only code
   api/client/                        client half of the API: effect renderers
   client/ArcaneClient.java           entrypoint: key binding, packet receiver and tick hooks
   client/gui/SpellWheelScreen.java   the radial spell wheel
-  client/gui/SpellHud.java           mana bar and active-spell slot
+  client/gui/SpellHud.java           mana bar, corruption bar and active-spell slot
   client/fx/SpellParticles.java      particle choreography for every built-in effect
   client/fx/SpellLighting.java       Nebulon lights, rune circles and arcs
   client/fx/AstralFx.java            the Astral spells' visuals, registered and ticked together
@@ -177,6 +194,7 @@ src/client/java/dev/arcane/          client-only code
         PlanetfallDebris               displays (and the whole planet, without the shader pass)
   client/fx/SpaceSky.java            turns the sky to space while a Planetfall's rift is open
   client/fx/ScreenEffects.java       screen shake, flash and darkening, within the accessibility settings
+  client/fx/CorruptionFx.java        the corruption haze at the screen's edges, and a backlash's lurch
   client/particle/ArcaneSpark.java   the tinted glow particle
   client/particle/PlanetfallCloud    Planetfall's billows of dust, smoke and fire
   mixin/client/CameraMixin.java      turns the camera (never the aim) for screen shake and to draw the eye
@@ -187,6 +205,8 @@ src/main/resources/assets/arcane_spells/shaders/core/
                                      Planetfall's screen pass (planetfall.fsh) and its frame copy
 src/main/resources/data/arcane_spells/tags/arcane_spells/spell/
                                      each staff's spells
+src/main/resources/data/arcane_spells/enchantment/, advancement/
+                                     the staff enchantments' levels and rarity, and the advancements
 src/gametest/                        Fabric client game tests, and TestAddon, a sample addon they use
 tools/generate_assets.py             draws the spell icons and textures, and synthesizes the spell sounds
 reference/                           local-only decompiled/library sources (gitignored)
@@ -213,10 +233,10 @@ Other mods can add spells, react to casting, use mana and send their own effects
 | `SpellRegistries` | `SPELLS` and `SPELL_EFFECTS`: register your spells and effect types here, in your mod initializer. |
 | `SpellTags` | Which spells each staff holds (`ARCANE_STAFF`, `ASTRAL_STAFF`). Add your spell to a staff with a tag file. |
 | `spell.Spell` | Subclass it. `Properties` sets mana cost, cooldown, accent color and whether it's charged (and for how long); override `cast` (and `onChargeStart`/`onChargeTick` for charged spells). |
-| `spell.SpellContext` | What `cast` gets: the level, the caster and the charge power. |
-| `event.SpellEvents` | `ALLOW_CAST` (refuse a cast, with a reason), `MODIFY_MANA_COST`, `MODIFY_COOLDOWN`, `AFTER_CAST`. |
-| `SpellAttributes` | `MAX_MANA` and `MANA_REGEN` (per second): add attribute modifiers to change a player's mana. |
-| `ArcaneSpellsApi` | Read and add mana, read max mana and regeneration, read and set cooldowns, find the held staff and its spell, cast a spell from code, and `sendEffect`. |
+| `spell.SpellContext` | What `cast` gets: the level, the caster, the charge power and the spell power. Multiply your spell's damage by `spellPower()` so Potency, corruption and the attribute apply to it. |
+| `event.SpellEvents` | `ALLOW_CAST` (refuse a cast, with a reason), `MODIFY_MANA_COST`, `MODIFY_COOLDOWN`, `MODIFY_SPELL_POWER`, `AFTER_CAST`. |
+| `SpellAttributes` | `MAX_MANA`, `MANA_REGEN` (per second) and `SPELL_POWER` (a damage multiplier): add attribute modifiers to change them. |
+| `ArcaneSpellsApi` | Read and add mana, read max mana, regeneration and a spell's power, read and set cooldowns, find the held staff and its spell, cast a spell from code, and `sendEffect`. |
 | `effect.SpellEffect`, `effect.SpellEffectType` | A visual event, sent once to nearby players and drawn by each client. |
 | `client.SpellEffectRenderers` | Draw your effect types, or add to the built-in ones in `ModSpellEffects`. |
 

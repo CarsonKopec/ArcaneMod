@@ -1,0 +1,33 @@
+{
+	"criteria": {
+		"staff": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "arcane_spells:arcane_staff"
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "arcane_spells:arcane_staff"
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.root.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.root.description"
+		},
+		"background": "minecraft:block/obsidian",
+		"show_toast": false,
+		"announce_to_chat": false
+	},
+	"requirements": [
+		[
+			"staff"
+		]
+	]
+}

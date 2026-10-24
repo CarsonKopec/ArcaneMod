@@ -1,0 +1,24 @@
+{
+	"parent": "arcane_spells:astral_staff",
+	"criteria": {
+		"backlash": {
+			"trigger": "arcane_spells:astral_backlash"
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:crying_obsidian"
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.backlash.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.backlash.description"
+		}
+	},
+	"requirements": [
+		[
+			"backlash"
+		]
+	]
+}

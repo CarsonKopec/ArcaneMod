@@ -31,6 +31,60 @@ public final class SpellTuning {
     /** Tempo, Focus's capstone: how much shorter Astral spells' new cooldowns are. */
     public static final float TEMPO_ASTRAL_COOLDOWN_CUT = 0.1f;
 
+    // Corruption: the Astral Staff's price, and its power
+
+    /** The most corruption a caster can carry. */
+    public static final int CORRUPTION_MAX = 100;
+    /** Corruption each point of mana spent on an Astral spell builds (at least 1 a cast): Celestial Judgment builds 23. */
+    public static final float CORRUPTION_PER_MANA = 0.25f;
+    /** Spell power each point of corruption adds to Astral spells: +50% at the most. */
+    public static final float CORRUPTION_POWER_PER_POINT = 0.005f;
+    /** From this much corruption on, an Astral cast can backlash. */
+    public static final int BACKLASH_THRESHOLD = 50;
+    /** The chance of a backlash for each point of corruption over the threshold: 50% at the most. */
+    public static final float BACKLASH_CHANCE_PER_POINT = 0.01f;
+    /** A backlash hurts its caster this much, plus {@link #BACKLASH_DAMAGE_PER_POINT} for each point of corruption. */
+    public static final float BACKLASH_BASE_DAMAGE = 2;
+    /** 7 damage at the threshold, 12 at the most. */
+    public static final float BACKLASH_DAMAGE_PER_POINT = 0.1f;
+    /** How long a backlash darkens its caster's sight. */
+    public static final int BACKLASH_DARKNESS_TICKS = 80;
+    /** Corruption a backlash burns off. */
+    public static final int BACKLASH_VENT = 30;
+    /** Corruption fades by a point every this many ticks (2 s) while the caster isn't channelling or using an item. */
+    public static final int CORRUPTION_DECAY_TICKS = 40;
+    /** Under Clarity it fades by a point every this many ticks, whatever the caster is doing, and nothing backlashes. */
+    public static final int CLARITY_DECAY_TICKS = 4;
+
+    // Potions and their effects
+
+    /** Instant Mana restores this much mana, doubled at level II. */
+    public static final float INSTANT_MANA = 40;
+    /** Arcane Flow's extra mana per second, per level. */
+    public static final float ARCANE_FLOW_MANA_REGEN = 2.5f;
+    /** Potion durations in ticks: 3 and 8 minutes for Arcane Flow, 90 s and 4 minutes for Clarity, as vanilla's. */
+    public static final int ARCANE_FLOW_TICKS = 3600;
+    public static final int LONG_ARCANE_FLOW_TICKS = 9600;
+    public static final int STRONG_ARCANE_FLOW_TICKS = 1800;
+    public static final int CLARITY_TICKS = 1800;
+    public static final int LONG_CLARITY_TICKS = 4800;
+
+    // Staff enchantments
+
+    /** Potency: spell power each level adds to the spells its staff casts. */
+    public static final float POTENCY_SPELL_POWER = 0.1f;
+    /** Thrift: how much less mana each level makes its staff's spells cost. */
+    public static final float THRIFT_COST_CUT = 0.08f;
+    /** Celerity: how much shorter each level makes its staff's new cooldowns. */
+    public static final float CELERITY_COOLDOWN_CUT = 0.08f;
+
+    // Spell reactions
+
+    /** Arcane Bolt and Chain Lightning hit a frozen target this much harder, shattering the ice. */
+    public static final float SHATTER_MULTIPLIER = 1.5f;
+    /** Chain Lightning hits a wet target this much harder, and leaps from it this much farther. */
+    public static final float CONDUCTION_MULTIPLIER = 1.5f;
+
     // Arcane Bolt
 
     public static final float BOLT_MANA = 25;

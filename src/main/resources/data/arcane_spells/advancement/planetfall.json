@@ -1,0 +1,28 @@
+{
+	"parent": "arcane_spells:astral_staff",
+	"criteria": {
+		"planetfall": {
+			"trigger": "arcane_spells:cast_spell",
+			"conditions": {
+				"spell": "arcane_spells:planetfall"
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:magma_block"
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.planetfall.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.planetfall.description"
+		},
+		"frame": "challenge"
+	},
+	"requirements": [
+		[
+			"planetfall"
+		]
+	]
+}

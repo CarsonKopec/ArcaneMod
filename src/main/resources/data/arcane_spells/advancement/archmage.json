@@ -1,0 +1,28 @@
+{
+	"parent": "arcane_spells:first_talent",
+	"criteria": {
+		"archmage": {
+			"trigger": "arcane_spells:learn_talent",
+			"conditions": {
+				"talent": "archmage"
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "arcane_spells:astral_amulet"
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.archmage.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.archmage.description"
+		},
+		"frame": "challenge"
+	},
+	"requirements": [
+		[
+			"archmage"
+		]
+	]
+}

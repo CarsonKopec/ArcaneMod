@@ -66,6 +66,8 @@ final class PlanetfallStrike {
     private final ServerPlayer caster;
     private final Vec3 mark;
     private final Vec3 rift;
+    /** What the shards' and the impact's damage is multiplied by, fixed at the cast. The planet itself kills regardless. */
+    private final float spellPower;
     private final int sourceId;
     /** Shared with every client, so they all draw the same planet. */
     private final int seed;
@@ -83,11 +85,12 @@ final class PlanetfallStrike {
     private final ArrayDeque<PloughSweep> sweeps = new ArrayDeque<>();
     private final List<Shard> shards = new ArrayList<>();
 
-    PlanetfallStrike(ServerLevel level, ServerPlayer caster, Vec3 mark, Vec3 rift, int sourceId) {
+    PlanetfallStrike(ServerLevel level, ServerPlayer caster, Vec3 mark, Vec3 rift, float spellPower, int sourceId) {
         this.level = level;
         this.caster = caster;
         this.mark = mark;
         this.rift = rift;
+        this.spellPower = spellPower;
         this.sourceId = sourceId;
         this.mayBuild = SpellTerrain.mayBreak(level, caster);
         this.random = level.getRandom();
@@ -231,7 +234,7 @@ final class PlanetfallStrike {
             double distance = center.distanceTo(at);
             if (distance > radius) continue;
             float falloff = (float) (1 - distance / radius);
-            if (victim.hurtServer(level, damage, SpellTuning.PLANETFALL_SHARD_DAMAGE * falloff)) {
+            if (victim.hurtServer(level, damage, SpellTuning.PLANETFALL_SHARD_DAMAGE * falloff * spellPower)) {
                 victim.igniteForSeconds(4);
                 Vec3 away = center.subtract(at).normalize().scale(falloff * 1.2);
                 victim.push(away.x, 0.3 + falloff * 0.5, away.z);
@@ -283,7 +286,7 @@ final class PlanetfallStrike {
             double distance = at.distanceTo(mark);
             if (distance > reach || !struck.add(victim.getId())) continue;
             float falloff = (float) (1 - distance / radius);
-            if (victim.hurtServer(level, damage, SpellTuning.PLANETFALL_IMPACT_DAMAGE * falloff)) {
+            if (victim.hurtServer(level, damage, SpellTuning.PLANETFALL_IMPACT_DAMAGE * falloff * spellPower)) {
                 Vec3 away = new Vec3(at.x - mark.x, 0, at.z - mark.z);
                 away = away.lengthSqr() < 1.0e-6 ? Vec3.ZERO : away.normalize();
                 double push = SpellTuning.PLANETFALL_IMPACT_KNOCKBACK * falloff;

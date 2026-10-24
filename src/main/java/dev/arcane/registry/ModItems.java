@@ -20,12 +20,12 @@ import net.minecraft.world.item.Rarity;
 public final class ModItems {
     public static final ResourceKey<Item> ARCANE_STAFF_KEY = ResourceKey.create(Registries.ITEM, ArcaneSpells.id("arcane_staff"));
     public static final Item ARCANE_STAFF = new ArcaneStaffItem(new Item.Properties().setId(ARCANE_STAFF_KEY).stacksTo(1)
-            .component(ModComponents.SELECTED_SPELL, ModSpells.ARCANE_BOLT), SpellTags.ARCANE_STAFF, 0xAD55FF);
+            .enchantable(15).component(ModComponents.SELECTED_SPELL, ModSpells.ARCANE_BOLT), SpellTags.ARCANE_STAFF, 0xAD55FF);
 
     /** The advanced spells' staff: an endgame upgrade of the Arcane Staff. Survives fire and lava, like netherite. */
     public static final ResourceKey<Item> ASTRAL_STAFF_KEY = ResourceKey.create(Registries.ITEM, ArcaneSpells.id("astral_staff"));
     public static final Item ASTRAL_STAFF = new ArcaneStaffItem(new Item.Properties().setId(ASTRAL_STAFF_KEY).stacksTo(1)
-            .rarity(Rarity.EPIC).fireResistant().component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true)
+            .rarity(Rarity.EPIC).fireResistant().enchantable(22).component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true)
             .component(ModComponents.SELECTED_SPELL, ModSpells.CELESTIAL_JUDGMENT), SpellTags.ASTRAL_STAFF, 0xFFE3A0);
 
     // Trinkets, worn in Trinkets' slots: which slots each fits is in data/trinkets/tags/item.

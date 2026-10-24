@@ -33,7 +33,7 @@ public final class ArcaneBolt extends Spell {
     }
 
     @Override public boolean cast(SpellContext context) {
-        return launch(context.level(), context.caster(), context.power());
+        return launch(context.level(), context.caster(), context.power(), context.spellPower());
     }
 
     @Override public void onChargeStart(SpellContext context) {
@@ -50,16 +50,22 @@ public final class ArcaneBolt extends Spell {
     }
 
     /**
-     * Fires a bolt, skipping mana and cooldown. Returns false, and the spell audibly fizzles, when too many bolts are
-     * already in flight.
+     * Fires a bolt at the bolt's own damage, skipping mana and cooldown. Returns false, and the spell audibly fizzles,
+     * when too many bolts are already in flight.
      */
     public static boolean launch(ServerLevel level, ServerPlayer caster, float power) {
+        return launch(level, caster, power, 1);
+    }
+
+    /** Fires a bolt as {@link #launch(ServerLevel, ServerPlayer, float)} does, its damage multiplied by {@code spellPower}. */
+    public static boolean launch(ServerLevel level, ServerPlayer caster, float power, float spellPower) {
         if (ACTIVE.size() >= SpellTuning.MAX_ACTIVE_BOLTS) {
             level.playSound(null, caster.blockPosition(), ModSounds.FIZZLE, SoundSource.PLAYERS, 0.6f, 1.0f);
             return false;
         }
         // Start at the eye: offsetting forward can skip a wall the player is touching.
-        ACTIVE.add(new SpellBolt(level, caster, caster.getEyePosition(), caster.getLookAngle().normalize(), power, nextSourceId--));
+        ACTIVE.add(new SpellBolt(level, caster, caster.getEyePosition(), caster.getLookAngle().normalize(), power, spellPower,
+                nextSourceId--));
         level.playSound(null, caster.blockPosition(), ModSounds.BOLT_CAST, SoundSource.PLAYERS, 0.8f, 1.0f);
         return true;
     }

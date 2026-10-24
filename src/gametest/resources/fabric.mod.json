@@ -17,6 +17,7 @@
 			"dev.arcane.test.ProgressionGameTest",
 			"dev.arcane.test.LibraryUiGameTest",
 			"dev.arcane.test.TrinketsGameTest",
+			"dev.arcane.test.ArcanaGameTest",
 			"dev.arcane.test.DedicatedServerGameTest"
 		]
 	},

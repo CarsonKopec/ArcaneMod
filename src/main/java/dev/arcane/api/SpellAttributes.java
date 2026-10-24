@@ -9,7 +9,7 @@ import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 
 /**
- * Every player's mana pool and regeneration are ordinary attributes, so anything that changes attributes changes them:
+ * Every player's mana pool, regeneration and spell power are ordinary attributes, so anything that changes attributes changes them:
  * attribute modifiers on gear, potions and effects, other mods, and {@code /attribute}. For example, a ring adding
  * 50 max mana while worn:
  *
@@ -27,6 +27,11 @@ public final class SpellAttributes {
     public static final Holder<Attribute> MAX_MANA = register("max_mana", SpellTuning.BASE_MAX_MANA, 0, 10_000);
     /** Mana regenerated per second: 5 for a player with no modifiers, so an empty pool refills in 20 s. */
     public static final Holder<Attribute> MANA_REGEN = register("mana_regen", SpellTuning.BASE_MANA_REGEN, 0, 1_000);
+    /**
+     * What every spell's damage is multiplied by: 1 for a player with no modifiers, so +0.1 makes spells hit 10% harder.
+     * It's read when a spell is cast, so a strike already on its way keeps the power it was cast with.
+     */
+    public static final Holder<Attribute> SPELL_POWER = register("spell_power", 1, 0, 1_024);
 
     private SpellAttributes() {
     }

@@ -41,6 +41,12 @@ public final class ModSounds {
     /** The ringing in a near observer's ears after the boom. */
     public static final SoundEvent PLANETFALL_RINGING = register("spell.planetfall.ringing");
     public static final SoundEvent PLANETFALL_SHARD = register("spell.planetfall.shard");
+    /** A caster's corruption lashing back at them. */
+    public static final SoundEvent BACKLASH = register("spell.astral.backlash");
+    /** A frozen target's ice shattering under a spell. */
+    public static final SoundEvent SHATTER = register("spell.reaction.shatter");
+    /** Lightning surging through a wet target. */
+    public static final SoundEvent CONDUCTION = register("spell.reaction.conduction");
     /** A refused or failed cast. */
     public static final SoundEvent FIZZLE = register("spell.fizzle");
     public static final SoundEvent WHEEL_SELECT = register("ui.spell_wheel.select");

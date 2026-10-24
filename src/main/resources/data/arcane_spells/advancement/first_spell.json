@@ -1,0 +1,24 @@
+{
+	"parent": "arcane_spells:root",
+	"criteria": {
+		"cast": {
+			"trigger": "arcane_spells:cast_spell"
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:amethyst_shard"
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.first_spell.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.first_spell.description"
+		}
+	},
+	"requirements": [
+		[
+			"cast"
+		]
+	]
+}

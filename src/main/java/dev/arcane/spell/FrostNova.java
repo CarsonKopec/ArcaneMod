@@ -31,7 +31,7 @@ public final class FrostNova extends Spell {
             if (at.distanceTo(center) > radius || !SpellTargets.clearPath(level, center, victim.getEyePosition(), caster)) continue;
 
             boolean heatLoving = victim.getType().is(EntityTypeTags.FREEZE_HURTS_EXTRA_TYPES);
-            float damage = SpellTuning.NOVA_DAMAGE * (heatLoving ? SpellTuning.NOVA_HEAT_MULTIPLIER : 1);
+            float damage = SpellTuning.NOVA_DAMAGE * (heatLoving ? SpellTuning.NOVA_HEAT_MULTIPLIER : 1) * context.spellPower();
             victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), damage);
             // Past the freezing threshold, the target shakes, frosts over and takes vanilla freeze damage until it
             // thaws. canFreeze() is false for strays, snow golems and anyone wearing leather, as with powder snow.

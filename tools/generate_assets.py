@@ -1,4 +1,4 @@
-"""Generates the spell icons, the Astral Staff and beam textures, and the spell sounds into src/main/resources.
+"""Generates the spell icons, the item, effect and overlay textures, and the spell sounds into src/main/resources.
 
 Every asset is drawn or synthesized here from code, so there is nothing to license and any of it can be tweaked
 and regenerated. Output is deterministic (fixed random seed).
@@ -454,12 +454,76 @@ def texture_chrono_charm():
     return c.image()
 
 
+# Status effect icons: 18x18, as vanilla's, shown on the HUD and in the inventory.
+
+def effect_instant_mana():
+    """A drop of mana, the mana bar's violet, with a glint: Instant Mana."""
+    c = Canvas(18)
+    # A teardrop: a disc below, tapering to a point above.
+    c.disc(9, 11.2, 5.2, [(0.45, "#D9C2FF"), (0.8, "#9B6BFF"), (1.0, "#5B2FC0")])
+    c.stroke([(9, 2.2), (9, 8.0)], 0.4, 3.9, [(0.5, "#B48CFF"), (1.0, "#5B2FC0")])
+    c.put(7, 9, hex_rgba("#FFFFFF"))
+    c.put(7, 10, hex_rgba("#FFFFFF"))
+    c.put(8, 8, hex_rgba("#F0E6FF"))
+    c.outline("#1A0F2E")
+    return c.image()
+
+
+def effect_arcane_flow():
+    """Two violet streams curling upwards, tapering as they rise: mana flowing back in."""
+    c = Canvas(18)
+    tiers = [(0.45, "#E9D4FF"), (1.0, "#9B5CFF")]
+    for dx in (-3.5, 3.5):
+        c.stroke([(9 + dx - 1.0, 16.5), (9 + dx + 1.8, 12.0), (9 + dx - 1.6, 7.0), (9 + dx + 0.8, 2.5)], 1.6, 0.45, tiers)
+    for x, y in ((2, 4), (15, 6), (9, 1)):
+        c.put(x, y, hex_rgba("#FFFFFF"))
+    c.outline("#1A0F2E")
+    return c.image()
+
+
+def effect_clarity():
+    """An open eye, pale as the Clarity potion: a mind seeing clearly."""
+    c = Canvas(18)
+    for y in range(18):
+        for x in range(18):
+            # The almond between two arcs, its lids lined in cyan.
+            u, v = (x + 0.5 - 9) / 8.0, (y + 0.5 - 9) / 8.0
+            lid = 0.55 * (1 - u * u)
+            if abs(u) <= 1 and abs(v) <= lid:
+                c.put(x, y, hex_rgba("#3B9BB0" if abs(v) > lid - 0.17 else "#F2FCFF"))
+    c.disc(9, 9, 3.3, [(0.4, "#123A4A"), (0.75, "#4FC3D9"), (1.0, "#2D8AA0")])
+    c.put(8, 8, hex_rgba("#FFFFFF"))
+    c.outline("#0E1E2A")
+    return c.image()
+
+
+def texture_corruption_vignette():
+    """White, clear at the centre and opaque at the edges, with faint tendrils creeping in: corruption's haze at the
+    edges of sight, tinted violet when drawn."""
+    size = 256
+    y, x = np.mgrid[0:size, 0:size]
+    u, v = (x + 0.5) / size * 2 - 1, (y + 0.5) / size * 2 - 1
+    r = np.sqrt(u * u + v * v)
+    angle = np.arctan2(v, u)
+    tendrils = 0.04 * np.sin(angle * 11 + r * 6) + 0.025 * np.sin(angle * 23 - r * 9)
+    t = np.clip((r - 0.68 + tendrils) / 0.62, 0, 1)
+    alpha = (t * t * (3 - 2 * t)) ** 1.3
+    rgba = np.zeros((size, size, 4), dtype=np.uint8)
+    rgba[..., :3] = 255
+    rgba[..., 3] = np.round(alpha * 255).astype(np.uint8)
+    return Image.fromarray(rgba, "RGBA")
+
+
 TEXTURE_MAKERS = {
     "item/astral_staff": texture_astral_staff,
     "effect/judgment_beam": texture_judgment_beam,
     "item/arcane_ring": texture_arcane_ring,
     "item/astral_amulet": texture_astral_amulet,
     "item/chrono_charm": texture_chrono_charm,
+    "mob_effect/instant_mana": effect_instant_mana,
+    "mob_effect/arcane_flow": effect_arcane_flow,
+    "mob_effect/clarity": effect_clarity,
+    "misc/corruption_vignette": texture_corruption_vignette,
 }
 
 
@@ -876,6 +940,45 @@ def sound_planetfall_shard():
     return finish(0.45 * s(shriek) + 0.65 * s(roar) + 0.3 * s(fire))
 
 
+def sound_astral_backlash():
+    """Corruption lashing back: a breath drawn in backwards, then a sick lurch down into a growl, with a dissonant
+    cluster ringing over it and a crackle of something tearing."""
+    d = 1.4
+    t = times(d)
+    inhale = band(noise(d), 600, 4000) * place(d, swell(0.35, 0.33, 0.02), 0)
+    dive = np.sin(sweep(520, 55, d)) * place(d, decay(d - 0.3, 0.45), 0.3)
+    growl_phase = 2 * math.pi * 62 * t + 3.0 * np.sin(2 * math.pi * 7 * t)
+    growl = band(signal.sawtooth(growl_phase), high=900) * place(d, decay(d - 0.3, 0.5, attack=0.02), 0.3)
+    cluster = sum(place(d, bell(f, d - 0.3, [(1, 1, 0.5), (2.01, 0.4, 0.3)]), 0.3) for f in (311.1, 329.6, 349.2))
+    tear = crackle(d, 160, low=1200) * place(d, decay(d - 0.3, 0.2), 0.3)
+    return finish(0.45 * s(inhale) + 0.55 * s(dive) + 0.5 * s(growl) + 0.3 * s(cluster) + 0.35 * s(tear))
+
+
+def sound_shatter():
+    """A frozen creature's ice breaking: a sharp crack, then a spray of glassy shards."""
+    d = 0.7
+    t = times(d)
+    out = 0.6 * s(band(noise(d), low=2500) * decay(d, 0.03))
+    for _ in range(22):
+        start = float(rng.exponential(0.06))
+        if start > 0.35:
+            continue
+        shard = bell(rng.uniform(2800, 7500), 0.2, [(1, 1, rng.uniform(0.02, 0.08)), (2.4, 0.4, 0.03)])
+        out += place(d, shard, start) * rng.uniform(0.15, 0.35) * math.exp(-start / 0.15)
+    out += 0.3 * np.sin(sweep(260, 90, d)) * decay(d, 0.05)
+    return finish(out)
+
+
+def sound_conduction():
+    """Lightning surging through water: a buzz that swells and climbs, thick with crackle."""
+    d = 0.55
+    t = times(d)
+    buzz = band(signal.sawtooth(sweep(90, 180, d)) * (0.6 + 0.4 * np.sign(np.sin(2 * math.pi * 50 * t))), 150, 5000)
+    buzz *= swell(d, 0.08, 0.2)
+    fizz = band(noise(d), 4000, 9000) * decay(d, 0.15)
+    return finish(0.5 * s(buzz) + 0.6 * s(crackle(d, 320, low=1800) * decay(d, 0.2)) + 0.25 * s(fizz))
+
+
 SOUND_MAKERS = {
     "spell/arcane_bolt_charge": sound_bolt_charge,
     "spell/arcane_bolt_cast": sound_bolt_cast,
@@ -907,6 +1010,9 @@ SOUND_MAKERS = {
     "spell/planetfall_impact": sound_planetfall_impact,
     "spell/planetfall_ringing": sound_planetfall_ringing,
     "spell/planetfall_shard": sound_planetfall_shard,
+    "spell/astral_backlash": sound_astral_backlash,
+    "spell/shatter": sound_shatter,
+    "spell/conduction": sound_conduction,
 }
 
 

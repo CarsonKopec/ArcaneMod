@@ -63,7 +63,7 @@ public final class MeteorSwarm extends MarkedSpell {
             context.level().playSound(null, context.caster().blockPosition(), ModSounds.FIZZLE, SoundSource.PLAYERS, 0.6f, 1.0f);
             return false;
         }
-        SWARMS.add(new Swarm(context.level(), context.caster(), mark, nextSwarmId--));
+        SWARMS.add(new Swarm(context.level(), context.caster(), mark, context.spellPower(), nextSwarmId--));
         return true;
     }
 
@@ -81,15 +81,18 @@ public final class MeteorSwarm extends MarkedSpell {
         final Vec3 heading;
         /** Whether the caster could build when they cast it; every meteor follows that. */
         final boolean mayBuild;
+        /** What every meteor's damage is multiplied by, fixed at the cast. */
+        final float spellPower;
         final RandomSource random;
         int age;
         int launched;
         boolean dreadStarLaunched;
 
-        Swarm(ServerLevel level, ServerPlayer caster, Vec3 mark, int id) {
+        Swarm(ServerLevel level, ServerPlayer caster, Vec3 mark, float spellPower, int id) {
             this.level = level;
             this.caster = caster;
             this.mark = mark;
+            this.spellPower = spellPower;
             this.sky = new Vec3(mark.x, Math.min(level.getMaxY() - 1, mark.y + SpellTuning.METEOR_SKY_HEIGHT), mark.z);
             Vec3 toward = new Vec3(mark.x - caster.getX(), 0, mark.z - caster.getZ());
             this.heading = toward.lengthSqr() < 1.0e-6 ? new Vec3(0, 0, 1) : toward.normalize();
@@ -112,7 +115,7 @@ public final class MeteorSwarm extends MarkedSpell {
                 // Straight down out of the heart of the sigil, onto the mark itself.
                 Vec3 start = sky.subtract(0, 1, 0);
                 Vec3 velocity = mark.subtract(start).normalize().scale(SpellTuning.DREAD_STAR_SPEED);
-                METEORS.add(new Meteor(level, caster, mayBuild, start, velocity, nextMeteorId--, true));
+                METEORS.add(new Meteor(level, caster, mayBuild, start, velocity, nextMeteorId--, true, spellPower));
                 dreadStarLaunched = true;
             }
             age++;
@@ -125,7 +128,7 @@ public final class MeteorSwarm extends MarkedSpell {
             Vec3 start = sky.add((random.nextDouble() - 0.5) * 16, random.nextDouble() * 6, (random.nextDouble() - 0.5) * 16)
                     .subtract(heading.scale(12));
             Vec3 velocity = target.subtract(start).normalize().scale(SpellTuning.METEOR_SPEED);
-            METEORS.add(new Meteor(level, caster, mayBuild, start, velocity, nextMeteorId--, false));
+            METEORS.add(new Meteor(level, caster, mayBuild, start, velocity, nextMeteorId--, false, spellPower));
         }
     }
 
@@ -147,7 +150,8 @@ public final class MeteorSwarm extends MarkedSpell {
         Vec3 position;
         int age;
 
-        Meteor(ServerLevel level, ServerPlayer caster, boolean mayBuild, Vec3 start, Vec3 velocity, int id, boolean dreadStar) {
+        Meteor(ServerLevel level, ServerPlayer caster, boolean mayBuild, Vec3 start, Vec3 velocity, int id, boolean dreadStar,
+                float spellPower) {
             this.level = level;
             this.caster = caster;
             this.mayBuild = mayBuild;
@@ -156,7 +160,7 @@ public final class MeteorSwarm extends MarkedSpell {
             this.id = id;
             this.size = dreadStar ? SpellTuning.DREAD_STAR_SIZE : 1;
             this.blastRadius = dreadStar ? SpellTuning.DREAD_STAR_BLAST_RADIUS : SpellTuning.METEOR_BLAST_RADIUS;
-            this.damage = dreadStar ? SpellTuning.DREAD_STAR_DAMAGE : SpellTuning.METEOR_DAMAGE;
+            this.damage = (dreadStar ? SpellTuning.DREAD_STAR_DAMAGE : SpellTuning.METEOR_DAMAGE) * spellPower;
             this.terrainStrength = dreadStar ? SpellTuning.DREAD_STAR_TERRAIN_STRENGTH : SpellTuning.METEOR_TERRAIN_STRENGTH;
             SpellEffects.send(level, ModSpellEffects.METEOR, start, velocity, size, SpellTuning.METEOR_LIFETIME_TICKS, id);
             // Bigger sounds deeper, and carries further.

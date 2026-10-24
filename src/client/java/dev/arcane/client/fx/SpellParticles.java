@@ -11,11 +11,13 @@ import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ParticleStatus;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -51,6 +53,9 @@ public final class SpellParticles {
         SpellEffectRenderers.register(ModSpellEffects.WARD_END, (effect, level) -> stopShimmer(effect.sourceId()));
         on(ModSpellEffects.WARD_END, SpellParticles::wardEnd);
         on(ModSpellEffects.NOVA, SpellParticles::nova);
+        on(ModSpellEffects.BACKLASH, SpellParticles::backlash);
+        on(ModSpellEffects.SHATTER, SpellParticles::shatter);
+        on(ModSpellEffects.CONDUCTION, SpellParticles::conduction);
     }
 
     /** Plays {@code type}'s particles when the effect is close enough to the camera, and particles are on. */
@@ -201,6 +206,47 @@ public final class SpellParticles {
      */
     private static void nova(SpellEffect effect) {
         start(new FrostRing(Minecraft.getInstance().level, effect.position()));
+    }
+
+    /** Corruption tearing out of its caster: violet sparks and dark wisps burst from them, and a ring scorches their feet. */
+    private static void backlash(SpellEffect effect) {
+        Vec3 center = effect.position();
+        Vec3 feet = center.subtract(0, 0.8, 0);
+        ring(feet, X, Z, 1.3, 0, 32, VIOLET);
+        ring(feet, X, Z, 0.9, 0.4, 24, PINK);
+        // In the caster's own first-person view, start beyond arm's reach, so the burst frames the view, not fills it.
+        Minecraft client = Minecraft.getInstance();
+        boolean ownView = client.player != null && client.player.getId() == effect.sourceId() && client.options.getCameraType().isFirstPerson();
+        int count = scaled(40 + Math.round(40 * effect.power()));
+        for (int i = 0; i < count; i++) {
+            Vec3 direction = sphere(i, count);
+            Vec3 from = center.add(direction.scale(ownView ? 1.6 : 0.4));
+            particle(i % 3 == 0 ? PINK : VIOLET, from, direction.scale(0.25));
+            if (i % 4 == 0) particle(ParticleTypes.SQUID_INK, from, direction.scale(0.12));
+        }
+    }
+
+    /** A frozen target's ice bursting off it in shards. */
+    private static void shatter(SpellEffect effect) {
+        BlockParticleOption ice = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.PACKED_ICE.defaultBlockState());
+        double size = Math.max(0.5, effect.power());
+        int count = scaled(30);
+        for (int i = 0; i < count; i++) {
+            Vec3 direction = sphere(i, count);
+            Vec3 at = effect.position().add(direction.scale(size * 0.5));
+            particle(ice, at, direction.scale(0.3));
+            if (i % 3 == 0) particle(ParticleTypes.SNOWFLAKE, at, direction.scale(0.15));
+        }
+        burst(effect.position(), scaled(10), CYAN, 0.25);
+    }
+
+    /** Lightning surging over a wet target: a crackling cage of arcs around it. */
+    private static void conduction(SpellEffect effect) {
+        double radius = Math.max(0.5, effect.power()) * 0.8;
+        ring(effect.position(), X, Z, radius, 0, 20, CYAN);
+        ring(effect.position(), X, Y, radius, 0.5, 20, CYAN);
+        ring(effect.position(), Z, Y, radius, 1.0, 20, PINK);
+        burst(effect.position(), scaled(24), ParticleTypes.ELECTRIC_SPARK, 0.35);
     }
 
     private static void start(Animation animation) {

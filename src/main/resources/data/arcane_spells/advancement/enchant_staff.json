@@ -1,0 +1,29 @@
+{
+	"parent": "arcane_spells:first_spell",
+	"criteria": {
+		"enchant": {
+			"trigger": "minecraft:enchanted_item",
+			"conditions": {
+				"item": {
+					"items": "#arcane_spells:enchantable/staff"
+				}
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"id": "minecraft:enchanted_book"
+		},
+		"title": {
+			"translate": "advancements.arcane_spells.enchant_staff.title"
+		},
+		"description": {
+			"translate": "advancements.arcane_spells.enchant_staff.description"
+		}
+	},
+	"requirements": [
+		[
+			"enchant"
+		]
+	]
+}
