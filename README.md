@@ -6,7 +6,7 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
 
 1. Install Fabric Loader **0.19.5 or later** for Minecraft **1.21.11** (https://fabricmc.net/use/installer/). Minecraft needs Java 21 or newer.
 2. Put these eight JARs in the instance's `mods` folder. Choose the **Fabric / Minecraft 1.21.11** files:
-   - `arcane-spells-0.5.0.jar` (from `build/libs/`, not the `-sources` JAR)
+   - `arcane-spells-0.6.0.jar` (from `build/libs/`, not the `-sources` JAR)
    - [Fabric API 0.141.6+1.21.11](https://modrinth.com/mod/fabric-api/versions?g=1.21.11)
    - [Nebulon 0.1.2-beta+mc1.21.11.20260928.19](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/0.1.2-beta+mc1.21.11.20260928.19/nebulon-0.1.2-beta+mc1.21.11.20260928.19.jar)
    - [Player Animation Library 1.1.10+mc.1.21.11](https://modrinth.com/mod/player-animation-library/version/wJLdv4ZQ)
@@ -14,7 +14,7 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
    - [Cardinal Components API 7.3.2](https://modrinth.com/mod/cardinal-components-api/version/HZMLTuxY) (the complete release JAR)
    - [owo-lib 0.13.0+1.21.11](https://modrinth.com/mod/owo-lib/version/33Ei8Thm)
    - [Trinkets Updated 3.11.0-beta.2+1.21.11](https://modrinth.com/mod/trinkets-updated/version/3.11.0-beta.2+1.21.11)
-3. For multiplayer, install all eight on the server **and** every client, with the same Arcane Spells version on both. 0.5 is not network-compatible with 0.4.
+3. For multiplayer, install all eight on the server **and** every client, with the same Arcane Spells version on both. 0.6 is not network-compatible with 0.5.
 
 These libraries power player casting poses, animated 3D staffs, saved player progression, the spell book and settings screens, and the trinket slots.
 
@@ -267,7 +267,7 @@ The spell's name is the translation key `spell.mymod.fireball` (plus `spell.mymo
 
 Both registries are synced, so a client without the addon can't join a server that has it. If an addon is removed, staffs holding its spells fall back to Arcane Bolt and its cooldowns are dropped.
 
-To build against the mod, publish it with `gradlew.bat publishToMavenLocal` and add `modImplementation "dev.arcane:arcane-spells:0.5.0"` to the addon (with `mavenLocal()` in its repositories), plus a `"arcane_spells": ">=0.5.0"` dependency in its `fabric.mod.json`.
+To build against the mod, publish it with `gradlew.bat publishToMavenLocal` and add `modImplementation "dev.arcane:arcane-spells:0.6.0"` to the addon (with `mavenLocal()` in its repositories), plus a `"arcane_spells": ">=0.6.0"` dependency in its `fabric.mod.json`.
 
 ## Status
 
