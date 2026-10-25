@@ -135,7 +135,12 @@ public final class JudgmentGameTest implements FabricClientGameTest {
             context.takeScreenshot("judgment-gather");
             context.waitTicks(SpellTuning.JUDGMENT_GATHER_TICKS - 30 + 12);
             context.takeScreenshot("judgment-beam");
-            context.waitTicks(SpellTuning.JUDGMENT_BEAM_TICKS - 12 + 2);
+            // Closer, from above the plateau's corner, as the cracks race out across the ground from the beam's foot.
+            server.runCommand("tp @a 36 -18 4 facing 0 -43 40");
+            context.waitTicks(6);
+            context.takeScreenshot("judgment-cracks");
+            server.runCommand("tp @a 70 -15 -30 facing 0 -3 40");
+            context.waitTicks(SpellTuning.JUDGMENT_BEAM_TICKS - 12 + 2 - 6);
             context.takeScreenshot("judgment-blast");
             context.waitTicks(12);
             context.takeScreenshot("judgment-shockwave");

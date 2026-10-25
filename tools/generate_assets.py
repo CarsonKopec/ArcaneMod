@@ -612,16 +612,29 @@ def s(x):
 
 def room(x, size=0.6, wet=0.3, bright=6000):
     """`x` in a stone hall: convolved with a burst of noise dying away over `size` seconds, its highs darker than its
-    lows as a real room's are, mixed in at `wet`. The tail is added on the end, so the sound grows longer."""
+    lows as a real room's are, mixed in at `wet`. The tail is added on the end, so the sound grows longer.
+
+    The hall's noise comes from its own generator, seeded by its size, never from the shared stream: adding a room to
+    a sound leaves every other sound's random draws as they were."""
     n = int(SR * size)
     t = np.arange(n) / SR
-    tail = band(noise(size), high=bright) * np.exp(-t / (size / 5)) + 0.5 * band(noise(size), high=bright / 4) * np.exp(-t / (size / 3))
+    hall = np.random.default_rng(int(size * 1000))
+    tail = (band(hall.standard_normal(n), high=bright) * np.exp(-t / (size / 5))
+            + 0.5 * band(hall.standard_normal(n), high=bright / 4) * np.exp(-t / (size / 3)))
     tail[:int(SR * 0.012)] = 0  # the first reflections arrive a moment after the sound
+    tail *= np.clip((n - np.arange(n)) / (0.3 * n), 0, 1)  # its slower, darker part would still be audible where it's cut off
     # The dry sound must end at silence, or it clicks where the tail begins.
     x = x * np.clip((len(x) - 1 - np.arange(len(x))) / (SR * 0.03), 0, 1)
     out = np.concatenate([x, np.zeros(n)])
     reverb = signal.fftconvolve(out, tail)[:len(out)]
     return (1 - wet) * s(out) + wet * s(reverb)
+
+
+def sub(x, f0=45, amount=0.2):
+    """`x` with a sub-bass tone under it, rising and falling with its loudness: weight that is felt more than heard."""
+    loudness = np.clip(band(np.abs(x), high=25, order=2), 0, None)
+    tone = np.sin(2 * math.pi * f0 * np.arange(len(x)) / SR) * loudness
+    return (1 - amount) * s(x) + amount * s(tone)
 
 
 def sound_bolt_charge():
@@ -631,17 +644,17 @@ def sound_bolt_charge():
     hum = np.sin(phase) + 0.5 * np.sin(2.003 * phase) + 0.25 * np.sin(3.01 * phase)
     hum *= 0.75 + 0.25 * np.sin(2 * math.pi * 9 * t)
     sparkle = band(noise(d), 3000, 7000) * np.linspace(0.2, 1, len(t))
-    return finish((0.8 * s(hum) + 0.25 * s(sparkle)) * swell(d, 0.35, 0.4))
+    return finish(room((0.8 * s(hum) + 0.25 * s(sparkle)) * swell(d, 0.35, 0.4), size=0.4, wet=0.15))
 
 
-def sound_bolt_cast():
+def sound_bolt_cast(pitch=1.0):
     d = 0.8
     t = times(d)
-    zap = np.sin(sweep(1500, 200, d)) * decay(d, 0.12)
+    zap = np.sin(sweep(1500 * pitch, 200 * pitch, d)) * decay(d, 0.12)
     whoosh = band(noise(d), 500, 3500) * decay(d, 0.22, attack=0.01)
     thump = np.sin(2 * math.pi * 70 * t) * decay(d, 0.08)
-    shimmer = sum(np.sin(2 * math.pi * f * t) for f in (880, 1320, 1760)) * decay(d, 0.3)
-    return finish(0.6 * s(zap) + 0.45 * s(whoosh) + 0.5 * s(thump) + 0.2 * s(shimmer))
+    shimmer = sum(np.sin(2 * math.pi * f * pitch * t) for f in (880, 1320, 1760)) * decay(d, 0.3)
+    return finish(room(sub(0.6 * s(zap) + 0.45 * s(whoosh) + 0.5 * s(thump) + 0.2 * s(shimmer)), size=0.6, wet=0.22))
 
 
 def sound_chain_cast():
@@ -650,16 +663,17 @@ def sound_chain_cast():
     buzz = band(signal.sawtooth(2 * math.pi * (110 + 15 * np.sin(2 * math.pi * 23 * t)) * t), 200, 4000)
     buzz *= decay(d, 0.22)
     zap = np.sin(sweep(2600, 600, d)) * decay(d, 0.05)
-    return finish(0.45 * s(buzz) + 0.7 * s(crackle(d, 140) * decay(d, 0.25)) + 0.4 * s(zap))
+    return finish(room(0.45 * s(buzz) + 0.7 * s(crackle(d, 140) * decay(d, 0.25)) + 0.4 * s(zap), size=0.5, wet=0.18))
 
 
-def sound_chain_hit():
+def sound_chain_hit(pitch=1.0):
     d = 0.35
     t = times(d)
     burst = band(noise(d), low=2000) * decay(d, 0.04)
-    zap = np.sin(sweep(3200, 900, d)) * decay(d, 0.06)
-    thump = np.sin(2 * math.pi * 90 * t) * decay(d, 0.05)
-    return finish(0.5 * s(burst) + 0.6 * s(crackle(d, 220) * decay(d, 0.12)) + 0.45 * s(zap) + 0.35 * s(thump))
+    zap = np.sin(sweep(3200 * pitch, 900 * pitch, d)) * decay(d, 0.06)
+    thump = np.sin(2 * math.pi * 90 * pitch * t) * decay(d, 0.05)
+    return finish(room(sub(0.5 * s(burst) + 0.6 * s(crackle(d, 220) * decay(d, 0.12)) + 0.45 * s(zap) + 0.35 * s(thump)),
+                       size=0.5, wet=0.2))
 
 
 def sound_blink():
@@ -667,7 +681,7 @@ def sound_blink():
     glide = np.sin(sweep(320, 1900, d)) * swell(d, 0.28, 0.06)
     air = band(noise(d), 300, 5000) * swell(d, 0.26, 0.05)
     twinkle = place(d, bell(3200, 0.25, [(1, 1, 0.08), (1.5, 0.5, 0.05)]), 0.27)
-    return finish(0.55 * s(glide) + 0.5 * s(air) + 0.3 * s(twinkle))
+    return finish(room(0.55 * s(glide) + 0.5 * s(air) + 0.3 * s(twinkle), size=0.5, wet=0.2))
 
 
 def soft_bell(f0, duration, tau):
@@ -681,15 +695,15 @@ def sound_ward_raise():
                 for i, f in enumerate((440, 554.37, 659.25, 880)))
     rise = band(noise(d), 1000, 5000) * swell(d, 0.3, 0.3)
     low = np.sin(2 * math.pi * 110 * t) * swell(d, 0.25, 0.5)
-    return finish(0.7 * s(chord) + 0.2 * s(rise) + 0.3 * s(low))
+    return finish(room(0.7 * s(chord) + 0.2 * s(rise) + 0.3 * s(low), size=1.0, wet=0.3))
 
 
-def sound_ward_hit():
+def sound_ward_hit(pitch=1.0):
     d = 0.45
     t = times(d)
-    tink = bell(1240, d, [(1, 1, 0.25), (2.76, 0.6, 0.15), (5.40, 0.35, 0.08), (8.93, 0.2, 0.05)])
+    tink = bell(1240 * pitch, d, [(1, 1, 0.25), (2.76, 0.6, 0.15), (5.40, 0.35, 0.08), (8.93, 0.2, 0.05)])
     thud = band(noise(d), high=300) * decay(d, 0.04) + np.sin(2 * math.pi * 120 * t) * decay(d, 0.06)
-    return finish(0.75 * s(tink) + 0.45 * s(thud))
+    return finish(room(sub(0.75 * s(tink) + 0.45 * s(thud)), size=0.5, wet=0.2))
 
 
 def sound_ward_break():
@@ -704,7 +718,7 @@ def sound_ward_break():
         shard = bell(f0, 0.3, [(1, 1, rng.uniform(0.04, 0.14)), (2.76, 0.4, 0.05)])
         out += place(d, shard, start) * rng.uniform(0.15, 0.35) * math.exp(-start / 0.3)
     out += 0.4 * np.sin(2 * math.pi * 80 * t) * decay(d, 0.09)
-    return finish(out)
+    return finish(room(out, size=0.9, wet=0.3))
 
 
 def sound_ward_fade():
@@ -712,7 +726,7 @@ def sound_ward_fade():
     out = sum(place(d, soft_bell(f, d - i * 0.1, 0.35), i * 0.1) * (1 - i * 0.15)
               for i, f in enumerate((880, 739.99, 587.33, 440)))
     air = band(noise(d), high=2000) * swell(d, 0.05, 0.4)
-    return finish(0.8 * s(out) + 0.15 * s(air), peak=0.7)
+    return finish(room(0.8 * s(out) + 0.15 * s(air), size=0.8, wet=0.3), peak=0.7)
 
 
 def sound_frost_nova():
@@ -723,7 +737,7 @@ def sound_frost_nova():
                   for _ in range(12))
     whoomp = np.sin(sweep(170, 45, d)) * decay(d, 0.15)
     wind = band(noise(d), 800, 3000) * swell(d, 0.03, 0.5)
-    return finish(0.5 * s(crack) + 0.35 * s(crystal) + 0.6 * s(whoomp) + 0.3 * s(wind))
+    return finish(room(sub(0.5 * s(crack) + 0.35 * s(crystal) + 0.6 * s(whoomp) + 0.3 * s(wind)), size=0.9, wet=0.28))
 
 
 def sound_astral_channel():
@@ -742,7 +756,7 @@ def sound_astral_channel():
     shimmer = band(noise(d), 5000, 9000) * np.clip(t / d, 0, 1) ** 2
     bells = place(d, bell(1760, 0.4, [(1, 1, 0.25), (2.0, 0.4, 0.15), (3.0, 0.2, 0.08)]), 1.9)
     bells += place(d, bell(2637, 0.35, [(1, 1, 0.2), (2.0, 0.3, 0.1)]), 1.98)
-    return finish(0.75 * s(choir * swell_in) + 0.2 * s(shimmer) + 0.35 * s(bells))
+    return finish(room(0.75 * s(choir * swell_in) + 0.2 * s(shimmer) + 0.35 * s(bells), size=1.2, wet=0.3))
 
 
 def sound_judgment_gather():
@@ -754,7 +768,7 @@ def sound_judgment_gather():
     pad = sum(np.sin(2 * math.pi * f * t + rng.uniform(0, 6.3)) for f in (110, 164.81, 220, 277.18, 329.63))
     pad *= swell(d, 2.0, 0.8) * (0.8 + 0.2 * np.sin(2 * math.pi * 0.7 * t))
     riser = band(noise(d), 1500, 8000) * np.where(t < 2.5, (t / 2.5) ** 3, np.exp(-(t - 2.5) / 0.05))
-    return finish(0.55 * s(rumble) + 0.5 * s(sub) + 0.35 * s(pad) + 0.4 * s(riser))
+    return finish(room(0.55 * s(rumble) + 0.5 * s(sub) + 0.35 * s(pad) + 0.4 * s(riser), size=1.5, wet=0.2))
 
 
 def sound_judgment_beam():
@@ -768,7 +782,8 @@ def sound_judgment_beam():
     roar = band(noise(d), 150, 2500) * (0.7 + 0.3 * np.sin(2 * math.pi * 31 * t))
     sizzle = crackle(d, 300, low=3000)
     whine = np.sin(sweep(1800, 2400, d))
-    return finish(0.6 * s(impact) + (0.45 * s(hum) + 0.55 * s(roar) + 0.3 * s(sizzle) + 0.08 * s(whine)) * envelope)
+    return finish(room(sub(0.6 * s(impact) + (0.45 * s(hum) + 0.55 * s(roar) + 0.3 * s(sizzle) + 0.08 * s(whine)) * envelope),
+                       size=1.0, wet=0.2))
 
 
 def sound_judgment_blast():
@@ -782,7 +797,8 @@ def sound_judgment_blast():
     tail = band(noise(d), high=150) * decay(d, 1.8, attack=0.05)
     debris = crackle(d, 60, low=800) * decay(d, 1.2)
     ring = sum(place(d, soft_bell(f, d - 0.3, 1.4), 0.3) for f in (2093, 2637, 3136))
-    return finish(0.5 * s(crack) + 0.8 * s(boom) + 0.55 * s(body) + 0.6 * s(tail) + 0.25 * s(debris) + 0.12 * s(ring))
+    return finish(room(sub(0.5 * s(crack) + 0.8 * s(boom) + 0.55 * s(body) + 0.6 * s(tail) + 0.25 * s(debris) + 0.12 * s(ring)),
+                       size=2.0, wet=0.22))
 
 
 def sound_meteor_fall():
@@ -792,17 +808,17 @@ def sound_meteor_fall():
     whistle = np.sin(sweep(2400, 500, d)) * swell(d, 1.2, 0.25)
     roar = band(noise(d), 200, 2500) * np.linspace(0.2, 1, len(t)) ** 2 * np.clip((d - t) / 0.2, 0, 1)
     sparks = crackle(d, 80, low=1200) * np.linspace(0, 1, len(t))
-    return finish(0.35 * s(whistle) + 0.6 * s(roar) + 0.25 * s(sparks))
+    return finish(room(0.35 * s(whistle) + 0.6 * s(roar) + 0.25 * s(sparks), size=0.6, wet=0.15))
 
 
-def sound_meteor_impact():
+def sound_meteor_impact(pitch=1.0):
     """A meteor striking: a sharp crack, a deep boom, and rubble raining down."""
     d = 1.6
     crack = band(noise(d), low=1200) * decay(d, 0.05)
-    boom = np.sin(sweep(110, 30, d)) * decay(d, 0.35)
-    body = band(noise(d), high=700) * decay(d, 0.4, attack=0.004)
+    boom = np.sin(sweep(110 * pitch, 30 * pitch, d)) * decay(d, 0.35)
+    body = band(noise(d), high=700 * pitch) * decay(d, 0.4, attack=0.004)
     rubble = crackle(d, 90, low=600) * decay(d, 0.5)
-    return finish(0.45 * s(crack) + 0.8 * s(boom) + 0.5 * s(body) + 0.25 * s(rubble))
+    return finish(room(sub(0.45 * s(crack) + 0.8 * s(boom) + 0.5 * s(body) + 0.25 * s(rubble)), size=1.2, wet=0.25))
 
 
 def sound_singularity_open():
@@ -815,7 +831,7 @@ def sound_singularity_open():
     wind = band(noise(d), 300, 1800) * (0.6 + 0.4 * np.sin(2 * math.pi * 0.7 * t))
     whine = np.sin(sweep(200, 900, d)) * (t / d) ** 2
     envelope = np.minimum(t / 0.4, 1.0) * np.clip((d - t) / 0.05, 0, 1)
-    return finish((0.7 * s(throb) + 0.45 * s(wind) + 0.2 * s(whine)) * envelope)
+    return finish(room((0.7 * s(throb) + 0.45 * s(wind) + 0.2 * s(whine)) * envelope, size=1.0, wet=0.2))
 
 
 def sound_singularity_collapse():
@@ -825,8 +841,8 @@ def sound_singularity_collapse():
     boom = np.sin(sweep(90, 25, 2.2)) * decay(2.2, 0.6)
     blast = band(noise(2.2), high=1200) * decay(2.2, 0.5, attack=0.003)
     ring = sum(soft_bell(f, 2.0, 0.8) for f in (1567.98, 2349.32))
-    return finish(0.5 * s(place(d, suck, 0)) + 0.8 * s(place(d, boom, 0.25)) + 0.5 * s(place(d, blast, 0.25))
-                  + 0.12 * s(place(d, ring, 0.3)))
+    return finish(room(sub(0.5 * s(place(d, suck, 0)) + 0.8 * s(place(d, boom, 0.25)) + 0.5 * s(place(d, blast, 0.25))
+                           + 0.12 * s(place(d, ring, 0.3))), size=1.5, wet=0.25))
 
 
 def sound_singularity_form():
@@ -857,8 +873,8 @@ def sound_chrono_start():
     fall = np.sin(sweep(1200, 80, 0.45)) * (1 - t / 0.45)
     tick = bell(800, 0.15, [(1, 1, 0.03), (2.7, 0.5, 0.02)]) + np.sin(2 * math.pi * 90 * times(0.15)) * decay(0.15, 0.03)
     chime = soft_bell(523.25, 1.3, 1.0) + 0.5 * soft_bell(783.99, 1.3, 0.8)
-    return finish(0.5 * s(place(d, rush, 0)) + 0.4 * s(place(d, fall, 0)) + 0.5 * s(place(d, tick, 0.47))
-                  + 0.45 * s(place(d, chime, 0.5)))
+    return finish(room(0.5 * s(place(d, rush, 0)) + 0.4 * s(place(d, fall, 0)) + 0.5 * s(place(d, tick, 0.47))
+                       + 0.45 * s(place(d, chime, 0.5)), size=1.2, wet=0.3))
 
 
 def sound_chrono_end():
@@ -868,7 +884,7 @@ def sound_chrono_end():
     rush = band(noise(0.6), 500, 6000) * (t / 0.6) ** 2
     rise = np.sin(sweep(80, 1200, 0.6)) * (t / 0.6)
     snap = bell(1200, 0.3, [(1, 1, 0.06), (2.4, 0.5, 0.04)]) + band(noise(0.3), low=2000) * decay(0.3, 0.02)
-    return finish(0.55 * s(place(d, rush, 0)) + 0.35 * s(place(d, rise, 0)) + 0.5 * s(place(d, snap, 0.6)))
+    return finish(room(0.55 * s(place(d, rush, 0)) + 0.35 * s(place(d, rise, 0)) + 0.5 * s(place(d, snap, 0.6)), size=1.0, wet=0.3))
 
 
 def sound_gate_open():
@@ -877,7 +893,7 @@ def sound_gate_open():
     chord = sum(place(d, soft_bell(f, d - i * 0.05, 0.7), i * 0.05) for i, f in enumerate((392, 493.88, 587.33, 783.99)))
     glide = np.sin(sweep(300, 1200, d)) * swell(d, 0.5, 0.6)
     sparkle = band(noise(d), 5000, 10000) * swell(d, 0.3, 0.5)
-    return finish(0.6 * s(chord) + 0.3 * s(glide) + 0.25 * s(sparkle))
+    return finish(room(0.6 * s(chord) + 0.3 * s(glide) + 0.25 * s(sparkle), size=1.0, wet=0.3))
 
 
 def sound_gate_cross():
@@ -886,7 +902,7 @@ def sound_gate_cross():
     whoosh = band(noise(d), 150, 3000) * swell(d, 0.25, 0.2)
     rise = np.sin(sweep(150, 900, d)) * swell(d, 0.22, 0.15)
     chime = place(d, bell(1760, 0.6, [(1, 1, 0.2), (2, 0.4, 0.1), (3, 0.2, 0.06)]), 0.25)
-    return finish(0.6 * s(whoosh) + 0.35 * s(rise) + 0.35 * s(chime))
+    return finish(room(0.6 * s(whoosh) + 0.35 * s(rise) + 0.35 * s(chime), size=0.9, wet=0.3))
 
 
 def sound_fizzle():
@@ -895,7 +911,7 @@ def sound_fizzle():
     gate = np.clip(np.sin(2 * math.pi * 31 * t + 2.0 * np.sin(2 * math.pi * 7 * t)), 0, 1)
     sputter = band(noise(d), high=1400) * gate * decay(d, 0.15)
     blip = np.sin(sweep(600, 150, d)) * decay(d, 0.1)
-    return finish(0.7 * s(sputter) + 0.4 * s(blip), peak=0.7)
+    return finish(room(0.7 * s(sputter) + 0.4 * s(blip), size=0.3, wet=0.1), peak=0.7)
 
 
 def sound_wheel_select():
@@ -921,7 +937,7 @@ def sound_planetfall_rift():
     choir *= swell(d, 1.9, 1.4) * (0.85 + 0.15 * np.sin(2 * math.pi * 4.5 * t))
     shimmer = band(noise(d), 6000, 11000) * swell(d, 2.0, 1.0)
     sparks = crackle(d, 45, low=2000) * swell(d, 1.5, 1.5)
-    return finish(0.45 * s(rip) + 0.6 * s(growl) + 0.5 * s(choir) + 0.2 * s(shimmer) + 0.25 * s(sparks))
+    return finish(room(0.45 * s(rip) + 0.6 * s(growl) + 0.5 * s(choir) + 0.2 * s(shimmer) + 0.25 * s(sparks), size=1.5, wet=0.2))
 
 
 def sound_planetfall_descent():
@@ -934,7 +950,7 @@ def sound_planetfall_descent():
     whistle = np.sin(sweep(900, 240, d)) * (t / d) ** 1.5
     sub = np.sin(sweep(46, 27, d)) * build
     fire = crackle(d, 220, low=1200) * (t / d) ** 1.5
-    return finish(0.7 * s(roar) + 0.25 * s(whistle) + 0.6 * s(sub) + 0.3 * s(fire))
+    return finish(room(0.7 * s(roar) + 0.25 * s(whistle) + 0.6 * s(sub) + 0.3 * s(fire), size=1.0, wet=0.12))
 
 
 def sound_planetfall_impact():
@@ -948,8 +964,8 @@ def sound_planetfall_impact():
     tail = band(noise(d), high=120) * decay(d, 3.0, attack=0.1)
     debris = crackle(d, 80, low=700) * decay(d, 2.5)
     ring = sum(place(d, soft_bell(f, d - 1.2, 2.5), 1.0) for f in (1046.5, 1567.98, 2093.0, 2637.0))
-    return finish(0.45 * s(crack) + 0.8 * s(boom) + 0.55 * s(second) + 0.5 * s(body) + 0.6 * s(tail) + 0.25 * s(debris)
-                  + 0.1 * s(ring))
+    return finish(room(0.45 * s(crack) + 0.8 * s(boom) + 0.55 * s(second) + 0.5 * s(body) + 0.6 * s(tail) + 0.25 * s(debris)
+                       + 0.1 * s(ring), size=2.5, wet=0.18))
 
 
 def sound_planetfall_ringing():
@@ -971,7 +987,7 @@ def sound_planetfall_shard():
     shriek = np.sin(sweep(1500, 360, d)) * build
     roar = band(noise(d), 180, 2600) * (t / d) ** 2.2
     fire = crackle(d, 170, low=1400) * build
-    return finish(0.45 * s(shriek) + 0.65 * s(roar) + 0.3 * s(fire))
+    return finish(room(0.45 * s(shriek) + 0.65 * s(roar) + 0.3 * s(fire), size=0.8, wet=0.15))
 
 
 def sound_astral_backlash():
@@ -985,10 +1001,10 @@ def sound_astral_backlash():
     growl = band(signal.sawtooth(growl_phase), high=900) * place(d, decay(d - 0.3, 0.5, attack=0.02), 0.3)
     cluster = sum(place(d, bell(f, d - 0.3, [(1, 1, 0.5), (2.01, 0.4, 0.3)]), 0.3) for f in (311.1, 329.6, 349.2))
     tear = crackle(d, 160, low=1200) * place(d, decay(d - 0.3, 0.2), 0.3)
-    return finish(0.45 * s(inhale) + 0.55 * s(dive) + 0.5 * s(growl) + 0.3 * s(cluster) + 0.35 * s(tear))
+    return finish(room(0.45 * s(inhale) + 0.55 * s(dive) + 0.5 * s(growl) + 0.3 * s(cluster) + 0.35 * s(tear), size=0.8, wet=0.25))
 
 
-def sound_shatter():
+def sound_shatter(pitch=1.0):
     """A frozen creature's ice breaking: a sharp crack, then a spray of glassy shards."""
     d = 0.7
     t = times(d)
@@ -997,10 +1013,10 @@ def sound_shatter():
         start = float(rng.exponential(0.06))
         if start > 0.35:
             continue
-        shard = bell(rng.uniform(2800, 7500), 0.2, [(1, 1, rng.uniform(0.02, 0.08)), (2.4, 0.4, 0.03)])
+        shard = bell(rng.uniform(2800, 7500) * pitch, 0.2, [(1, 1, rng.uniform(0.02, 0.08)), (2.4, 0.4, 0.03)])
         out += place(d, shard, start) * rng.uniform(0.15, 0.35) * math.exp(-start / 0.15)
     out += 0.3 * np.sin(sweep(260, 90, d)) * decay(d, 0.05)
-    return finish(out)
+    return finish(room(out, size=0.6, wet=0.22))
 
 
 def sound_conduction():
@@ -1010,19 +1026,19 @@ def sound_conduction():
     buzz = band(signal.sawtooth(sweep(90, 180, d)) * (0.6 + 0.4 * np.sign(np.sin(2 * math.pi * 50 * t))), 150, 5000)
     buzz *= swell(d, 0.08, 0.2)
     fizz = band(noise(d), 4000, 9000) * decay(d, 0.15)
-    return finish(0.5 * s(buzz) + 0.6 * s(crackle(d, 320, low=1800) * decay(d, 0.2)) + 0.25 * s(fizz))
+    return finish(room(0.5 * s(buzz) + 0.6 * s(crackle(d, 320, low=1800) * decay(d, 0.2)) + 0.25 * s(fizz), size=0.5, wet=0.2))
 
 
-def sound_bolt_impact():
+def sound_bolt_impact(pitch=1.0):
     """The bolt bursting: a crack, a low punch, arcane chimes scattering, and the blast rolling round the hall."""
     d = 1.0
     t = times(d)
     crack = band(noise(d), low=2500) * decay(d, 0.025, attack=0.0005)
-    punch = np.sin(sweep(110, 38, d)) * decay(d, 0.18)
+    punch = np.sin(sweep(110 * pitch, 38 * pitch, d)) * decay(d, 0.18)
     rumble = band(noise(d), high=500) * decay(d, 0.35, attack=0.004)
-    chimes = sum(place(d, bell(f, 0.7, [(1, 1, 0.25), (2.76, 0.4, 0.12)]), 0.01 + 0.03 * i)
+    chimes = sum(place(d, bell(f * pitch, 0.7, [(1, 1, 0.25), (2.76, 0.4, 0.12)]), 0.01 + 0.03 * i)
                  for i, f in enumerate((1318.5, 1760.0, 2093.0, 2637.0)))
-    return finish(room(0.55 * s(crack) + 0.85 * s(punch) + 0.5 * s(rumble) + 0.22 * s(chimes), size=0.9, wet=0.28))
+    return finish(room(sub(0.55 * s(crack) + 0.85 * s(punch) + 0.5 * s(rumble) + 0.22 * s(chimes)), size=0.9, wet=0.28))
 
 
 def sound_bolt_shards():
@@ -1078,6 +1094,41 @@ def sound_ward_rebound():
     return finish(room(0.85 * s(whump) + 0.45 * s(flare) + 0.25 * s(ring), size=0.8, wet=0.25))
 
 
+def sound_chrono_tick():
+    """One tick of the stopped clock, heard once a second while the field holds: a dry click and a small wooden knock,
+    ringing faintly round a large, still hall. The client plays every other one lower, for tick and tock."""
+    d = 0.25
+    t = times(d)
+    click = band(noise(d), 1500, 6000) * decay(d, 0.004, attack=0.0003)
+    knock = np.sin(2 * math.pi * 1100 * t) * decay(d, 0.012) + 0.5 * np.sin(2 * math.pi * 2650 * t) * decay(d, 0.008)
+    body = np.sin(2 * math.pi * 180 * t) * decay(d, 0.02)
+    return finish(room(0.6 * s(click) + 0.5 * s(knock) + 0.35 * s(body), size=1.4, wet=0.35), peak=0.7)
+
+
+def sound_chrono_rewind():
+    """Projectiles flung back as time resumes: a tape-rewind warble sweeping up, and chimes played backwards, swelling
+    into a sudden stop."""
+    d = 1.1
+    t = times(d)
+    warble = np.sin(sweep(180, 2200, d) + 5 * np.sin(2 * math.pi * 11 * t)) * (t / d) ** 1.5
+    chimes = sum(bell(f, d, [(1, 1, 0.35), (2.0, 0.4, 0.2), (3.0, 0.15, 0.1)]) for f in (783.99, 1046.5, 1318.5))[::-1]
+    whoosh = band(noise(d), 600, 7000) * (t / d) ** 2
+    stop = np.clip((d - t) / 0.015, 0, 1)
+    return finish(room((0.4 * s(warble) + 0.5 * s(chimes) + 0.35 * s(whoosh)) * stop, size=0.8, wet=0.25))
+
+
+def sound_gate_hum():
+    """An open gate breathing: two seconds of a low drone and a shimmer of air swelling and ebbing, played again and
+    again while the gate stays open, so that it throbs slowly."""
+    d = 2.0
+    t = times(d)
+    drone = sum(a * np.sin(2 * math.pi * f * t + rng.uniform(0, 2 * math.pi)) for f, a in ((98, 1), (147, 0.6), (196, 0.35), (294, 0.15)))
+    shimmer = band(noise(d), 3000, 8000) * (0.5 + 0.5 * np.sin(2 * math.pi * 3 * t))
+    air = band(noise(d), 200, 1200)
+    breath = np.sin(math.pi * t / d) ** 1.5
+    return finish((0.75 * s(drone) + 0.12 * s(shimmer) + 0.25 * s(air)) * breath, peak=0.6)
+
+
 SOUND_MAKERS = {
     "spell/arcane_bolt_charge": sound_bolt_charge,
     "spell/arcane_bolt_cast": sound_bolt_cast,
@@ -1119,6 +1170,23 @@ SOUND_MAKERS = {
     "spell/blink_arrive": sound_blink_arrive,
     "spell/blink_afterimage": sound_blink_afterimage,
     "spell/arcane_ward_rebound": sound_ward_rebound,
+    "spell/chrono_field_tick": sound_chrono_tick,
+    "spell/chrono_field_rewind": sound_chrono_rewind,
+    "spell/astral_gate_hum": sound_gate_hum,
+    # Second and third takes of the commonest sounds, a little lower and higher, with noise of their own: sounds.json
+    # lists all three, and Minecraft picks one at random each time, so repeats don't sound like a loop.
+    "spell/arcane_bolt_cast_2": lambda: sound_bolt_cast(0.93),
+    "spell/arcane_bolt_cast_3": lambda: sound_bolt_cast(1.08),
+    "spell/arcane_bolt_impact_2": lambda: sound_bolt_impact(0.92),
+    "spell/arcane_bolt_impact_3": lambda: sound_bolt_impact(1.09),
+    "spell/chain_lightning_hit_2": lambda: sound_chain_hit(0.9),
+    "spell/chain_lightning_hit_3": lambda: sound_chain_hit(1.12),
+    "spell/arcane_ward_hit_2": lambda: sound_ward_hit(0.89),
+    "spell/arcane_ward_hit_3": lambda: sound_ward_hit(1.12),
+    "spell/meteor_swarm_impact_2": lambda: sound_meteor_impact(0.88),
+    "spell/meteor_swarm_impact_3": lambda: sound_meteor_impact(1.1),
+    "spell/shatter_2": lambda: sound_shatter(0.92),
+    "spell/shatter_3": lambda: sound_shatter(1.08),
 }
 
 
@@ -1143,7 +1211,10 @@ def main():
         path = SOUNDS / f"{name}.ogg"
         path.parent.mkdir(parents=True, exist_ok=True)
         clips[name] = make().astype(np.float32)
-        soundfile.write(path, clips[name], SR, format="OGG", subtype="VORBIS")
+        # A second at a time: handed a long clip at once, libsndfile's Vorbis encoder overflows the stack.
+        with soundfile.SoundFile(path, "w", SR, 1, format="OGG", subtype="VORBIS") as out:
+            for start in range(0, len(clips[name]), SR):
+                out.write(clips[name][start:start + SR])
     print(f"wrote {len(icons)} icons, {len(TEXTURE_MAKERS)} textures and {len(clips)} sounds under {ASSETS}")
 
     if args.preview:

@@ -5,6 +5,7 @@ import static dev.arcane.client.fx.Fx.UP;
 import static dev.arcane.client.fx.Fx.anyDirection;
 import static dev.arcane.client.fx.Fx.circle;
 import static dev.arcane.client.fx.Fx.ease;
+import static dev.arcane.client.fx.Fx.jitter;
 import static dev.arcane.client.fx.Fx.light;
 import static dev.arcane.client.fx.Fx.onCircle;
 import static dev.arcane.client.fx.Fx.particle;
@@ -22,9 +23,13 @@ import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.effect.SpellEffect;
+import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ColorParticleOption;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -34,8 +39,9 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Meteor Swarm as the client sees it: a burning seal over the target area, its edge marked in red on the ground, and
- * each meteor a blazing ball trailing flame and smoke, flown here from its launch message until it strikes. The Dread
- * Star, last, is the same at its own far larger size.
+ * each meteor a white-hot ball shedding sparks and trailing flame and lingering smoke, flown here from its launch
+ * message until it strikes in a flash. The Dread Star, last, is the same at its own far larger size, and its shockwave
+ * drives a wall of dust out across the ground.
  */
 final class MeteorFx {
     private static final Fx.Tracker<Swarm> SWARMS = new Fx.Tracker<>();
@@ -43,6 +49,10 @@ final class MeteorFx {
     private static final ColorRgba FIRE = ColorRgba.rgba(0xFF8A3DFF);
     private static final ColorRgba BLAZE = ColorRgba.rgba(0xFFE3A0FF);
     private static final ColorRgba CRIMSON = ColorRgba.rgba(0xFF3B1FFF);
+    /** Vanilla's firework flash, tinted: the instant of each impact. */
+    private static final ParticleOptions FLARE = ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFC890);
+    /** Big, slow motes of brown dust, for the Dread Star's dust wall. */
+    private static final ParticleOptions DUST = new DustParticleOptions(0x7A6A58, 4);
     private static final int TINT = 0x200804;
     /** How long an impact keeps glowing. */
     private static final int IMPACT_TICKS = 24;
@@ -166,6 +176,7 @@ final class MeteorFx {
         @Override public boolean tick() {
             if (impactAge >= 0) {
                 impactAge++;
+                if (size > 1 && particlesVisible(position)) dustWall();
             } else {
                 age++;
                 Vec3 previous = position;
@@ -179,23 +190,53 @@ final class MeteorFx {
         private void animate() {
             planes.begin();
             if (impactAge < 0) {
+                // A white-hot core in a blazing head, its fire streaming out behind it.
                 planes.glow(position, size * (1.8f + 0.3f * Mth.sin(age * 1.3f)), BLAZE);
-                planes.glow(position.subtract(velocity.scale(0.4 * size)), size * 1.3f, scaled(FIRE, 0.8f));
-                light = light(light, position, 12 * size, 2.5f * size, FIRE);
+                planes.glow(position, size * 0.55f, ColorRgba.WHITE);
+                for (int i = 1; i <= 3; i++) {
+                    planes.glow(position.subtract(velocity.scale(0.35 * i * size)), size * (1.6f - 0.3f * i), scaled(i < 3 ? FIRE : CRIMSON, 1 - 0.2f * i));
+                }
+                light = light(light, position, 14 * size, 3.5f * size, FIRE);
             } else {
-                int glowTicks = Math.round(10 * size), ringTicks = Math.round(9 * size);
+                int glowTicks = Math.round(10 * size), ringTicks = ringTicks();
                 float fade = 1 - impactAge / (float) impactTicks();
                 if (impactAge <= glowTicks) {
                     planes.glow(position.add(0, size, 0), size * (2 + 5 * ease(impactAge / 3f)), scaled(BLAZE, 1 - impactAge / (float) glowTicks));
                 }
                 if (impactAge <= ringTicks) {
                     float left = 1 - impactAge / (float) ringTicks;
-                    planes.ring(position.add(0, 0.2, 0), UP, size * (1 + 8 * ease(impactAge / (float) (ringTicks - 1))), size * 0.5f * left + 0.05f,
-                            scaled(FIRE, left));
+                    planes.ring(position.add(0, 0.2, 0), UP, shockwave(), size * 0.5f * left + 0.05f, scaled(FIRE, left));
                 }
                 light = light(light, position.add(0, 1.5, 0), 14 * size, 4 * size * fade * fade, FIRE);
             }
             planes.end();
+        }
+
+        private int ringTicks() {
+            return Math.round(9 * size);
+        }
+
+        /** How far the impact's shockwave has raced out across the ground. */
+        private double shockwave() {
+            return size * (1 + 8 * ease(impactAge / (float) (ringTicks() - 1)));
+        }
+
+        /** The Dread Star's shockwave, driving a wall of dust and grit out across the ground and leaving a haze. */
+        private void dustWall() {
+            if (impactAge > ringTicks()) return;
+            double radius = shockwave();
+            float left = 1 - impactAge / (float) ringTicks();
+            BlockParticleOption grit = new BlockParticleOption(ParticleTypes.DUST_PILLAR, ground());
+            for (int i = 0, n = Fx.scaled(Math.round(48 * left) + 8); i < n; i++) {
+                double angle = random.nextDouble() * Mth.TWO_PI;
+                Vec3 out = new Vec3(Math.cos(angle), 0, Math.sin(angle));
+                Vec3 at = onCircle(position, radius + jitter(random, 1.5), angle, random.nextDouble() * 3 * left);
+                switch (i % 4) {
+                    case 0 -> particle(grit, at, out.scale(0.5).add(0, 0.4 + random.nextDouble() * 0.4, 0));
+                    case 1 -> particle(DUST, at.add(0, random.nextDouble() * 4 * left, 0), out.scale(0.6));
+                    default -> particle(ParticleTypes.CAMPFIRE_COSY_SMOKE, at, out.scale(0.12).add(0, 0.03, 0));
+                }
+            }
         }
 
         /** Flame and smoke along this tick's stretch of the path, with the odd spat ember. */
@@ -208,9 +249,18 @@ final class MeteorFx {
                 particle(ParticleTypes.LARGE_SMOKE, from.lerp(position, random.nextDouble()).add(anyDirection(random).scale(0.3 * size)), Vec3.ZERO);
             }
             if (age % 2 == 0) particle(ParticleTypes.LAVA, position, Vec3.ZERO);
+            // Sparks shed from the head, flung back and out.
+            for (int i = 0, n = Fx.scaled(Math.round(3 * size)); i < n; i++) {
+                particle(ModParticles.GOLD, position, velocity.scale(-0.06).add(anyDirection(random).scale(0.25 * Math.sqrt(size))));
+            }
+            // Smoke that hangs in the sky after it, so the swarm leaves its trails behind.
+            for (int i = 0, n = Fx.scaled(Math.round(size)); i < n; i++) {
+                particle(ParticleTypes.CAMPFIRE_COSY_SMOKE, from.lerp(position, random.nextDouble()), anyDirection(random).scale(0.01));
+            }
         }
 
         private void impactParticles() {
+            particle(FLARE, position.add(0, size, 0), Vec3.ZERO);
             for (int i = 0; i < Math.round(size * size); i++) {
                 particle(ParticleTypes.EXPLOSION_EMITTER, position.add(upwards(random, 0.3).scale(random.nextDouble() * 2 * (size - 1))), Vec3.ZERO);
             }

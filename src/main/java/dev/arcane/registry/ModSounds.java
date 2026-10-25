@@ -45,8 +45,14 @@ public final class ModSounds {
     public static final SoundEvent SINGULARITY_COLLAPSE = register("spell.singularity.collapse");
     public static final SoundEvent CHRONO_START = register("spell.chrono_field.start");
     public static final SoundEvent CHRONO_END = register("spell.chrono_field.end");
+    /** The stopped clock, once a second, played by each client in step with the second hand it draws. */
+    public static final SoundEvent CHRONO_TICK = register("spell.chrono_field.tick");
+    /** Projectiles flung back the way they came as time resumes. */
+    public static final SoundEvent CHRONO_REWIND = register("spell.chrono_field.rewind");
     public static final SoundEvent GATE_OPEN = register("spell.astral_gate.open");
     public static final SoundEvent GATE_CROSS = register("spell.astral_gate.cross");
+    /** Two seconds of an open gate's hum, played again by each client at each end for as long as it stays open. */
+    public static final SoundEvent GATE_HUM = register("spell.astral_gate.hum");
     public static final SoundEvent PLANETFALL_RIFT = register("spell.planetfall.rift");
     public static final SoundEvent PLANETFALL_DESCENT = register("spell.planetfall.descent");
     public static final SoundEvent PLANETFALL_IMPACT = register("spell.planetfall.impact");

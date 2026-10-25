@@ -32,10 +32,13 @@ import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ColorParticleOption;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
@@ -43,6 +46,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -51,9 +55,11 @@ import net.minecraft.world.phys.Vec3;
  * <ul>
  *   <li>Gather: storm clouds swirl in around a great seal in the sky, three rings form on the ground, motes rise into
  *       the sky, and the view darkens.</li>
- *   <li>Beam: a pillar of light slams down and bores into the ground, flinging sparks and debris; the view shakes.</li>
+ *   <li>Beam: a pillar of light slams down and bores into the ground, splitting it with cracks of gold that race
+ *       outwards, flinging sparks and debris; the view shakes.</li>
  *   <li>Detonation: a fireball, a shockwave racing out across the ground, explosions and a smoke column, the hardest
- *       shake; then the sky clears, leaving a glowing, smoking crater.</li>
+ *       shake; then the sky clears, embers rain down, and the crater is left glowing and smoking, its rim smouldering
+ *       longest.</li>
  * </ul>
  */
 final class JudgmentFx {
@@ -68,8 +74,15 @@ final class JudgmentFx {
     private static final ColorRgba EMBER = ColorRgba.rgba(0xFF6A1FFF);
     /** Vanilla's firework flash, tinted: a big, brief, camera-facing burst of light. */
     private static final ParticleOptions FLARE = ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFE8B0);
+    /**
+     * Solid motes of gold for the cracks. The soft sparks fade to nothing a few dozen blocks off, where the caster
+     * stands, so these carry the line there.
+     */
+    private static final ParticleOptions CRACK_DUST = new DustParticleOptions(0xFFC840, 2);
     /** How long the crater smoulders after the detonation. */
-    private static final int AFTERMATH_TICKS = 200;
+    private static final int AFTERMATH_TICKS = 300;
+    /** Cracks the beam splits the ground with. */
+    private static final int CRACKS = 9;
     private static final double CRATER = SpellTuning.JUDGMENT_CRATER_RADIUS;
     /** The beam's half-width, and the unit the rest of the strike's shapes are sized in. */
     private static final float BEAM = (float) SpellTuning.JUDGMENT_BEAM_RADIUS;
@@ -94,7 +107,7 @@ final class JudgmentFx {
         return STRIKES.get(effect.sourceId(), level, id -> new Strike(id, effect));
     }
 
-    private static BillboardSprite beamSprite(Vec3 center, float width, float height, ColorRgba color) {
+    static BillboardSprite beamSprite(Vec3 center, float width, float height, ColorRgba color) {
         return BillboardSprite.builder(BEAM_TEXTURE).at(center).size(Math.max(0.05f, width), height).color(color)
                 .blend(BillboardSprite.Blend.ADDITIVE).facing(BillboardSprite.Facing.Y_AXIS)
                 .flipbook(BEAM_FRAMES, 1, BEAM_FPS).maxRenderDistance(RENDER_DISTANCE).build();
@@ -113,6 +126,8 @@ final class JudgmentFx {
         int blastAge = -1;
         EffectHandle<MagicCircle> groundRunes, skyRunes;
         EffectHandle<BillboardSprite> beamCore, beamBody, beamHalo;
+        /** Each crack's path over the ground, from the beam's edge out to about the crater's rim, laid when the beam lands. */
+        final List<List<Vec3>> cracks = new ArrayList<>();
         PointLightHandle groundLight, skyLight, blastLight, emberLight;
         BeamLightHandle beamLight;
 
@@ -133,9 +148,49 @@ final class JudgmentFx {
             beamAge = 0;
             beamTicks = Math.max(1, effect.age());
             age = Math.max(age, gatherTicks);
+            layCracks();
             float near = proximity(impact);
             ScreenEffects.flash(0.5f * near);
             ScreenEffects.shake(0.5f * near);
+        }
+
+        /** Every client splits the ground the same way: the cracks are seeded by the strike. */
+        private void layCracks() {
+            RandomSource seeded = RandomSource.create(id * 7919L);
+            for (int i = 0; i < CRACKS; i++) {
+                double angle = (i + seeded.nextDouble() * 0.6) * Mth.TWO_PI / CRACKS;
+                double reach = CRATER * (0.8 + seeded.nextDouble() * 0.45);
+                List<Vec3> path = new ArrayList<>();
+                for (double r = BEAM + 0.5; r < reach; r += 2.5 + seeded.nextDouble() * 2) {
+                    angle += (seeded.nextDouble() - 0.5) * 0.2;
+                    path.add(onGround(impact.x + Math.cos(angle) * r, impact.z + Math.sin(angle) * r));
+                }
+                if (path.size() >= 2) cracks.add(path);
+            }
+        }
+
+        /** Just above the top of the ground at x, z. */
+        private static Vec3 onGround(double x, double z) {
+            return new Vec3(x, world().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(x), Mth.floor(z)) + 0.08, z);
+        }
+
+        /** The first {@code fraction} of a path's length, or null while that's too short to draw. */
+        private static List<Vec3> partial(List<Vec3> path, float fraction) {
+            double total = 0;
+            for (int i = 1; i < path.size(); i++) total += path.get(i - 1).distanceTo(path.get(i));
+            double left = total * fraction;
+            if (left < 0.3) return null;
+            List<Vec3> part = new ArrayList<>(List.of(path.getFirst()));
+            for (int i = 1; i < path.size(); i++) {
+                double step = path.get(i - 1).distanceTo(path.get(i));
+                if (step >= left) {
+                    part.add(path.get(i - 1).lerp(path.get(i), left / step));
+                    return part;
+                }
+                part.add(path.get(i));
+                left -= step;
+            }
+            return part;
         }
 
         void blast() {
@@ -238,8 +293,13 @@ final class JudgmentFx {
                 }
                 float flash = 1 - blastAge / 30f;
                 blastLight = flash > 0 ? light(blastLight, impact.add(0, 6, 0), 110, 9 * flash * flash, PALE_GOLD) : unlight(blastLight);
-                float smoulder = 3 * (1 - blastAge / (float) AFTERMATH_TICKS);
-                emberLight = light(emberLight, impact.subtract(0, CRATER * 0.3, 0), (float) CRATER * 1.2f, smoulder, EMBER);
+                // The crater cools slowly, the rim last: a ring of embers round its lip, lit once the dust has cleared.
+                float cooling = Math.max(0, 1 - blastAge / (float) AFTERMATH_TICKS);
+                emberLight = light(emberLight, impact.subtract(0, CRATER * 0.3, 0), (float) CRATER * 1.2f, 3 * (float) Math.sqrt(cooling), EMBER);
+                if (blastAge >= 10) {
+                    float rim = cooling * ease((blastAge - 10) / 20f) * (0.85f + 0.15f * Mth.sin(age * 0.3f));
+                    planes.ring(impact.add(0, 0.15, 0), UP, CRATER, 0.5f + 0.5f * cooling, scaled(EMBER, 0.6f * rim));
+                }
             }
             planes.end();
         }
@@ -291,8 +351,40 @@ final class JudgmentFx {
             }
         }
 
+        /**
+         * The cracks, racing out from the beam's foot over most of its life: lines of gold sparks, redrawn every other tick
+         * as they lengthen, flames licking up out of them, and a spray of sparks and grit at each advancing tip.
+         */
+        private void crackParticles() {
+            float split = ease(beamAge / (beamTicks * 0.7f));
+            for (List<Vec3> crack : cracks) {
+                List<Vec3> path = partial(crack, split);
+                if (path == null) continue;
+                if (beamAge % 2 == 0) {
+                    for (int i = 1; i < path.size(); i++) {
+                        Vec3 from = path.get(i - 1), to = path.get(i);
+                        int dots = Math.max(1, (int) (from.distanceTo(to) / 0.4));
+                        for (int j = 0; j < dots; j++) {
+                            Vec3 at = from.lerp(to, j / (double) dots).add(0, 0.22, 0);
+                            particle(ModParticles.GOLD, at, Vec3.ZERO);
+                            // The motes last a second or more, so they're laid less often.
+                            if (beamAge % 4 == 0 && j % 2 == 0) particle(CRACK_DUST, at, Vec3.ZERO);
+                        }
+                    }
+                }
+                Vec3 lick = path.get(random.nextInt(path.size()));
+                particle(ParticleTypes.SMALL_FLAME, lick, new Vec3(0, 0.04, 0));
+                if (split < 1) {
+                    Vec3 tip = path.getLast();
+                    for (int i = 0; i < 2; i++) particle(ModParticles.GOLD, tip, new Vec3(jitter(random, 0.3), 0.3 + random.nextDouble() * 0.2, jitter(random, 0.3)));
+                    particle(ParticleTypes.LAVA, tip, Vec3.ZERO);
+                }
+            }
+        }
+
         /** A flare at the beam's foot, sparks and debris flung from it, light streaming down it, smoke rolling out. */
         private void beamParticles() {
+            crackParticles();
             Vec3 foot = impact.add(0, 0.5, 0);
             if (beamAge % 3 == 0) particle(FLARE, impact.add(0, 1.5, 0), Vec3.ZERO);
             for (int i = 0, n = Fx.scaled(10); i < n; i++) {
@@ -369,6 +461,19 @@ final class JudgmentFx {
             if (blastAge % 4 == 0) {
                 Vec3 at = onCircle(impact, Math.sqrt(random.nextDouble()) * (CRATER - 2), random.nextDouble() * Mth.TWO_PI, -random.nextDouble() * 4);
                 particle(ParticleTypes.SMOKE, at, new Vec3(0, 0.06, 0));
+            }
+            // Embers raining down out of the clearing sky, thinning as it clears: glowing drops that fall all the way,
+            // and gold glints sinking among them.
+            if (blastAge >= 8 && blastAge <= 160) {
+                for (int i = 0, n = Fx.scaled(blastAge < 70 ? 4 : 1); i < n; i++) {
+                    Vec3 at = onCircle(impact, Math.sqrt(random.nextDouble()) * CRATER * 1.3, random.nextDouble() * Mth.TWO_PI, 6 + random.nextDouble() * 30);
+                    particle(i % 2 == 0 ? ParticleTypes.FALLING_LAVA : ModParticles.GOLD, at, new Vec3(jitter(random, 0.04), -0.22, jitter(random, 0.04)));
+                }
+            }
+            // Sparks still spitting off the rim.
+            if (blastAge >= 20 && blastAge % 3 == 0 && blastAge < AFTERMATH_TICKS - 40) {
+                Vec3 at = onCircle(impact, CRATER + jitter(random, 1), random.nextDouble() * Mth.TWO_PI, 0.2);
+                particle(random.nextInt(3) == 0 ? ParticleTypes.LAVA : ModParticles.GOLD, at, new Vec3(0, 0.18 + random.nextDouble() * 0.1, 0));
             }
         }
 

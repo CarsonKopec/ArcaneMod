@@ -17,9 +17,12 @@ import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModParticles;
+import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -28,10 +31,11 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Chrono Field as the client sees it: a wireframe dome of teal rings, a clock face on the ground with its hands stopped
- * at ten past ten, motes of light hanging motionless in the air and on every creature caught, and everything inside
- * drained of its colour ({@link SpaceTimeShader}; without that pass, the view is washed teal from inside instead).
- * When time resumes, colour floods back out from the centre behind a bright front, and the dome ripples outwards and
- * fades.
+ * at ten past ten while its second hand ticks round, once, for as long as the field lasts, motes of light hanging
+ * motionless in the air and on every creature caught, and everything inside drained of its colour
+ * ({@link SpaceTimeShader}; without that pass, the view is washed teal from inside instead). When time resumes, the
+ * second hand spins back, colour floods back out from the centre behind a bright front, and the dome ripples outwards
+ * and fades.
  */
 final class ChronoFx {
     private static final Fx.Tracker<Field> FIELDS = new Fx.Tracker<>();
@@ -42,6 +46,10 @@ final class ChronoFx {
     private static final float[] LATITUDES = {0, 25, 50, 72};
     private static final int MERIDIANS = 3;
     private static final int END_TICKS = 14;
+    /** The second hand steps once a second. */
+    private static final int TICK = 20;
+    /** Turns the second hand spins back as time resumes. */
+    private static final float REWIND_TURNS = 2;
 
     private ChronoFx() {
     }
@@ -82,6 +90,14 @@ final class ChronoFx {
             if (endAge >= 0) endAge++;
             SpellLighting.guarded(this::animate);
             if (endAge < 0 && particlesVisible(center)) particles();
+            // Tick, tock: once a second, as the second hand steps.
+            if (endAge < 0 && age % TICK == 0 && age < duration) {
+                world().playLocalSound(center.x, center.y, center.z, ModSounds.CHRONO_TICK, SoundSource.PLAYERS, 2.0f, age / TICK % 2 == 0 ? 1.0f : 0.84f, false);
+            }
+            // The second hand: redrawn every other tick while it steps, every tick as it spins back.
+            if ((endAge >= 0 ? endAge <= END_TICKS : age % 2 == 0) && particlesVisible(center)) {
+                for (double d = radius * 0.22; d <= radius * 0.88; d += 0.4) particle(ModParticles.PINK, handPoint(d, secondAngle()), Vec3.ZERO);
+            }
             boolean drained = SpaceTimeShader.available();
             if (drained && endAge <= END_TICKS) SpaceTimeShader.show(this::write);
             boolean inside = camera().distanceTo(center) < radius;
@@ -111,15 +127,31 @@ final class ChronoFx {
                     double angle = i * Math.PI / MERIDIANS;
                     planes.ring(center, new Vec3(Math.cos(angle), 0, Math.sin(angle)), r, 0.1f, scaled(TEAL, 0.3f * fade));
                 }
-                // The clock face: rim, twelve-sided hour ring, centre.
+                // The clock face: rim, twelve-sided hour ring, centre. The rim pulses with every tick.
                 Vec3 ground = center.add(0, 0.06, 0);
-                planes.ring(ground, UP, r * 0.95, 0.6f, scaled(TEAL, fade));
+                float pulse = endAge < 0 ? 1 + 0.7f * Math.max(0, 1 - age % TICK / 4f) : 1;
+                planes.ring(ground, UP, r * 0.95, 0.6f, scaled(TEAL, Math.min(1, fade * pulse)));
                 planes.polygon(ground, UP, r * 0.85, 12, 0, 0.25f, scaled(PALE, 0.6f * fade));
                 planes.ring(ground, UP, r * 0.2, 0.3f, scaled(PALE, 0.8f * fade));
                 if (endAge >= 0) planes.ring(ground, UP, r * (1 + 0.6 * ease(endAge / (float) END_TICKS)), 1.2f * fade, scaled(PALE, fade));
             }
             planes.end();
             glow = fade > 0 ? light(glow, center.add(0, 2, 0), (float) radius, 1.1f * fade, TEAL) : unlight(glow);
+        }
+
+        /**
+         * The second hand, clockwise from twelve: a step each second, round once over the field's whole life, then
+         * spinning back as time resumes.
+         */
+        private double secondAngle() {
+            int ticks = Math.max(TICK, duration / TICK * TICK);
+            double swept = Mth.TWO_PI * Math.min(1, age / TICK * TICK / (double) ticks);
+            return endAge < 0 ? swept : swept - REWIND_TURNS * Mth.TWO_PI * ease(endAge / (float) END_TICKS);
+        }
+
+        /** The point on the clock face {@code distance} from its centre, {@code angle} clockwise from twelve (north). */
+        private Vec3 handPoint(double distance, double angle) {
+            return onCircle(center, distance, angle - Math.PI / 2, 0.15);
         }
 
         private void particles() {
@@ -149,10 +181,7 @@ final class ChronoFx {
 
         /** A hand of the clock: a line of light from the centre, {@code angle} clockwise from twelve (north). */
         private void hand(double angle, double length) {
-            for (double d = radius * 0.22; d <= length; d += 0.8) {
-                Vec3 at = onCircle(center, d, angle - Math.PI / 2, 0.15);
-                particle(ModParticles.CYAN, at, Vec3.ZERO);
-            }
+            for (double d = radius * 0.22; d <= length; d += 0.5) particle(ModParticles.CYAN, handPoint(d, angle), Vec3.ZERO);
         }
 
         @Override public void release() {

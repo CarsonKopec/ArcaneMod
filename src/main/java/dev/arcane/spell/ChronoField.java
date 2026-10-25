@@ -165,15 +165,20 @@ public final class ChronoField extends MarkedSpell {
 
         /** Time resumes: everything moves on as it was, then takes the damage it was dealt while frozen. */
         void release() {
+            boolean rewound = false;
             for (Frozen entry : frozen) {
                 if (FROZEN.remove(entry.entity) != entry || entry.entity.isRemoved()) continue;
                 entry.thaw();
-                if (entry.entity instanceof Projectile projectile && projectile.getOwner() != caster) rewind(projectile, entry.velocity, caster);
+                if (entry.entity instanceof Projectile projectile && projectile.getOwner() != caster) {
+                    rewind(projectile, entry.velocity, caster);
+                    rewound = true;
+                }
                 if (entry.heldDamage > 0 && entry.entity instanceof LivingEntity living) {
                     living.hurtServer(level, entry.heldSource, entry.heldDamage * SpellTuning.CHRONO_DAMAGE_MULTIPLIER);
                 }
             }
             frozen.clear();
+            if (rewound) level.playSound(null, center.x, center.y, center.z, ModSounds.CHRONO_REWIND, SoundSource.PLAYERS, 2.5f, 1.0f);
         }
     }
 

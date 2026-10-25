@@ -5,11 +5,11 @@
 	},
 	"spell.arcane_bolt.cast": {
 		"subtitle": "subtitles.arcane_spells.spell.arcane_bolt.cast",
-		"sounds": ["arcane_spells:spell/arcane_bolt_cast"]
+		"sounds": ["arcane_spells:spell/arcane_bolt_cast", "arcane_spells:spell/arcane_bolt_cast_2", "arcane_spells:spell/arcane_bolt_cast_3"]
 	},
 	"spell.arcane_bolt.impact": {
 		"subtitle": "subtitles.arcane_spells.spell.arcane_bolt.impact",
-		"sounds": ["arcane_spells:spell/arcane_bolt_impact"]
+		"sounds": ["arcane_spells:spell/arcane_bolt_impact", "arcane_spells:spell/arcane_bolt_impact_2", "arcane_spells:spell/arcane_bolt_impact_3"]
 	},
 	"spell.arcane_bolt.shards": {
 		"subtitle": "subtitles.arcane_spells.spell.arcane_bolt.shards",
@@ -21,7 +21,7 @@
 	},
 	"spell.chain_lightning.hit": {
 		"subtitle": "subtitles.arcane_spells.spell.chain_lightning.hit",
-		"sounds": ["arcane_spells:spell/chain_lightning_hit"]
+		"sounds": ["arcane_spells:spell/chain_lightning_hit", "arcane_spells:spell/chain_lightning_hit_2", "arcane_spells:spell/chain_lightning_hit_3"]
 	},
 	"spell.chain_lightning.overload": {
 		"subtitle": "subtitles.arcane_spells.spell.chain_lightning.overload",
@@ -45,7 +45,7 @@
 	},
 	"spell.arcane_ward.hit": {
 		"subtitle": "subtitles.arcane_spells.spell.arcane_ward.hit",
-		"sounds": ["arcane_spells:spell/arcane_ward_hit"]
+		"sounds": ["arcane_spells:spell/arcane_ward_hit", "arcane_spells:spell/arcane_ward_hit_2", "arcane_spells:spell/arcane_ward_hit_3"]
 	},
 	"spell.arcane_ward.break": {
 		"subtitle": "subtitles.arcane_spells.spell.arcane_ward.break",
@@ -81,7 +81,7 @@
 	},
 	"spell.meteor_swarm.impact": {
 		"subtitle": "subtitles.arcane_spells.spell.meteor_swarm.impact",
-		"sounds": ["arcane_spells:spell/meteor_swarm_impact"]
+		"sounds": ["arcane_spells:spell/meteor_swarm_impact", "arcane_spells:spell/meteor_swarm_impact_2", "arcane_spells:spell/meteor_swarm_impact_3"]
 	},
 	"spell.singularity.open": {
 		"subtitle": "subtitles.arcane_spells.spell.singularity.open",
@@ -103,6 +103,14 @@
 		"subtitle": "subtitles.arcane_spells.spell.chrono_field.end",
 		"sounds": ["arcane_spells:spell/chrono_field_end"]
 	},
+	"spell.chrono_field.tick": {
+		"subtitle": "subtitles.arcane_spells.spell.chrono_field.tick",
+		"sounds": ["arcane_spells:spell/chrono_field_tick"]
+	},
+	"spell.chrono_field.rewind": {
+		"subtitle": "subtitles.arcane_spells.spell.chrono_field.rewind",
+		"sounds": ["arcane_spells:spell/chrono_field_rewind"]
+	},
 	"spell.astral_gate.open": {
 		"subtitle": "subtitles.arcane_spells.spell.astral_gate.open",
 		"sounds": ["arcane_spells:spell/astral_gate_open"]
@@ -110,6 +118,10 @@
 	"spell.astral_gate.cross": {
 		"subtitle": "subtitles.arcane_spells.spell.astral_gate.cross",
 		"sounds": ["arcane_spells:spell/astral_gate_cross"]
+	},
+	"spell.astral_gate.hum": {
+		"subtitle": "subtitles.arcane_spells.spell.astral_gate.hum",
+		"sounds": ["arcane_spells:spell/astral_gate_hum"]
 	},
 	"spell.planetfall.rift": {
 		"subtitle": "subtitles.arcane_spells.spell.planetfall.rift",
@@ -145,7 +157,7 @@
 	},
 	"spell.reaction.shatter": {
 		"subtitle": "subtitles.arcane_spells.spell.reaction.shatter",
-		"sounds": ["arcane_spells:spell/shatter"]
+		"sounds": ["arcane_spells:spell/shatter", "arcane_spells:spell/shatter_2", "arcane_spells:spell/shatter_3"]
 	},
 	"spell.reaction.conduction": {
 		"subtitle": "subtitles.arcane_spells.spell.reaction.conduction",

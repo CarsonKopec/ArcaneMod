@@ -78,7 +78,7 @@ import org.joml.Vector3fc;
  *   <li>Impact: a white flash, an instant of inverted silhouettes, then the planet shatters into tumbling blocks, the
  *       ground is thrown up and a dome of shocked air races outwards. Where it reaches you the view is kicked and the
  *       boom arrives, late, as it would. A mushroom cloud rises, the rift seals and the sky clears over a glowing
- *       crater.</li>
+ *       crater, where ash drifts down for half a minute and embers rise from the planet's heart.</li>
  * </ul>
  * In the second half of the fall, burning shards break off the planet and streak down to crater the ground around the
  * mark ({@link Shard}).
@@ -104,6 +104,8 @@ final class PlanetfallFx {
     /** How far beyond the rift the planet is when it first shows through it. */
     private static final double APPROACH = 1400;
     private static final int AFTERMATH_TICKS = 300;
+    /** Ash keeps drifting down over the crater, and embers rising from the core, this long after the impact. */
+    private static final int ASH_TICKS = 600;
     /** How long the sky takes to clear after the impact. */
     private static final int SKY_CLEARS = 100;
     /** How long the screen pass's mushroom cloud lingers after the impact, fading over its last few seconds. */
@@ -290,7 +292,7 @@ final class PlanetfallFx {
                 boolean debrisGone = planet == null || !planet.shattered() || planet.tickDebris();
                 if (debrisGone) planet = null;
                 if (groundDebris != null && groundDebris.tick()) groundDebris = null;
-                return impactAge > AFTERMATH_TICKS && planet == null && groundDebris == null;
+                return impactAge > ASH_TICKS && planet == null && groundDebris == null;
             }
             // A strike whose impact never arrives (the server stopped, the chunk unloaded) still ends.
             return age > riftTicks + fallTicks + 60;
@@ -526,6 +528,7 @@ final class PlanetfallFx {
         private void aftermathParticles() {
             int t = impactAge;
             ejecta(true);
+            settlingParticles(t);
             if (!drawn) cloudParticles(t);
             // Surface samples follow the crater as the server excavates it, including on uneven ground.
             if (t > 10 && t % 2 == 0) {
@@ -539,6 +542,30 @@ final class PlanetfallFx {
                     ParticleOptions type = hot ? (i % 2 == 0 ? ParticleTypes.LAVA : ModParticles.GOLD)
                             : i % 3 == 0 ? ModParticles.VIOLET : ParticleTypes.SMOKE;
                     particle(type, at, new Vec3(0, 0.06 + random.nextDouble() * 0.1, 0));
+                }
+            }
+        }
+
+        /**
+         * The long settling: ash drifting down over the whole crater from high above, thinning out over half a minute,
+         * and embers and a thread of smoke rising from the planet's glowing heart at the bottom.
+         */
+        private void settlingParticles(int t) {
+            float left = 1 - t / (float) ASH_TICKS;
+            if (t > 40) {
+                for (int i = 0, n = Fx.scaled(Math.round(8 * left)); i < n; i++) {
+                    Vec3 at = onCircle(mark, Math.sqrt(random.nextDouble()) * CRATER * 1.2, random.nextDouble() * Mth.TWO_PI, 4 + random.nextDouble() * 36);
+                    particle(i % 3 == 0 ? ParticleTypes.WHITE_ASH : ParticleTypes.ASH, at, Vec3.ZERO);
+                }
+            }
+            if (t > 30) {
+                double core = SpellTuning.PLANETFALL_CORE_RADIUS;
+                for (int i = 0, n = Fx.scaled(Math.round(3 * left + 1)); i < n; i++) {
+                    Vec3 at = surface(onCircle(mark, Math.sqrt(random.nextDouble()) * core * 1.3, random.nextDouble() * Mth.TWO_PI, 0));
+                    // Only down in a crater: where terrain is spared there is none, and no core.
+                    if (at == null || at.y > mark.y - SpellTuning.PLANETFALL_CRATER_DEPTH * 0.5) continue;
+                    particle(i % 4 == 3 ? ParticleTypes.LAVA : ModParticles.GOLD, at, new Vec3(jitter(random, 0.05), 0.22 + random.nextDouble() * 0.2, jitter(random, 0.05)));
+                    if (t % 5 == 0 && i == 0) particle(ParticleTypes.CAMPFIRE_COSY_SMOKE, at, new Vec3(0, 0.04, 0));
                 }
             }
         }

@@ -1,5 +1,7 @@
 package dev.arcane.test;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.api.SpellRegistries;
@@ -10,8 +12,10 @@ import dev.arcane.spell.ArcaneWard;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
-import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Map;
+import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -63,6 +67,17 @@ public final class SpellsGameTest implements FabricClientGameTest {
                     sounds++;
                 }
                 check(sounds > 0, "No spell sounds registered");
+                // Every take sounds.json lists, not just one drawn at random: the commonest sounds have three.
+                try (var reader = client.getResourceManager().getResourceOrThrow(ArcaneSpells.id("sounds.json")).openAsReader()) {
+                    for (var event : JsonParser.parseReader(reader).getAsJsonObject().entrySet()) {
+                        for (JsonElement take : event.getValue().getAsJsonObject().getAsJsonArray("sounds")) {
+                            Identifier file = Identifier.parse(take.getAsString()).withPath(path -> "sounds/" + path + ".ogg");
+                            check(client.getResourceManager().getResource(file).isPresent(), "Missing sound file " + file + " for " + event.getKey());
+                        }
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
                 TextureAtlas gui = client.getAtlasManager().getAtlasOrThrow(AtlasIds.GUI);
                 for (Spell spell : SpellRegistries.SPELLS) {
                     check(gui.getSprite(spell.icon()) != gui.missingSprite(), "Missing icon for " + spell);
