@@ -5,6 +5,8 @@ import de.nexusrealms.nebulon.api.render.client.post.NebulonPostProcessing;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.client.gui.SpellWheelScreen;
+import dev.arcane.progression.ArcaneProgression;
+import dev.arcane.progression.PlayerProgressionComponent;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.ChronoField;
@@ -33,7 +35,7 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * The Astral Staff's other four spells in a real client, each cast on a stone plateau: Meteor Swarm cratering the
- * ground and hurting what's there; Singularity dragging creatures and items in, eating the ground and collapsing;
+ * ground and hurting what's there, and its seekers finding a lone pig; Singularity dragging creatures and items in, eating the ground and collapsing;
  * Chrono Field freezing a creature and an arrow, holding back damage until time resumes; Astral Gate carrying the
  * caster, and a pig standing in the gate, to the far end. Screenshots record each.
  */
@@ -71,6 +73,7 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
             context.waitForScreen(null);
 
             meteorSwarm(context, server);
+            meteorSeeking(context, server);
             singularity(context, server);
             chronoField(context, server);
             astralGate(context, server);
@@ -82,13 +85,7 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
             double angle = i * Math.PI * 2 / 5;
             server.runCommand(String.format("summon minecraft:pig %.1f -43 %.1f {NoAI:1b}", 0.5 + Math.cos(angle) * 10, 40.5 + Math.sin(angle) * 10));
         }
-        // And one out near the area's edge, away from the rest, which takes no harm but logs every blast that reaches it.
-        Pig[] edge = new Pig[1];
-        server.runOnServer(s -> {
-            DamageLog.clear();
-            edge[0] = DamageLog.spawn(s.overworld(), EntityType.PIG, MARK_TOP.add(-20, 0, 0));
-            check(castAt(s, ModSpells.METEOR_SWARM, MARK_TOP), "Meteor Swarm was refused");
-        });
+        server.runOnServer(s -> check(castAt(s, ModSpells.METEOR_SWARM, MARK_TOP), "Meteor Swarm was refused"));
         server.runCommand("gamemode spectator @a");
         server.runCommand(VANTAGE);
         context.waitTicks(30);
@@ -110,18 +107,41 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
             }
             check(cratered, "The Dread Star left no crater at the mark");
             // Killed pigs are soon gone altogether, so count the pigs left unharmed.
-            long unharmed = level.getEntities(EntityType.PIG, pig -> pig != edge[0] && pig.isAlive() && pig.getHealth() == pig.getMaxHealth())
-                    .size();
+            long unharmed = level.getEntities(EntityType.PIG, pig -> pig.isAlive() && pig.getHealth() == pig.getMaxHealth()).size();
             check(unharmed < 5, "No pig was hit by " + SpellTuning.METEOR_COUNT + " meteors and the Dread Star");
-            // Seeking: every other meteor aims at a creature in the area, and once the others are dead, only the pig at
-            // the edge is left to aim at. By chance alone, two or three meteors would land near it.
-            long hits = DamageLog.of(edge[0]).stream().filter(blow -> blow.source().is(DamageTypeTags.IS_EXPLOSION)).count();
-            int seekers = SpellTuning.METEOR_COUNT / SpellTuning.METEOR_SEEKING_EVERY;
-            check(hits >= seekers * 2 / 5, "Meteors hit the pig at the area's edge only " + hits + " times");
-            edge[0].discard();
         });
         server.runCommand("kill @e[type=!minecraft:player]");
         server.runCommand("gamemode survival @a");
+    }
+
+    /**
+     * Seeking: every other meteor aims at a creature in the area. With one pig there, out near the edge, every seeker
+     * aims at it, where by chance alone two or three meteors would land near it. (Among several creatures dying at
+     * random, the share left for any one of them is chance too.) The pig takes no harm but logs every blast that
+     * reaches it; with terrain_damage off the ground under it stays flat.
+     */
+    private static void meteorSeeking(ClientGameTestContext context, TestServerContext server) {
+        Plateau.build(server);
+        server.runCommand(CASTER_AT);
+        server.runCommand("gamerule arcane_spells:terrain_damage false");
+        Pig[] lone = new Pig[1];
+        server.runOnServer(s -> {
+            DamageLog.clear();
+            lone[0] = DamageLog.spawn(s.overworld(), EntityType.PIG, MARK_TOP.add(-20, 0, 0));
+            // This extra swarm's corruption would carry into the spells cast after it, so the caster is left as they were.
+            PlayerProgressionComponent progression = ArcaneProgression.get(player(s));
+            int corruption = progression.corruption();
+            check(castAt(s, ModSpells.METEOR_SWARM, MARK_TOP), "Meteor Swarm was refused");
+            progression.setCorruption(corruption);
+        });
+        context.waitTicks(SWARM_TICKS);
+        server.runOnServer(s -> {
+            long hits = DamageLog.of(lone[0]).stream().filter(blow -> blow.source().is(DamageTypeTags.IS_EXPLOSION)).count();
+            int seekers = SpellTuning.METEOR_COUNT / SpellTuning.METEOR_SEEKING_EVERY;
+            check(hits >= seekers * 3 / 4, "Seeking meteors hit the lone pig only " + hits + " times, of " + seekers + " seekers");
+            lone[0].discard();
+        });
+        server.runCommand("gamerule arcane_spells:terrain_damage true");
     }
 
     private static void singularity(ClientGameTestContext context, TestServerContext server) {
