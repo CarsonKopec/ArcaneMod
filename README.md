@@ -194,7 +194,8 @@ src/client/java/dev/arcane/          client-only code
   client/fx/JudgmentFx, MeteorFx,    each Astral spell's visuals
         SingularityFx, ChronoFx, GateFx, PlanetfallFx
   client/fx/PlanetfallShader.java    Planetfall's full-screen shader pass: space, the rift, the planet, the shock dome
-  client/fx/SpaceTimeShader.java     the screen pass for black holes and stopped time: bent light, a lensed disc, colour drained
+  client/fx/SpaceTimeShader.java     the screen pass for black holes and stopped time: bent light, a lensed disc, colour drained,
+                                     the clock's hands
   client/fx/VoxelPlanet,             the planet's shattered blocks and the ground it throws up, as client-only block
         PlanetfallDebris               displays (and the whole planet, without the shader pass)
   client/fx/SpaceSky.java            turns the sky to space while a Planetfall's rift is open

@@ -40,7 +40,8 @@ import org.joml.Vector4f;
  *
  * <p>Each frame, the frame is copied ({@code planetfall_copy}, by a draw, for the reason given there), and the pass
  * draws over the frame from the copy: it traces the light bent past each black hole and reads the copy again where
- * that light comes from, and drains the colour from what lies inside each Chrono Field.
+ * that light comes from, drains the colour from what lies inside each Chrono Field, and lays its clock's hands on the
+ * ground.
  *
  * <p>Any number of spells can ask for it at once ({@link #show}, every tick they want it); up to {@link View#SLOTS}
  * black holes and as many fields are drawn. It costs nothing while none do. With a shader pack or VulkanMod, or after
@@ -243,11 +244,13 @@ final class SpaceTimeShader {
         /**
          * A Chrono Field at {@code center}, {@code radius} blocks across from its centre, with {@code drain} of the colour gone
          * from what it holds, 0 to 1; {@code front}, if above 0, is how far out from the centre colour has come back.
+         * The hands of its clock lie on the ground at the centre, {@code hands} bright from 0 to 1, the second hand
+         * {@code secondHand} radians clockwise from twelve.
          */
-        void field(Vec3 center, float radius, float drain, float front) {
+        void field(Vec3 center, float radius, float drain, float front, float secondHand, float hands) {
             if (fields >= SLOTS || radius <= 0) return;
             relative(fieldCenter[fields], center, radius);
-            fieldState[fields].set(drain, front, 0, 0);
+            fieldState[fields].set(drain, front, secondHand, hands);
             fields++;
         }
 

@@ -3,7 +3,8 @@
 // Singularity's black holes and Chrono Field's stopped time, drawn into the frame (see SpaceTimeShader). A black hole
 // bends light as a real one does: each ray is traced past it, the frame is read again wherever the bent ray lands,
 // and so the world behind the hole wraps round it. Its accretion disc glows with the heat of its orbit, the side
-// coming towards the viewer brighter and bluer. Inside a Chrono Field the world loses its colour. Out: the frame.
+// coming towards the viewer brighter and bluer. Inside a Chrono Field the world loses its colour, and the hands of a
+// stopped clock lie on the ground. Out: the frame.
 
 #moj_import <minecraft:projection.glsl>
 
@@ -14,7 +15,8 @@ layout(std140) uniform SpaceTimeView {
     vec4 HoleDisc[4];    // xyz: the disc's axis, which it turns round anticlockwise; w: its outer radius
     vec4 HoleState[4];   // x: the disc's brightness, 0 to 1; y: how far its inner edge has turned, in radians; w: seed
     vec4 FieldCenter[4]; // xyz: centre; w: radius, 0 for none
-    vec4 FieldState[4];  // x: how much colour has drained, 0 to 1; y: the returning colour's front, 0 for none
+    vec4 FieldState[4];  // x: how much colour has drained, 0 to 1; y: the returning colour's front, 0 for none;
+                         // z: the second hand, radians clockwise from twelve; w: the hands' brightness, 0 to 1
 };
 
 #moj_import <arcane_spells:screen_space.glsl>
@@ -213,7 +215,44 @@ vec3 rollOff(vec3 light) {
 
 // ---------------------------------------------------------------- stopped time
 
-// Drains the colour from whatever of the world lies inside each Chrono Field, and outlines the field's dome faintly.
+// How far p, on the ground relative to a clock's centre, is from a hand pointing angle radians clockwise from twelve
+// (north, -z) and running from start to end blocks out.
+float handDistance(vec2 p, float angle, float start, float end) {
+    vec2 along = vec2(sin(angle), -cos(angle));
+    return length(p - along * clamp(dot(p, along), start, end));
+}
+
+// A hand halfWidth blocks either side of its line, d blocks from what this pixel sees, laid over color with a faint
+// glow round it. However far off, it stays at least a pixel and a half across, dimmer where it has to be widened.
+vec3 hand(vec3 color, float d, float halfWidth, vec3 tint, float strength) {
+    float pixel = max(fwidth(d), 1.0e-4);
+    float width = max(halfWidth, pixel * 0.75);
+    float line = 1.0 - smoothstep(width - pixel * 0.5, width + pixel * 0.5, d);
+    strength *= mix(0.6, 1.0, halfWidth / width);
+    return mix(color, tint, line * 0.9 * strength) + tint * exp(-d / (width * 3.0)) * 0.12 * strength;
+}
+
+// Chrono Field i's clock hands, on the ground at its centre and keeping their colour in the drained field: hour and
+// minute stopped at ten past ten (as ChronoFx's sparks draw them without this pass), the second hand where it says.
+// The pixel's ray is followed to the clock face's plane; anything nearer hides the hands.
+vec3 clockHands(int i, vec3 color, vec3 dir, float sceneDistance) {
+    vec3 c = FieldCenter[i].xyz;
+    float radius = FieldCenter[i].w;
+    float strength = FieldState[i].w;
+    // Worked out for every pixel, whether its ray meets the plane or not, so the derivatives that smooth the hands'
+    // edges are defined everywhere.
+    float dy = abs(dir.y) < 1.0e-4 ? 1.0e-4 : dir.y;
+    float t = (c.y + 0.06 - rayOrigin.y) / dy;
+    vec2 p = rayOrigin.xz + dir.xz * t - c.xz;
+    if (!(t > 0.0 && t < sceneDistance)) strength = 0.0;
+    vec3 cyan = vec3(0.53, 0.96, 1.0);
+    color = hand(color, handDistance(p, -PI / 3.0, radius * 0.22, radius * 0.45), radius * 0.015, cyan, strength);
+    color = hand(color, handDistance(p, PI / 3.0, radius * 0.22, radius * 0.75), radius * 0.011, cyan, strength);
+    return hand(color, handDistance(p, FieldState[i].z, radius * 0.22, radius * 0.88), radius * 0.005, vec3(0.95, 0.71, 1.0), strength);
+}
+
+// Drains the colour from whatever of the world lies inside each Chrono Field, lays its clock's hands on the ground,
+// and outlines the field's dome faintly.
 vec3 stopTime(vec3 color, vec3 dir, float sceneDistance, bool sky) {
     vec3 point = rayOrigin + dir * min(sceneDistance, 4096.0);
     for (int i = 0; i < 4; i++) {
@@ -235,6 +274,7 @@ vec3 stopTime(vec3 color, vec3 dir, float sceneDistance, bool sky) {
                 color += vec3(0.55, 1.0, 0.9) * edge * 0.7;
             }
         }
+        color = clockHands(i, color, dir, sceneDistance);
         // The dome's skin, brightest seen edge on.
         vec2 span = sphereHits(dir, c, radius);
         if (span.y > 0.0 && drain > 0.0) {

@@ -33,7 +33,8 @@ import net.minecraft.world.phys.Vec3;
  * Chrono Field as the client sees it: a wireframe dome of teal rings, a clock face on the ground with its hands stopped
  * at ten past ten while its second hand ticks round, once, for as long as the field lasts, motes of light hanging
  * motionless in the air and on every creature caught, and everything inside drained of its colour
- * ({@link SpaceTimeShader}; without that pass, the view is washed teal from inside instead). When time resumes, the
+ * ({@link SpaceTimeShader}, which draws the hands too, so they keep their colour and read from afar; without that
+ * pass, the view is washed teal from inside instead, and the hands are traced in sparks). When time resumes, the
  * second hand spins back, colour floods back out from the centre behind a bright front, and the dome ripples outwards
  * and fades.
  */
@@ -88,17 +89,17 @@ final class ChronoFx {
         @Override public boolean tick() {
             age++;
             if (endAge >= 0) endAge++;
+            boolean drained = SpaceTimeShader.available();
             SpellLighting.guarded(this::animate);
-            if (endAge < 0 && particlesVisible(center)) particles();
+            if (endAge < 0 && particlesVisible(center)) particles(drained);
             // Tick, tock: once a second, as the second hand steps.
             if (endAge < 0 && age % TICK == 0 && age < duration) {
                 world().playLocalSound(center.x, center.y, center.z, ModSounds.CHRONO_TICK, SoundSource.PLAYERS, 2.0f, age / TICK % 2 == 0 ? 1.0f : 0.84f, false);
             }
-            // The second hand: redrawn every other tick while it steps, every tick as it spins back.
-            if ((endAge >= 0 ? endAge <= END_TICKS : age % 2 == 0) && particlesVisible(center)) {
-                for (double d = radius * 0.22; d <= radius * 0.88; d += 0.4) particle(ModParticles.PINK, handPoint(d, secondAngle()), Vec3.ZERO);
+            // The second hand in sparks: redrawn every other tick while it steps, every tick as it spins back.
+            if (!drained && (endAge >= 0 ? endAge <= END_TICKS : age % 2 == 0) && particlesVisible(center)) {
+                for (double d = radius * 0.22; d <= radius * 0.88; d += 0.4) particle(ModParticles.PINK, handPoint(d, secondAngle(0)), Vec3.ZERO);
             }
-            boolean drained = SpaceTimeShader.available();
             if (drained && endAge <= END_TICKS) SpaceTimeShader.show(this::write);
             boolean inside = camera().distanceTo(center) < radius;
             if (inside && endAge < 0) ScreenEffects.tint((drained ? 0.12f : 0.35f) * ease(age / 8f), TINT);
@@ -109,7 +110,9 @@ final class ChronoFx {
             float drain = ease((age + partialTick) / 10f);
             // The front runs out past the dome's edge, so colour is back everywhere before the pass lets go.
             float front = endAge >= 0 ? 0.01f + (float) radius * 1.3f * ease((endAge + partialTick) / (END_TICKS - 2f)) : 0;
-            view.field(center, (float) radius, drain, front);
+            // The hands appear as the colour drains, and fade as the second hand spins back.
+            float hands = endAge >= 0 ? Math.max(0, 1 - (endAge + partialTick) / END_TICKS) : drain;
+            view.field(center, (float) radius, drain, front, (float) secondAngle(partialTick), hands);
         }
 
         private void animate() {
@@ -140,13 +143,14 @@ final class ChronoFx {
         }
 
         /**
-         * The second hand, clockwise from twelve: a step each second, round once over the field's whole life, then
-         * spinning back as time resumes.
+         * The second hand, clockwise from twelve, {@code partialTick} of the way to the next tick: a step each second,
+         * round once over the field's whole life, then spinning back from where it stopped as time resumes.
          */
-        private double secondAngle() {
+        private double secondAngle(float partialTick) {
             int ticks = Math.max(TICK, duration / TICK * TICK);
-            double swept = Mth.TWO_PI * Math.min(1, age / TICK * TICK / (double) ticks);
-            return endAge < 0 ? swept : swept - REWIND_TURNS * Mth.TWO_PI * ease(endAge / (float) END_TICKS);
+            int stopped = endAge >= 0 ? age - endAge : age;
+            double swept = Mth.TWO_PI * Math.min(1, stopped / TICK * TICK / (double) ticks);
+            return endAge < 0 ? swept : swept - REWIND_TURNS * Mth.TWO_PI * ease(Math.min(END_TICKS, endAge + partialTick) / END_TICKS);
         }
 
         /** The point on the clock face {@code distance} from its centre, {@code angle} clockwise from twelve (north). */
@@ -154,7 +158,7 @@ final class ChronoFx {
             return onCircle(center, distance, angle - Math.PI / 2, 0.15);
         }
 
-        private void particles() {
+        private void particles(boolean drained) {
             // Motes hang where they appear: nothing moves in here.
             if (age % 3 == 0) {
                 for (int i = 0, n = Fx.scaled(12); i < n; i++) {
@@ -162,8 +166,8 @@ final class ChronoFx {
                     if (at.y > center.y) particle(ParticleTypes.END_ROD, at, Vec3.ZERO);
                 }
             }
-            // The clock's hands, stopped at ten past ten.
-            if (age % 6 == 0) {
+            // The clock's hands, stopped at ten past ten, in sparks (spacetime.fsh draws the same hands).
+            if (!drained && age % 6 == 0) {
                 hand(Math.toRadians(-60), radius * 0.45);
                 hand(Math.toRadians(60), radius * 0.75);
             }
