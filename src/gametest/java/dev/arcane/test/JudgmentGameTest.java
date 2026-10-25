@@ -15,11 +15,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * The Astral Staff and Celestial Judgment in a real client: the staff holds only its own spells, the spell refuses a
@@ -78,7 +81,23 @@ public final class JudgmentGameTest implements FabricClientGameTest {
             strikeLeavesTerrain(context, server, "An Adventure-mode strike broke terrain");
             server.runCommand("gamemode survival @a");
             server.runCommand("gamerule arcane_spells:terrain_damage false");
+            // Smite, in the same strike: a zombie and a pig either side of the mark, under the beam, which deals each the
+            // same flat amount, but the zombie half as much again. The log takes their blows, so neither burns or dies.
+            Mob[] smitten = new Mob[2];
+            server.runOnServer(s -> {
+                DamageLog.clear();
+                Vec3 top = MARK.getBottomCenter().add(0, 1, 0);
+                smitten[0] = DamageLog.spawn(s.overworld(), EntityType.ZOMBIE, top.add(1.5, 0, 0));
+                smitten[1] = DamageLog.spawn(s.overworld(), EntityType.PIG, top.add(-1.5, 0, 0));
+            });
             strikeLeavesTerrain(context, server, "A strike broke terrain with terrain_damage off");
+            server.runOnServer(s -> {
+                float zombie = firstBeamBlow(smitten[0]), pig = firstBeamBlow(smitten[1]);
+                check(Math.abs(zombie / pig - SpellTuning.JUDGMENT_SMITE_MULTIPLIER) < 0.01,
+                        "Smite: the beam dealt the zombie " + zombie + " and the pig " + pig);
+                smitten[0].discard();
+                smitten[1].discard();
+            });
             server.runCommand("gamerule arcane_spells:terrain_damage true");
 
             // The real thing: pigs at the mark, near the blast's edge and far away; a real two-second channel.
@@ -163,6 +182,13 @@ public final class JudgmentGameTest implements FabricClientGameTest {
         });
         context.waitTicks(STRIKE_TICKS);
         server.runOnServer(s -> check(!s.overworld().getBlockState(MARK).isAir(), failure));
+    }
+
+    /** What the beam dealt {@code mob} the first time it burned it. */
+    private static float firstBeamBlow(Mob mob) {
+        return DamageLog.of(mob).stream().filter(blow -> blow.source().is(DamageTypes.INDIRECT_MAGIC)).findFirst()
+                .orElseThrow(() -> new AssertionError("The beam missed the " + mob.getType().getDescription().getString()))
+                .amount();
     }
 
     private static ServerPlayer player(MinecraftServer server) {

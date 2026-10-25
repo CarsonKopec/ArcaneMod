@@ -28,8 +28,10 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Chrono Field as the client sees it: a wireframe dome of teal rings, a clock face on the ground with its hands stopped
- * at ten past ten, motes of light hanging motionless in the air and on every creature caught, and the view washed teal
- * from inside. When time resumes, the dome ripples outwards and fades.
+ * at ten past ten, motes of light hanging motionless in the air and on every creature caught, and everything inside
+ * drained of its colour ({@link SpaceTimeShader}; without that pass, the view is washed teal from inside instead).
+ * When time resumes, colour floods back out from the centre behind a bright front, and the dome ripples outwards and
+ * fades.
  */
 final class ChronoFx {
     private static final Fx.Tracker<Field> FIELDS = new Fx.Tracker<>();
@@ -80,9 +82,18 @@ final class ChronoFx {
             if (endAge >= 0) endAge++;
             SpellLighting.guarded(this::animate);
             if (endAge < 0 && particlesVisible(center)) particles();
+            boolean drained = SpaceTimeShader.available();
+            if (drained && endAge <= END_TICKS) SpaceTimeShader.show(this::write);
             boolean inside = camera().distanceTo(center) < radius;
-            if (inside && endAge < 0) ScreenEffects.tint(0.35f * ease(age / 8f), TINT);
+            if (inside && endAge < 0) ScreenEffects.tint((drained ? 0.12f : 0.35f) * ease(age / 8f), TINT);
             return endAge > END_TICKS || endAge < 0 && age > duration + 30;
+        }
+
+        private void write(SpaceTimeShader.View view, float partialTick) {
+            float drain = ease((age + partialTick) / 10f);
+            // The front runs out past the dome's edge, so colour is back everywhere before the pass lets go.
+            float front = endAge >= 0 ? 0.01f + (float) radius * 1.3f * ease((endAge + partialTick) / (END_TICKS - 2f)) : 0;
+            view.field(center, (float) radius, drain, front);
         }
 
         private void animate() {

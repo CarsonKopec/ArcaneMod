@@ -17,6 +17,7 @@ import dev.arcane.registry.ModEnchantments;
 import dev.arcane.registry.ModItems;
 import dev.arcane.registry.ModPotions;
 import dev.arcane.registry.ModSpells;
+import dev.arcane.spell.ArcaneWard;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
 import io.wispforest.owo.ui.container.ScrollContainer;
@@ -28,6 +29,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.advancements.AdvancementsScreen;
@@ -74,6 +76,8 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class ArcanaGameTest implements FabricClientGameTest {
     private static final float EPSILON = 0.01f;
+    /** What Chain Lightning's overload deals a lone target, before spell power: every leap but the first. */
+    private static final float LONE_OVERLOAD = SpellTuning.CHAIN_OVERLOAD_DAMAGE * (SpellTuning.CHAIN_MAX_TARGETS - 1);
 
     @Override public void runTest(ClientGameTestContext context) {
         try (var game = context.worldBuilder().create()) {
@@ -113,7 +117,9 @@ public final class ArcanaGameTest implements FabricClientGameTest {
                 player.lookAt(EntityAnchorArgument.Anchor.EYES, pig.getBoundingBox().getCenter());
                 ready(player);
                 check(ArcaneSpellsApi.cast(player, ModSpells.CHAIN_LIGHTNING, 1), "Chain Lightning was refused");
-                checkNear(pig.getHealth(), 100 - SpellTuning.CHAIN_DAMAGE * 1.3f * SpellTuning.SHATTER_MULTIPLIER, "A shattering bolt");
+                // Alone, the pig takes the chain's four unspent leaps too, as its overload.
+                checkNear(pig.getHealth(), 100 - SpellTuning.CHAIN_DAMAGE * 1.3f * SpellTuning.SHATTER_MULTIPLIER - LONE_OVERLOAD * 1.3f,
+                        "A shattering bolt");
                 check(pig.getTicksFrozen() == 0, "Shatter left the pig frozen");
                 pig.discard();
             });
@@ -134,10 +140,12 @@ public final class ArcanaGameTest implements FabricClientGameTest {
                 player.lookAt(EntityAnchorArgument.Anchor.EYES, pig.getBoundingBox().getCenter().with(Direction.Axis.Y, pig.getBoundingBox().maxY + 0.2));
                 ready(player);
                 check(ArcaneSpellsApi.cast(player, ModSpells.CHAIN_LIGHTNING, 1), "Chain Lightning was refused");
-                checkNear(pig.getHealth(), 100 - SpellTuning.CHAIN_DAMAGE * 1.3f * SpellTuning.CONDUCTION_MULTIPLIER, "A conducted bolt");
+                checkNear(pig.getHealth(), 100 - SpellTuning.CHAIN_DAMAGE * 1.3f * SpellTuning.CONDUCTION_MULTIPLIER - LONE_OVERLOAD * 1.3f,
+                        "A conducted bolt");
                 pig.discard();
                 s.overworld().setBlockAndUpdate(pool, Blocks.GRASS_BLOCK.defaultBlockState());
             });
+            checkArcaneUpgrades(context, server);
 
             server.runOnServer(s -> {
                 checkCorruption(s, player(s));
@@ -400,6 +408,137 @@ public final class ArcanaGameTest implements FabricClientGameTest {
         staff.enchant(enchantments.getOrThrow(ModEnchantments.THRIFT), thrift);
         staff.enchant(enchantments.getOrThrow(ModEnchantments.CELERITY), celerity);
         return staff;
+    }
+
+    /**
+     * The Arcane Staff's spells' extras, cast from a plain staff at their own power: Shardburst, Overload, Afterimage,
+     * Rebound and Rime.
+     */
+    private static void checkArcaneUpgrades(ClientGameTestContext context, TestServerContext server) {
+        server.runCommand("tp @a 0.5 -60 0.5 0 0");
+        context.waitTicks(2);
+        // The enchanted staff the rest of the test casts with, put back at the end.
+        ItemStack[] held = new ItemStack[1];
+        server.runOnServer(s -> held[0] = player(s).getMainHandItem().copy());
+
+        // Shardburst: a fully charged bolt strikes a pig; five more stand at one distance from the blast, so they all
+        // take the same splash, and four of them a shard as well. The blast mustn't dig the ground out from under them.
+        server.runCommand("gamerule arcane_spells:terrain_damage false");
+        server.runOnServer(s -> {
+            ServerPlayer player = player(s);
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.ARCANE_STAFF));
+            Pig target = pig(s.overworld(), 0.5, -60, 12.5);
+            target.addTag("shard_target");
+            Vec3 center = target.getBoundingBox().getCenter();
+            player.lookAt(EntityAnchorArgument.Anchor.EYES, center);
+            Vec3 eye = player.getEyePosition(), look = player.getLookAngle();
+            Vec3 hit = target.getBoundingBox().inflate(0.25).clip(eye, eye.add(look.scale(20))).orElseThrow();
+            Vec3 blast = hit.subtract(look.scale(0.3));
+            for (int i = 0; i < 5; i++) {
+                double angle = Math.toRadians(i * 45);
+                pig(s.overworld(), blast.x + Math.cos(angle) * 5, -60, blast.z + Math.sin(angle) * 5).addTag("shard_seeker");
+            }
+            ready(player);
+            check(ArcaneSpellsApi.cast(player, ModSpells.ARCANE_BOLT, 1), "The bolt was refused");
+        });
+        context.waitTicks(10);
+        server.runOnServer(s -> {
+            List<? extends Pig> pigs = s.overworld().getEntities(EntityType.PIG, p -> p.getTags().contains("shard_seeker"));
+            check(pigs.size() == 5, "Expected five pigs round the blast, found " + pigs.size());
+            float highest = (float) pigs.stream().mapToDouble(Pig::getHealth).max().orElseThrow();
+            check(highest < 100, "The blast's splash missed the pigs round it");
+            long shardHit = pigs.stream().filter(p -> Math.abs(p.getHealth() - (highest - SpellTuning.BOLT_SHARD_DAMAGE)) < 0.3).count();
+            check(shardHit == SpellTuning.BOLT_SHARDS, "Expected " + SpellTuning.BOLT_SHARDS + " pigs hit by shards, found " + shardHit
+                    + ": " + pigs.stream().map(Pig::getHealth).toList());
+            s.overworld().getEntities(EntityType.PIG, p -> true).forEach(Pig::discard);
+        });
+        server.runCommand("gamerule arcane_spells:terrain_damage true");
+
+        // Overload: the chain leaps from one pig to a second and runs out, so its three unspent leaps discharge round
+        // the second, catching the first two blocks away as well.
+        server.runOnServer(s -> {
+            ServerPlayer player = player(s);
+            Pig first = pig(s.overworld(), 0.5, -60, 8.5);
+            Pig second = pig(s.overworld(), 2.5, -60, 8.5);
+            player.lookAt(EntityAnchorArgument.Anchor.EYES, first.getBoundingBox().getCenter());
+            ready(player);
+            check(ArcaneSpellsApi.cast(player, ModSpells.CHAIN_LIGHTNING, 1), "Chain Lightning was refused");
+            float overload = SpellTuning.CHAIN_OVERLOAD_DAMAGE * (SpellTuning.CHAIN_MAX_TARGETS - 2);
+            checkNear(first.getHealth(), 100 - SpellTuning.CHAIN_DAMAGE - overload, "The first pig after an overload");
+            checkNear(second.getHealth(), 100 - SpellTuning.CHAIN_DAMAGE * SpellTuning.CHAIN_DAMAGE_FALLOFF - overload,
+                    "The second pig after an overload");
+            first.discard();
+            second.discard();
+        });
+
+        // Afterimage: a pig beside the caster as they blink away is caught when their afterimage bursts.
+        server.runOnServer(s -> {
+            ServerPlayer player = player(s);
+            pig(s.overworld(), 2.5, -60, 0.5).addTag("beside");
+            player.setYRot(0);
+            player.setXRot(0);
+            ready(player);
+            check(ArcaneSpellsApi.cast(player, ModSpells.BLINK, 1), "Blink was refused");
+            check(player.position().z > 8, "Blink didn't move the caster: " + player.position());
+        });
+        context.waitTicks(SpellTuning.BLINK_AFTERIMAGE_TICKS / 2);
+        server.runOnServer(s -> {
+            Pig pig = (Pig) s.overworld().getEntities(EntityType.PIG, p -> p.getTags().contains("beside")).getFirst();
+            check(pig.getHealth() == 100, "The afterimage burst early");
+        });
+        context.waitTicks(SpellTuning.BLINK_AFTERIMAGE_TICKS / 2 + 3);
+        server.runOnServer(s -> {
+            Pig pig = (Pig) s.overworld().getEntities(EntityType.PIG, p -> p.getTags().contains("beside")).getFirst();
+            checkNear(pig.getHealth(), 100 - SpellTuning.BLINK_AFTERIMAGE_DAMAGE, "The pig beside the afterimage");
+            pig.discard();
+        });
+        server.runCommand("tp @a 0.5 -60 0.5 0 0");
+        context.waitTicks(2);
+
+        // Rebound: a blow too hard for the ward breaks it, and it bursts outwards into the pig that struck.
+        server.runOnServer(s -> {
+            ServerPlayer player = player(s);
+            Pig attacker = pig(s.overworld(), 2.5, -60, 0.5);
+            ready(player);
+            check(ArcaneSpellsApi.cast(player, ModSpells.ARCANE_WARD, 1), "Arcane Ward was refused");
+            player.hurtServer(s.overworld(), s.overworld().damageSources().mobAttack(attacker), SpellTuning.WARD_STRENGTH + 5);
+            check(player.getHealth() == player.getMaxHealth(), "The blow that broke the ward got through");
+            check(ArcaneWard.strength(player) == 0, "The ward survived a blow harder than its strength");
+            checkNear(attacker.getHealth(), 100 - SpellTuning.WARD_REBOUND_DAMAGE, "The pig the ward rebounded into");
+            attacker.discard();
+        });
+
+        // Rime: still water nearby freezes, a fire goes out, and so does a burning pig; with terrain_damage off,
+        // only the pig.
+        BlockPos water = new BlockPos(2, -61, 2), fire = new BlockPos(-2, -60, 2);
+        server.runOnServer(s -> {
+            ServerPlayer player = player(s);
+            s.overworld().setBlockAndUpdate(water, Blocks.WATER.defaultBlockState());
+            s.overworld().setBlockAndUpdate(fire, Blocks.FIRE.defaultBlockState());
+            Pig burning = pig(s.overworld(), 0.5, -60, 3.5);
+            burning.igniteForSeconds(30);
+            ready(player);
+            check(ArcaneSpellsApi.cast(player, ModSpells.FROST_NOVA, 1), "Frost Nova was refused");
+            check(s.overworld().getBlockState(water).is(Blocks.FROSTED_ICE), "The water didn't freeze");
+            check(s.overworld().getBlockState(fire).isAir(), "The fire didn't go out");
+            check(!burning.isOnFire(), "The pig is still burning");
+            burning.discard();
+            s.overworld().setBlockAndUpdate(water, Blocks.WATER.defaultBlockState());
+            s.overworld().setBlockAndUpdate(fire, Blocks.FIRE.defaultBlockState());
+        });
+        server.runCommand("gamerule arcane_spells:terrain_damage false");
+        server.runOnServer(s -> {
+            ServerPlayer player = player(s);
+            ready(player);
+            check(ArcaneSpellsApi.cast(player, ModSpells.FROST_NOVA, 1), "Frost Nova was refused");
+            check(s.overworld().getBlockState(water).is(Blocks.WATER), "Water froze with terrain_damage off");
+            check(s.overworld().getBlockState(fire).is(Blocks.FIRE), "A fire went out with terrain_damage off");
+            s.overworld().setBlockAndUpdate(water, Blocks.GRASS_BLOCK.defaultBlockState());
+            s.overworld().setBlockAndUpdate(fire, Blocks.AIR.defaultBlockState());
+            player.setTicksFrozen(0);
+            player.setItemInHand(InteractionHand.MAIN_HAND, held[0]);
+        });
+        server.runCommand("gamerule arcane_spells:terrain_damage true");
     }
 
     /** A still pig with 100 health, its feet at {@code x}, {@code y}, {@code z}: on the ground at y -60. */

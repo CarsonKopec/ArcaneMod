@@ -21,11 +21,13 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileDeflection;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
  * Arcane Ward: a shell around the caster that absorbs hits from outside until its strength runs out, and turns
- * incoming projectiles back on whoever fired them. Owns every active ward.
+ * incoming projectiles back on whoever fired them. A ward that is broken, rather than left to fade, bursts outwards
+ * as it goes. Owns every active ward.
  */
 public final class ArcaneWard extends Spell {
     private static final Map<UUID, Ward> ACTIVE = new HashMap<>();
@@ -50,7 +52,7 @@ public final class ArcaneWard extends Spell {
         ServerLevel level = context.level();
         ServerPlayer caster = context.caster();
         // Recasting replaces the old ward with a fresh one.
-        ACTIVE.put(caster.getUUID(), new Ward(level, caster));
+        ACTIVE.put(caster.getUUID(), new Ward(level, caster, context.spellPower()));
         Vec3 center = caster.getBoundingBox().getCenter();
         level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_RAISE, SoundSource.PLAYERS, 0.8f, 1.0f);
         SpellEffects.send(level, ModSpellEffects.WARD, center, new Vec3(0, 1, 0), 1, SpellTuning.WARD_DURATION_TICKS, caster.getId());
@@ -72,12 +74,15 @@ public final class ArcaneWard extends Spell {
     private static final class Ward {
         final ServerLevel level;
         final ServerPlayer owner;
+        /** What its rebound's damage is multiplied by, fixed at the cast. */
+        final float spellPower;
         float strength = SpellTuning.WARD_STRENGTH;
         int age;
 
-        Ward(ServerLevel level, ServerPlayer owner) {
+        Ward(ServerLevel level, ServerPlayer owner, float spellPower) {
             this.level = level;
             this.owner = owner;
+            this.spellPower = spellPower;
         }
 
         /** Returns true once the ward is gone. */
@@ -109,8 +114,28 @@ public final class ArcaneWard extends Spell {
             strength = 0;
             Vec3 center = owner.getBoundingBox().getCenter();
             SpellEffects.send(level, ModSpellEffects.WARD_END, center, new Vec3(0, 1, 0), shattered ? 1 : 0, 0, owner.getId());
-            if (shattered) level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_BREAK, SoundSource.PLAYERS, 1.0f, 1.0f);
-            else level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_FADE, SoundSource.PLAYERS, 0.7f, 1.0f);
+            if (shattered) {
+                level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_BREAK, SoundSource.PLAYERS, 1.0f, 1.0f);
+                rebound(center);
+            } else {
+                level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_FADE, SoundSource.PLAYERS, 0.7f, 1.0f);
+            }
+        }
+
+        /** Rebound: a broken ward bursts outwards, hurting and hurling whatever is near its owner. */
+        void rebound(Vec3 center) {
+            double radius = SpellTuning.WARD_REBOUND_RADIUS;
+            for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(radius),
+                    e -> SpellTargets.canHarm(owner, e) && e.getBoundingBox().getCenter().distanceTo(center) <= radius)) {
+                if (!victim.hurtServer(level, level.damageSources().indirectMagic(owner, owner), SpellTuning.WARD_REBOUND_DAMAGE * spellPower)) {
+                    continue;
+                }
+                Vec3 away = victim.position().subtract(owner.position()).multiply(1, 0, 1);
+                away = away.lengthSqr() < 1.0e-6 ? Vec3.ZERO : away.normalize().scale(SpellTuning.WARD_REBOUND_KNOCKBACK);
+                victim.push(away.x, 0.4, away.z);
+                victim.hurtMarked = true;
+            }
+            level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_REBOUND, SoundSource.PLAYERS, 1.0f, 1.0f);
         }
 
         /** Turns back any projectile that will be inside the shell next tick and is still heading inwards. */

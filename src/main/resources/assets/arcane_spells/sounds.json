@@ -7,6 +7,14 @@
 		"subtitle": "subtitles.arcane_spells.spell.arcane_bolt.cast",
 		"sounds": ["arcane_spells:spell/arcane_bolt_cast"]
 	},
+	"spell.arcane_bolt.impact": {
+		"subtitle": "subtitles.arcane_spells.spell.arcane_bolt.impact",
+		"sounds": ["arcane_spells:spell/arcane_bolt_impact"]
+	},
+	"spell.arcane_bolt.shards": {
+		"subtitle": "subtitles.arcane_spells.spell.arcane_bolt.shards",
+		"sounds": ["arcane_spells:spell/arcane_bolt_shards"]
+	},
 	"spell.chain_lightning.cast": {
 		"subtitle": "subtitles.arcane_spells.spell.chain_lightning.cast",
 		"sounds": ["arcane_spells:spell/chain_lightning_cast"]
@@ -15,9 +23,21 @@
 		"subtitle": "subtitles.arcane_spells.spell.chain_lightning.hit",
 		"sounds": ["arcane_spells:spell/chain_lightning_hit"]
 	},
+	"spell.chain_lightning.overload": {
+		"subtitle": "subtitles.arcane_spells.spell.chain_lightning.overload",
+		"sounds": ["arcane_spells:spell/chain_lightning_overload"]
+	},
 	"spell.blink": {
 		"subtitle": "subtitles.arcane_spells.spell.blink",
 		"sounds": ["arcane_spells:spell/blink"]
+	},
+	"spell.blink.arrive": {
+		"subtitle": "subtitles.arcane_spells.spell.blink.arrive",
+		"sounds": ["arcane_spells:spell/blink_arrive"]
+	},
+	"spell.blink.afterimage": {
+		"subtitle": "subtitles.arcane_spells.spell.blink.afterimage",
+		"sounds": ["arcane_spells:spell/blink_afterimage"]
 	},
 	"spell.arcane_ward.raise": {
 		"subtitle": "subtitles.arcane_spells.spell.arcane_ward.raise",
@@ -30,6 +50,10 @@
 	"spell.arcane_ward.break": {
 		"subtitle": "subtitles.arcane_spells.spell.arcane_ward.break",
 		"sounds": ["arcane_spells:spell/arcane_ward_break"]
+	},
+	"spell.arcane_ward.rebound": {
+		"subtitle": "subtitles.arcane_spells.spell.arcane_ward.rebound",
+		"sounds": ["arcane_spells:spell/arcane_ward_rebound"]
 	},
 	"spell.arcane_ward.fade": {
 		"subtitle": "subtitles.arcane_spells.spell.arcane_ward.fade",
@@ -62,6 +86,10 @@
 	"spell.singularity.open": {
 		"subtitle": "subtitles.arcane_spells.spell.singularity.open",
 		"sounds": ["arcane_spells:spell/singularity_open"]
+	},
+	"spell.singularity.form": {
+		"subtitle": "subtitles.arcane_spells.spell.singularity.form",
+		"sounds": ["arcane_spells:spell/singularity_form"]
 	},
 	"spell.singularity.collapse": {
 		"subtitle": "subtitles.arcane_spells.spell.singularity.collapse",

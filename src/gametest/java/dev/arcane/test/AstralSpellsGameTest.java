@@ -1,6 +1,8 @@
 package dev.arcane.test;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import de.nexusrealms.nebulon.api.render.client.post.NebulonPostProcessing;
+import dev.arcane.ArcaneSpells;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.client.gui.SpellWheelScreen;
 import dev.arcane.registry.ModSpells;
@@ -17,11 +19,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.projectile.arrow.Arrow;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -76,7 +82,13 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
             double angle = i * Math.PI * 2 / 5;
             server.runCommand(String.format("summon minecraft:pig %.1f -43 %.1f {NoAI:1b}", 0.5 + Math.cos(angle) * 10, 40.5 + Math.sin(angle) * 10));
         }
-        server.runOnServer(s -> check(castAt(s, ModSpells.METEOR_SWARM, MARK_TOP), "Meteor Swarm was refused"));
+        // And one out near the area's edge, away from the rest, which takes no harm but logs every blast that reaches it.
+        Pig[] edge = new Pig[1];
+        server.runOnServer(s -> {
+            DamageLog.clear();
+            edge[0] = DamageLog.spawn(s.overworld(), EntityType.PIG, MARK_TOP.add(-20, 0, 0));
+            check(castAt(s, ModSpells.METEOR_SWARM, MARK_TOP), "Meteor Swarm was refused");
+        });
         server.runCommand("gamemode spectator @a");
         server.runCommand(VANTAGE);
         context.waitTicks(30);
@@ -98,8 +110,15 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
             }
             check(cratered, "The Dread Star left no crater at the mark");
             // Killed pigs are soon gone altogether, so count the pigs left unharmed.
-            long unharmed = level.getEntities(EntityType.PIG, pig -> pig.isAlive() && pig.getHealth() == pig.getMaxHealth()).size();
+            long unharmed = level.getEntities(EntityType.PIG, pig -> pig != edge[0] && pig.isAlive() && pig.getHealth() == pig.getMaxHealth())
+                    .size();
             check(unharmed < 5, "No pig was hit by " + SpellTuning.METEOR_COUNT + " meteors and the Dread Star");
+            // Seeking: every other meteor aims at a creature in the area, and once the others are dead, only the pig at
+            // the edge is left to aim at. By chance alone, two or three meteors would land near it.
+            long hits = DamageLog.of(edge[0]).stream().filter(blow -> blow.source().is(DamageTypeTags.IS_EXPLOSION)).count();
+            int seekers = SpellTuning.METEOR_COUNT / SpellTuning.METEOR_SEEKING_EVERY;
+            check(hits >= seekers * 2 / 5, "Meteors hit the pig at the area's edge only " + hits + " times");
+            edge[0].discard();
         });
         server.runCommand("kill @e[type=!minecraft:player]");
         server.runCommand("gamemode survival @a");
@@ -127,16 +146,34 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
             List<ItemEntity> items = s.overworld().getEntitiesOfClass(ItemEntity.class, new AABB(center, center).inflate(20));
             check(!items.isEmpty() && items.getFirst().position().distanceTo(center) < 8, "The diamond wasn't dragged in: " + items);
         });
-        context.waitTicks(SpellTuning.SINGULARITY_DURATION_TICKS - 40 + 6);
+        // Its last four seconds: a true black hole, drawn by the space-time pass. Seen from above, then edge on.
+        context.waitTicks(SpellTuning.SINGULARITY_DURATION_TICKS - 50 - 40);
+        context.runOnClient(client -> check(spaceTimePass(), "The black hole isn't being drawn"));
+        context.takeScreenshot("astral-black-hole");
+        server.runCommand("tp @a 0.5 -36 17 facing 0.5 -37 40.5");
+        context.waitTicks(4);
+        context.takeScreenshot("astral-black-hole-edge");
+        context.waitTicks(50 - 4 + 6);
         context.takeScreenshot("astral-singularity-collapse");
         server.runOnServer(s -> {
             check(s.overworld().getBlockState(MARK).isAir(), "The ground under the singularity wasn't eaten");
             long dead = s.overworld().getEntities(EntityType.PIG, pig -> !pig.isAlive()).size()
                     + 3 - s.overworld().getEntities(EntityType.PIG, pig -> true).size();
             check(dead >= 1, "The singularity crushed no pig");
+            // What it swallowed, it gives back.
+            List<ItemEntity> items = s.overworld().getEntitiesOfClass(ItemEntity.class, new AABB(center, center).inflate(48),
+                    item -> item.getItem().is(Items.DIAMOND));
+            check(!items.isEmpty(), "The singularity destroyed the diamond it swallowed");
         });
+        context.waitTicks(10);
+        context.runOnClient(client -> check(!spaceTimePass(), "The black hole outlived the singularity"));
         server.runCommand("kill @e[type=!minecraft:player]");
         server.runCommand("gamemode survival @a");
+    }
+
+    /** Whether the space-time pass, which draws black holes and stopped time, is running. */
+    private static boolean spaceTimePass() {
+        return NebulonPostProcessing.registeredPasses().contains(ArcaneSpells.id("spacetime"));
     }
 
     private static void chronoField(ClientGameTestContext context, TestServerContext server) {
@@ -164,6 +201,7 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
         server.runCommand("tp @a 14 -36 -2 facing 0 -42 10");
         context.waitTicks(10);
         context.takeScreenshot("astral-chrono");
+        context.runOnClient(client -> check(spaceTimePass(), "Chrono Field isn't draining the colour from what it holds"));
         server.runOnServer(s -> {
             Pig pig = s.overworld().getEntities(EntityType.PIG, p -> true).getFirst();
             Arrow arrow = s.overworld().getEntities(EntityType.ARROW, a -> true).getFirst();
@@ -176,9 +214,17 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
             float expected = pig.getMaxHealth() - 2 * SpellTuning.CHRONO_DAMAGE_MULTIPLIER;
             check(!ChronoField.isFrozen(pig) && !pig.isNoAi(), "The pig didn't thaw");
             check(Math.abs(pig.getHealth() - expected) < 0.01, "Held damage left the pig at " + pig.getHealth() + ", expected " + expected);
+            // Rewind: the arrow, which wasn't the caster's, flies back the way it came, and is the caster's now.
             List<? extends Arrow> arrows = s.overworld().getEntities(EntityType.ARROW, a -> true);
-            check(arrows.isEmpty() || arrows.getFirst().position().distanceTo(held[1]) > 1, "The arrow didn't fly on");
+            check(!arrows.isEmpty(), "The arrow vanished when time resumed");
+            Arrow arrow = arrows.getFirst();
+            check(arrow.getDeltaMovement().z < 0 && arrow.getZ() < held[1].z - 1,
+                    "The arrow didn't fly back: at " + arrow.position() + ", moving " + arrow.getDeltaMovement());
+            check(arrow.getOwner() == player(s), "The rewound arrow isn't the caster's: " + arrow.getOwner());
         });
+        // Colour floods back out from the centre.
+        context.waitTicks(3);
+        context.takeScreenshot("astral-chrono-resume");
         server.runCommand("kill @e[type=!minecraft:player]");
         server.runCommand("gamemode survival @a");
     }
@@ -205,6 +251,11 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
             check(pig.position().distanceTo(far) < 3, "The pig in the gate stayed at " + pig.position());
             float spent = SpellTuning.BASE_MAX_MANA - CasterState.of(player(s)).manaAt();
             check(Math.abs(spent - SpellTuning.GATE_MANA) < 0.01, "The gate cost " + spent + " mana");
+            // Astral Wake: both come out quickened.
+            for (LivingEntity traveller : List.of(player(s), pig)) {
+                MobEffectInstance wake = traveller.getEffect(MobEffects.SPEED);
+                check(wake != null && wake.getAmplifier() == SpellTuning.GATE_WAKE_AMPLIFIER, "No Astral Wake on " + traveller + ": " + wake);
+            }
         });
         server.runCommand("tp @a 0.5 -43 60.5 180 10");
         context.waitTicks(3);

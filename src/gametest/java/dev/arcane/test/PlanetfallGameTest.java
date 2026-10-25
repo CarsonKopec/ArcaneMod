@@ -191,6 +191,9 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
             check(s.overworld().getBlockState(MARK).is(Blocks.STONE), failure);
             check(s.overworld().getBlockState(MARK.below(16)).is(Blocks.STONE), failure);
             check(s.overworld().getBlockState(MARK.offset(36, 1, 0)).isAir(), failure + " (raised rim)");
+            for (BlockPos pos : BlockPos.betweenClosed(MARK.offset(-12, -33, -12), MARK.offset(12, 0, 12))) {
+                check(!riches(s.overworld().getBlockState(pos)), failure + " (ore at " + pos + ")");
+            }
         });
     }
 
@@ -203,7 +206,7 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
         check(level.getBlockState(CHEST).isAir(), "The breakable chest did not get excavated");
         check(!level.getEntitiesOfClass(ItemEntity.class, new AABB(MARK).inflate(35), item -> item.getItem().is(Items.DIAMOND)).isEmpty(),
                 "Planetfall silently deleted the excavated chest's contents");
-        int hot = 0, lining = 0, raised = 0, fissures = 0, glow = 0;
+        int hot = 0, lining = 0, raised = 0, fissures = 0, glow = 0, gold = 0, diamond = 0;
         for (BlockPos pos : BlockPos.betweenClosed(-71, -53, -47, 71, -8, 95)) {
             BlockState state = level.getBlockState(pos);
             double distance = Math.hypot(pos.getX() - MARK.getX(), pos.getZ() - MARK.getZ());
@@ -212,13 +215,21 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
             if (pos.getY() >= -19 && distance > 36 && !state.isAir()) raised++;
             if (pos.getY() == -22 && distance > 50 && state.isAir()) fissures++;
             if (state.is(Blocks.SHROOMLIGHT)) glow++;
+            if (state.is(Blocks.DEEPSLATE_GOLD_ORE)) gold++;
+            if (state.is(Blocks.DEEPSLATE_DIAMOND_ORE)) diamond++;
         }
         check(hot > 250 && lining > 1200, "Missing scorched strata or connected molten seams: " + hot + "/" + lining);
         check(raised > 300, "Planetfall raised too little rim and ejecta: " + raised);
         check(fissures > 50, "Planetfall left too little branching terrain destruction beyond the rim: " + fissures);
         check(glow > 15, "Planetfall left no glowing, split planetary core: " + glow);
+        check(gold > 0 && diamond > 0, "Riches: the core holds " + gold + " gold ore and " + diamond + " diamond ore");
         check(level.getEntities(EntityType.PIG, pig -> pig.isAlive() && pig.position().distanceTo(MARK.getCenter()) < 25).isEmpty(),
                 "A pig at the impact survived Planetfall");
+    }
+
+    /** The ores Riches studs the core with. */
+    private static boolean riches(BlockState state) {
+        return state.is(Blocks.DEEPSLATE_GOLD_ORE) || state.is(Blocks.DEEPSLATE_DIAMOND_ORE) || state.is(Blocks.ANCIENT_DEBRIS);
     }
 
     private static ServerPlayer player(MinecraftServer server) {

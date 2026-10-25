@@ -125,10 +125,23 @@ public final class MeteorSwarm extends MarkedSpell {
         private void launch() {
             double angle = random.nextDouble() * Mth.TWO_PI, distance = Math.sqrt(random.nextDouble()) * SpellTuning.METEOR_AREA_RADIUS;
             Vec3 target = mark.add(Math.cos(angle) * distance, 0, Math.sin(angle) * distance);
+            // Seeking: some meteors pick out a creature in the area instead.
+            if ((launched + 1) % SpellTuning.METEOR_SEEKING_EVERY == 0) {
+                LivingEntity prey = prey();
+                if (prey != null) target = prey.position();
+            }
             Vec3 start = sky.add((random.nextDouble() - 0.5) * 16, random.nextDouble() * 6, (random.nextDouble() - 0.5) * 16)
                     .subtract(heading.scale(12));
             Vec3 velocity = target.subtract(start).normalize().scale(SpellTuning.METEOR_SPEED);
             METEORS.add(new Meteor(level, caster, mayBuild, start, velocity, nextMeteorId--, false, spellPower));
+        }
+
+        /** A creature in the area the swarm may hurt, chosen at random, or null if there is none. */
+        private LivingEntity prey() {
+            double radius = SpellTuning.METEOR_AREA_RADIUS;
+            List<LivingEntity> prey = level.getEntitiesOfClass(LivingEntity.class, new AABB(mark, mark).inflate(radius, 32, radius),
+                    e -> SpellTargets.canHarm(caster, e) && Math.hypot(e.getX() - mark.x, e.getZ() - mark.z) <= radius);
+            return prey.isEmpty() ? null : prey.get(random.nextInt(prey.size()));
         }
     }
 

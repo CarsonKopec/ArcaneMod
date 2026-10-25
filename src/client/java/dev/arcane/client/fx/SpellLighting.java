@@ -25,6 +25,7 @@ import java.util.function.BiConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
@@ -64,8 +65,11 @@ public final class SpellLighting {
         on(ModSpellEffects.CHARGE, SpellLighting::charge);
         on(ModSpellEffects.BOLT, SpellLighting::bolt);
         on(ModSpellEffects.IMPACT, SpellLighting::impact);
+        on(ModSpellEffects.BOLT_SHARD, SpellLighting::shard);
         on(ModSpellEffects.CHAIN, SpellLighting::chain);
+        on(ModSpellEffects.CHAIN_OVERLOAD, SpellLighting::overload);
         on(ModSpellEffects.BLINK, SpellLighting::blink);
+        on(ModSpellEffects.AFTERIMAGE, SpellLighting::afterimage);
         on(ModSpellEffects.WARD, SpellLighting::ward);
         on(ModSpellEffects.WARD_HIT, (level, effect) -> flash(effect.position(), 3.5f, 1.6f, PINK, 8));
         on(ModSpellEffects.WARD_END, (level, effect) -> wardEnd(effect));
@@ -147,16 +151,55 @@ public final class SpellLighting {
         }
     }
 
-    /** A cyan arc along one leap, with a fainter violet one flowing the other way, and a flash on the target. */
-    private static void chain(ClientLevel level, SpellEffect effect) {
+    /** A pink arc along a shard's flight from the blast, and a flash where it strikes. */
+    private static void shard(ClientLevel level, SpellEffect effect) {
         Vec3 to = effect.position().add(effect.direction());
+        if (effect.direction().lengthSqr() > 0.001) NebulonRendering.effects().spawn(level, ArcChain.between(effect.position(), to, PINK), 6);
+        flash(to, 3.5f, 1.6f, PINK, 8);
+    }
+
+    /**
+     * A cyan arc along one leap, with a fainter violet one flowing the other way, two forks crackling off it, and a
+     * flash on the target.
+     */
+    private static void chain(ClientLevel level, SpellEffect effect) {
+        Vec3 from = effect.position(), path = effect.direction(), to = from.add(path);
         // Nebulon rejects a chain whose ends coincide.
-        if (effect.direction().lengthSqr() > 0.001) {
-            NebulonRendering.effects().spawn(level, ArcChain.between(effect.position(), to, CYAN), 8);
-            NebulonRendering.effects().spawn(level,
-                    new ArcChain(List.of(effect.position(), to), VIOLET, 0.04f, 0.2f, -0.8f, RENDER_DISTANCE), 6);
+        if (path.lengthSqr() > 0.001) {
+            NebulonRendering.effects().spawn(level, ArcChain.between(from, to, CYAN), 8);
+            NebulonRendering.effects().spawn(level, new ArcChain(List.of(from, to), VIOLET, 0.04f, 0.2f, -0.8f, RENDER_DISTANCE), 6);
+            // Every client draws the same forks: they're seeded by the leap.
+            RandomSource random = RandomSource.create(effect.sourceId() * 31L + effect.age());
+            for (int i = 0; i < 2; i++) {
+                Vec3 root = from.add(path.scale(0.35 + 0.3 * i));
+                Vec3 out = new Vec3(random.nextGaussian(), random.nextGaussian() * 0.6, random.nextGaussian()).normalize();
+                double length = 1.2 + random.nextDouble() * 1.5;
+                Vec3 bend = root.add(out.scale(length * 0.5)).add(path.normalize().scale(length * 0.3));
+                NebulonRendering.effects().spawn(level, new ArcChain(List.of(root, bend, bend.add(out.scale(length * 0.5))),
+                        CYAN, 0.025f, 0.2f, 0.6f, RENDER_DISTANCE), 5);
+            }
         }
         flash(to, 6, 2.2f * Math.max(0.4f, effect.power()), CYAN, 10);
+    }
+
+    /** The chain's leftover leaps discharging: arcs lashing out on every side, and a bright flash. */
+    private static void overload(ClientLevel level, SpellEffect effect) {
+        Vec3 at = effect.position();
+        double reach = SpellTuning.CHAIN_OVERLOAD_RADIUS;
+        for (int i = 0; i < 6; i++) {
+            double angle = i * Math.PI / 3;
+            Vec3 end = at.add(Math.cos(angle) * reach, (i % 3 - 1) * 0.8, Math.sin(angle) * reach);
+            NebulonRendering.effects().spawn(level, ArcChain.between(at, end, i % 2 == 0 ? CYAN : VIOLET), 8);
+        }
+        flash(at, 7, 1.5f + 2.5f * effect.power(), CYAN, 14);
+    }
+
+    /** A blink's afterimage bursting: a pink flash and a rune circle the size of its reach. */
+    private static void afterimage(ClientLevel level, SpellEffect effect) {
+        Vec3 feet = effect.position();
+        NebulonRendering.effects().spawn(level, new MagicCircle(feet.add(0, 0.05, 0), UP, SpellTuning.BLINK_AFTERIMAGE_RADIUS, 0.035f,
+                PINK, 3, effect.sourceId() + 2L, 1.2f, RENDER_DISTANCE), 12);
+        flash(feet.add(0, 1, 0), 6, 2.6f, PINK, 12);
     }
 
     /** Rune circles on the ground where the caster left and where they arrived. */
@@ -191,7 +234,14 @@ public final class SpellLighting {
     private static void wardEnd(SpellEffect effect) {
         Glow ward = GLOWS.remove(key(ModSpellEffects.WARD, effect.sourceId()));
         if (ward != null) ward.close();
-        if (effect.power() >= 1) flash(effect.position(), 7, 3.0f, PINK, 14);
+        if (effect.power() >= 1) {
+            // It breaks with a rebound: a rune circle on the ground as wide as the rebound's reach.
+            flash(effect.position(), 8, 3.4f, PINK, 14);
+            Entity entity = world.getEntity(effect.sourceId());
+            double feetY = entity != null ? entity.getY() : effect.position().y - 0.9;
+            NebulonRendering.effects().spawn(world, new MagicCircle(new Vec3(effect.position().x, feetY + 0.05, effect.position().z), UP,
+                    SpellTuning.WARD_REBOUND_RADIUS, 0.04f, VIOLET, 3, effect.sourceId() * 5L, -1.4f, RENDER_DISTANCE), 12);
+        }
     }
 
     /** Moves a ward's light and rings to wherever its entity is now; the ward ends if the entity is gone. */

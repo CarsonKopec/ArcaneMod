@@ -610,6 +610,20 @@ def s(x):
     return x / (np.max(np.abs(x)) + 1e-12)
 
 
+def room(x, size=0.6, wet=0.3, bright=6000):
+    """`x` in a stone hall: convolved with a burst of noise dying away over `size` seconds, its highs darker than its
+    lows as a real room's are, mixed in at `wet`. The tail is added on the end, so the sound grows longer."""
+    n = int(SR * size)
+    t = np.arange(n) / SR
+    tail = band(noise(size), high=bright) * np.exp(-t / (size / 5)) + 0.5 * band(noise(size), high=bright / 4) * np.exp(-t / (size / 3))
+    tail[:int(SR * 0.012)] = 0  # the first reflections arrive a moment after the sound
+    # The dry sound must end at silence, or it clicks where the tail begins.
+    x = x * np.clip((len(x) - 1 - np.arange(len(x))) / (SR * 0.03), 0, 1)
+    out = np.concatenate([x, np.zeros(n)])
+    reverb = signal.fftconvolve(out, tail)[:len(out)]
+    return (1 - wet) * s(out) + wet * s(reverb)
+
+
 def sound_bolt_charge():
     d = 0.9
     t = times(d)
@@ -815,6 +829,26 @@ def sound_singularity_collapse():
                   + 0.12 * s(place(d, ring, 0.3)))
 
 
+def sound_singularity_form():
+    """The singularity becoming a true black hole, a few seconds before it collapses: a pressure drop, light itself
+    groaning as it bends (a whine sliding down into a sub-bass drone), and a heartbeat thud quickening under it. Four
+    seconds, from the moment it forms to the collapse."""
+    d = 4.0
+    t = times(d)
+    drop = band(noise(d), 200, 2500) * decay(d, 0.35, attack=0.02)
+    groan = np.sin(sweep(1400, 70, 1.6)) * swell(1.6, 0.15, 0.7) * np.clip((1.6 - times(1.6)) / 0.3, 0, 1)
+    drone = (np.sin(sweep(38, 46, d)) + 0.4 * np.sin(sweep(76, 92, d))) * np.minimum(t / 1.2, 1.0)
+    beats = np.zeros_like(t)
+    beat = np.sin(2 * math.pi * 52 * times(0.45)) * decay(0.45, 0.06)
+    at = 0.6
+    while at < d - 0.3:
+        beats += place(d, beat, at)
+        at += 0.9 - 0.55 * (at / d)
+    envelope = np.clip((d - t) / 0.05, 0, 1)
+    return finish((0.35 * s(drop) + 0.5 * s(place(d, groan, 0.05)) + 0.75 * s(drone) + 0.55 * s(beats))
+                  * envelope)
+
+
 def sound_chrono_start():
     """Time stopping: a rush sweeping down into silence, one deep tick, and a bell left hanging."""
     d = 1.8
@@ -979,6 +1013,71 @@ def sound_conduction():
     return finish(0.5 * s(buzz) + 0.6 * s(crackle(d, 320, low=1800) * decay(d, 0.2)) + 0.25 * s(fizz))
 
 
+def sound_bolt_impact():
+    """The bolt bursting: a crack, a low punch, arcane chimes scattering, and the blast rolling round the hall."""
+    d = 1.0
+    t = times(d)
+    crack = band(noise(d), low=2500) * decay(d, 0.025, attack=0.0005)
+    punch = np.sin(sweep(110, 38, d)) * decay(d, 0.18)
+    rumble = band(noise(d), high=500) * decay(d, 0.35, attack=0.004)
+    chimes = sum(place(d, bell(f, 0.7, [(1, 1, 0.25), (2.76, 0.4, 0.12)]), 0.01 + 0.03 * i)
+                 for i, f in enumerate((1318.5, 1760.0, 2093.0, 2637.0)))
+    return finish(room(0.55 * s(crack) + 0.85 * s(punch) + 0.5 * s(rumble) + 0.22 * s(chimes), size=0.9, wet=0.28))
+
+
+def sound_bolt_shards():
+    """Four shards whistling out of the blast, one after another, each landing with a glassy tick."""
+    d = 0.7
+    out = np.zeros(int(SR * d))
+    for i in range(4):
+        whistle = np.sin(sweep(3400 - 300 * i, 900, 0.22)) * swell(0.22, 0.02, 0.1)
+        tick = bell(4200 + 400 * i, 0.08, [(1, 1, 0.02), (1.7, 0.5, 0.015)])
+        out += place(d, 0.6 * s(whistle), 0.03 + 0.07 * i) + place(d, 0.35 * s(tick), 0.2 + 0.07 * i)
+    return finish(room(out, size=0.5, wet=0.22))
+
+
+def sound_chain_overload():
+    """The chain's leftover leaps discharging at once: a dense crackle swelling into a buzzing snap and a thump."""
+    d = 0.9
+    t = times(d)
+    crackles = crackle(d, 600) * swell(d, 0.1, 0.12)
+    buzz = band(signal.sawtooth(2 * math.pi * (95 + 40 * t) * t), 150, 5000) * swell(d, 0.1, 0.1)
+    snap = band(noise(d), low=3000) * decay(d, 0.03, attack=0.001)
+    thump = np.sin(sweep(130, 45, d)) * decay(d, 0.12)
+    return finish(room(0.7 * s(crackles) + 0.4 * s(buzz) + 0.5 * s(place(d, snap, 0.1)) + 0.6 * s(place(d, thump, 0.1)),
+                       size=0.6, wet=0.2))
+
+
+def sound_blink_arrive():
+    """The caster arriving: air rushing in and cut off, then a bright twinkle as they appear."""
+    d = 0.5
+    t = times(d)
+    rush = band(noise(d), 400, 6000) * (t / d) ** 3 * np.clip((0.3 - t) / 0.01, 0, 1)
+    pop = np.sin(2 * math.pi * 180 * t) * decay(d, 0.04) * (t > 0.29)
+    twinkle = place(d, bell(2600, 0.2, [(1, 1, 0.07), (1.5, 0.6, 0.05), (2.0, 0.3, 0.04)]), 0.29)
+    return finish(room(0.5 * s(rush) + 0.4 * s(pop) + 0.45 * s(twinkle), size=0.4, wet=0.2))
+
+
+def sound_blink_afterimage():
+    """The caster's afterimage bursting: glassy chimes breaking apart over a soft thud and a gust."""
+    d = 0.8
+    t = times(d)
+    glass = sum(bell(f, d, [(1, 1, 0.15), (2.3, 0.5, 0.08), (3.9, 0.25, 0.05)], attack=0.001) for f in (1975.5, 2489.0, 3135.9))
+    gust = band(noise(d), 300, 3000) * decay(d, 0.12, attack=0.005)
+    thud = np.sin(sweep(150, 60, d)) * decay(d, 0.08)
+    return finish(room(0.45 * s(glass) + 0.45 * s(gust) + 0.6 * s(thud), size=0.6, wet=0.25))
+
+
+def sound_ward_rebound():
+    """A broken ward bursting outwards: a deep whump, a bright flare, and its shell ringing as it scatters."""
+    d = 1.0
+    t = times(d)
+    whump = np.sin(sweep(140, 40, d)) * decay(d, 0.2)
+    flare = band(noise(d), 1500, 8000) * decay(d, 0.06, attack=0.002)
+    ring = sum(soft_bell(f, d, 0.35) for f in (880.0, 1318.5))
+    return finish(room(0.85 * s(whump) + 0.45 * s(flare) + 0.25 * s(ring), size=0.8, wet=0.25))
+
+
 SOUND_MAKERS = {
     "spell/arcane_bolt_charge": sound_bolt_charge,
     "spell/arcane_bolt_cast": sound_bolt_cast,
@@ -1013,6 +1112,13 @@ SOUND_MAKERS = {
     "spell/astral_backlash": sound_astral_backlash,
     "spell/shatter": sound_shatter,
     "spell/conduction": sound_conduction,
+    "spell/singularity_form": sound_singularity_form,
+    "spell/arcane_bolt_impact": sound_bolt_impact,
+    "spell/arcane_bolt_shards": sound_bolt_shards,
+    "spell/chain_lightning_overload": sound_chain_overload,
+    "spell/blink_arrive": sound_blink_arrive,
+    "spell/blink_afterimage": sound_blink_afterimage,
+    "spell/arcane_ward_rebound": sound_ward_rebound,
 }
 
 

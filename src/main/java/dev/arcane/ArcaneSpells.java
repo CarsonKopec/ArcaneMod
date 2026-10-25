@@ -21,6 +21,7 @@ import dev.arcane.registry.ModTriggers;
 import dev.arcane.spell.ArcaneBolt;
 import dev.arcane.spell.ArcaneWard;
 import dev.arcane.spell.AstralGate;
+import dev.arcane.spell.Blink;
 import dev.arcane.spell.CelestialJudgment;
 import dev.arcane.spell.ChronoField;
 import dev.arcane.spell.ManaLimits;
@@ -70,6 +71,7 @@ public final class ArcaneSpells implements ModInitializer {
         ArcaneProgression.register();
         ArcaneBolt.register();
         ArcaneWard.register();
+        Blink.register();
         CelestialJudgment.register();
         MeteorSwarm.register();
         Singularity.register();

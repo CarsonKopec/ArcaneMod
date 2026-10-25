@@ -5,19 +5,35 @@ import dev.arcane.api.spell.SpellContext;
 import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import java.util.ArrayList;
+import java.util.List;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.core.SectionPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-/** Teleports the caster along their aim, stopping short of whatever they're looking at. */
+/**
+ * Teleports the caster along their aim, stopping short of whatever they're looking at. An afterimage of them stays
+ * where they stood, and a moment later bursts, hurting and hurling whatever is near it. Owns every afterimage.
+ */
 public final class Blink extends Spell {
     private static final double STEP = 0.25;
+    private static final List<Afterimage> AFTERIMAGES = new ArrayList<>();
 
     public Blink() {
         super(new Properties().manaCost(SpellTuning.BLINK_MANA).cooldown(SpellTuning.BLINK_COOLDOWN_TICKS).color(0xFFF3B5FF));
+    }
+
+    public static void register() {
+        ServerTickEvents.END_SERVER_TICK.register(server -> AFTERIMAGES.removeIf(Afterimage::tick));
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> AFTERIMAGES.clear());
     }
 
     @Override public boolean cast(SpellContext context) {
@@ -36,9 +52,10 @@ public final class Blink extends Spell {
         caster.stopRiding();
         caster.teleportTo(destination.x, destination.y, destination.z);
         caster.resetFallDistance();
-        level.playSound(null, origin.x, origin.y, origin.z, ModSounds.BLINK, SoundSource.PLAYERS, 0.7f, 0.9f);
-        level.playSound(null, destination.x, destination.y, destination.z, ModSounds.BLINK, SoundSource.PLAYERS, 0.7f, 1.15f);
+        level.playSound(null, origin.x, origin.y, origin.z, ModSounds.BLINK, SoundSource.PLAYERS, 0.7f, 1.0f);
+        level.playSound(null, destination.x, destination.y, destination.z, ModSounds.BLINK_ARRIVE, SoundSource.PLAYERS, 0.7f, 1.0f);
         SpellEffects.send(level, ModSpellEffects.BLINK, origin, destination.subtract(origin), 1, 0, caster.getId());
+        AFTERIMAGES.add(new Afterimage(level, caster, origin, context.spellPower()));
         return true;
     }
 
@@ -61,5 +78,43 @@ public final class Blink extends Spell {
             }
         }
         return null;
+    }
+
+    /** What a blink leaves where the caster stood, until it bursts. */
+    private static final class Afterimage {
+        final ServerLevel level;
+        final ServerPlayer caster;
+        final Vec3 feet;
+        /** What its damage is multiplied by, fixed at the cast. */
+        final float spellPower;
+        int age;
+
+        Afterimage(ServerLevel level, ServerPlayer caster, Vec3 feet, float spellPower) {
+            this.level = level;
+            this.caster = caster;
+            this.feet = feet;
+            this.spellPower = spellPower;
+        }
+
+        /** Returns true once it has burst, or is gone. */
+        boolean tick() {
+            if (!level.hasChunk(SectionPos.blockToSectionCoord(feet.x), SectionPos.blockToSectionCoord(feet.z))) return true;
+            if (++age < SpellTuning.BLINK_AFTERIMAGE_TICKS) return false;
+            Vec3 center = feet.add(0, 1, 0);
+            double radius = SpellTuning.BLINK_AFTERIMAGE_RADIUS;
+            for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(radius),
+                    e -> SpellTargets.canHarm(caster, e) && e.getBoundingBox().getCenter().distanceTo(center) <= radius)) {
+                if (!victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster),
+                        SpellTuning.BLINK_AFTERIMAGE_DAMAGE * spellPower)) {
+                    continue;
+                }
+                Vec3 away = victim.position().subtract(feet).multiply(1, 0, 1);
+                away = away.lengthSqr() < 1.0e-6 ? Vec3.ZERO : away.normalize().scale(SpellTuning.BLINK_AFTERIMAGE_KNOCKBACK);
+                victim.push(away.x, 0.3, away.z);
+            }
+            level.playSound(null, center.x, center.y, center.z, ModSounds.BLINK_AFTERIMAGE, SoundSource.PLAYERS, 0.9f, 1.0f);
+            SpellEffects.send(level, ModSpellEffects.AFTERIMAGE, feet, Vec3.ZERO, 1, 0, caster.getId());
+            return true;
+        }
     }
 }

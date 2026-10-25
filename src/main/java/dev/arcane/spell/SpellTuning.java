@@ -98,10 +98,15 @@ public final class SpellTuning {
     /** 8 s; at full power a bolt covers 400 blocks. */
     public static final int BOLT_LIFETIME_TICKS = 160;
     public static final int MAX_ACTIVE_BOLTS = 256;
+    /** Shardburst: a fully charged bolt bursts into this many shards, each seeking a different creature near the blast. */
+    public static final int BOLT_SHARDS = 4;
+    /** How far from the blast a shard seeks. */
+    public static final double BOLT_SHARD_RANGE = 8;
+    public static final float BOLT_SHARD_DAMAGE = 4;
 
     // Chain Lightning
 
-    public static final float CHAIN_MANA = 30;
+    public static final float CHAIN_MANA = 25;
     public static final int CHAIN_COOLDOWN_TICKS = 50;
     /** How far the first strike reaches. */
     public static final double CHAIN_RANGE = 24;
@@ -110,9 +115,12 @@ public final class SpellTuning {
     /** The farthest the lightning leaps from one target to the next. */
     public static final double CHAIN_JUMP_RANGE = 7;
     public static final int CHAIN_MAX_TARGETS = 5;
-    public static final float CHAIN_DAMAGE = 8;
+    public static final float CHAIN_DAMAGE = 10;
     /** Each leap deals this fraction of the previous one's damage. */
     public static final float CHAIN_DAMAGE_FALLOFF = 0.8f;
+    /** Overload: each leap left over when the chain runs out of targets deals this much around its last target. */
+    public static final float CHAIN_OVERLOAD_DAMAGE = 3;
+    public static final double CHAIN_OVERLOAD_RADIUS = 3;
 
     // Blink
 
@@ -121,6 +129,11 @@ public final class SpellTuning {
     public static final double BLINK_RANGE = 16;
     /** Destinations closer than this fail instead of wasting the cast on a shuffle. */
     public static final double BLINK_MIN_DISTANCE = 2;
+    /** Afterimage: this long after a blink, the caster's afterimage bursts where they stood. */
+    public static final int BLINK_AFTERIMAGE_TICKS = 20;
+    public static final double BLINK_AFTERIMAGE_RADIUS = 3;
+    public static final float BLINK_AFTERIMAGE_DAMAGE = 6;
+    public static final double BLINK_AFTERIMAGE_KNOCKBACK = 0.8;
 
     // Arcane Ward
 
@@ -129,18 +142,22 @@ public final class SpellTuning {
     public static final int WARD_COOLDOWN_TICKS = 300;
     public static final int WARD_DURATION_TICKS = 160;
     /** Damage the ward absorbs before it shatters. The hit that breaks it is still fully absorbed. */
-    public static final float WARD_STRENGTH = 16;
+    public static final float WARD_STRENGTH = 20;
     /** Strength spent each time the ward turns a projectile back. */
     public static final float WARD_DEFLECT_COST = 2;
     /** Radius of the rune shell, from the centre of the caster's body. */
     public static final double WARD_RADIUS = 2.5;
+    /** Rebound: a ward that is broken bursts outwards, hurting and hurling what's within this reach of its owner. */
+    public static final double WARD_REBOUND_RADIUS = 4;
+    public static final float WARD_REBOUND_DAMAGE = 6;
+    public static final double WARD_REBOUND_KNOCKBACK = 1.4;
 
     // Frost Nova
 
     public static final float NOVA_MANA = 35;
     public static final int NOVA_COOLDOWN_TICKS = 160;
     public static final double NOVA_RADIUS = 6;
-    public static final float NOVA_DAMAGE = 4;
+    public static final float NOVA_DAMAGE = 6;
     /** Blazes, magma cubes and other heat-loving mobs take this many times the damage, as with powder snow. */
     public static final float NOVA_HEAT_MULTIPLIER = 2.5f;
     /** Ticks targets stay fully frozen (shaking, frosted, taking vanilla freeze damage) before they start to thaw. */
@@ -184,6 +201,8 @@ public final class SpellTuning {
     /** Detonation damage at the centre, falling to nothing at the edge. */
     public static final float JUDGMENT_BLAST_DAMAGE = 100;
     public static final double JUDGMENT_BLAST_KNOCKBACK = 4.0;
+    /** Smite: undead take this many times the beam's and the blast's damage. */
+    public static final float JUDGMENT_SMITE_MULTIPLIER = 1.5f;
     /** Strikes in progress at once, server-wide; more fizzle. */
     public static final int MAX_ACTIVE_JUDGMENTS = 8;
 
@@ -211,6 +230,8 @@ public final class SpellTuning {
     /** At the centre of each impact, falling to nothing at its edge; it also sets things alight. */
     public static final float METEOR_DAMAGE = 30;
     public static final int METEOR_FIRE_SECONDS = 8;
+    /** Seeking: one meteor in this many aims at a creature in the area, if there is one. */
+    public static final int METEOR_SEEKING_EVERY = 2;
     /** Vanilla explosion strength for terrain: a charged creeper's. TNT is 4. */
     public static final float METEOR_TERRAIN_STRENGTH = 6;
     /** The swarm ends with the Dread Star: one colossal, slower meteor straight onto the mark. */
@@ -253,6 +274,8 @@ public final class SpellTuning {
     public static final double SINGULARITY_COLLAPSE_KNOCKBACK = 4.0;
     /** Vanilla explosion strength of the collapse, for terrain. TNT is 4. */
     public static final float SINGULARITY_COLLAPSE_TERRAIN_STRENGTH = 8;
+    /** Items it held are thrown out of reach for this many ticks, so they scatter before anyone grabs them. */
+    public static final int SINGULARITY_RELEASE_PICKUP_DELAY = 20;
     public static final int MAX_ACTIVE_SINGULARITIES = 4;
 
     // Chrono Field (Astral Staff)
@@ -289,6 +312,9 @@ public final class SpellTuning {
     public static final int GATE_CROSS_TICKS = 10;
     /** How long the gates stay open, both ways, for anyone. */
     public static final int GATE_OPEN_TICKS = 400;
+    /** Astral Wake: whatever crosses a gate comes out with Speed II for this long. */
+    public static final int GATE_WAKE_TICKS = 100;
+    public static final int GATE_WAKE_AMPLIFIER = 1;
     /** Anything standing this close to a gate's centre is carried through. */
     public static final double GATE_RADIUS = 2;
     public static final int MAX_ACTIVE_GATES = 8;
@@ -351,6 +377,10 @@ public final class SpellTuning {
     public static final float PLANETFALL_SHARD_TERRAIN_STRENGTH = 5;
     /** The planet's core, left glowing at the bottom of the crater. */
     public static final double PLANETFALL_CORE_RADIUS = 4.5;
+    /** Riches: of the core's outer blocks, these fractions are gold ore, diamond ore and ancient debris. */
+    public static final double PLANETFALL_CORE_GOLD = 0.08;
+    public static final double PLANETFALL_CORE_DIAMOND = 0.04;
+    public static final double PLANETFALL_CORE_DEBRIS = 0.015;
     public static final int MAX_ACTIVE_PLANETFALLS = 2;
 
     /** Blocks at least this blast resistant survive spells that vaporise terrain, as obsidian (1200) does. */

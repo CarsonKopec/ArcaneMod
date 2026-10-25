@@ -13,10 +13,16 @@ public final class ModSpellEffects {
     public static final SpellEffectType BOLT = register("bolt");
     /** A bolt detonated; {@code direction} is its flight direction. */
     public static final SpellEffectType IMPACT = register("impact");
+    /** A shard of a fully charged bolt flew from {@code position} along {@code direction} into a creature. */
+    public static final SpellEffectType BOLT_SHARD = register("bolt_shard");
     /** One leap of chain lightning, from {@code position} along {@code direction}; {@code age} counts the leaps. */
     public static final SpellEffectType CHAIN = register("chain");
+    /** Chain lightning's leftover leaps discharged at {@code position}; {@code power} is how many, out of all the chain's leaps. */
+    public static final SpellEffectType CHAIN_OVERLOAD = register("chain_overload");
     /** The caster's feet moved from {@code position} by {@code direction}. */
     public static final SpellEffectType BLINK = register("blink");
+    /** Entity {@code sourceId}'s afterimage, left at {@code position} by a blink, burst. */
+    public static final SpellEffectType AFTERIMAGE = register("afterimage");
     /** A ward went up around entity {@code sourceId}, at {@code position}, for {@code age} ticks. */
     public static final SpellEffectType WARD = register("ward");
     /** A ward absorbed a hit at {@code position}, facing {@code direction}; {@code power} is the strength left, 0–1. */

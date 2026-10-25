@@ -264,8 +264,14 @@ final class PlanetfallCrater {
         if (!(state.canBeReplaced() || SpellTerrain.mayVaporise(level, caster, true, pos, state))
                 || state.hasBlockEntity() || !level.mayInteract(caster, pos)) return;
         double seam = Math.abs(Math.sin(Math.atan2(local.z, local.x) * 3 + local.y * 0.7));
+        // Riches: the planet's heart, studded with ore for the caster to dig out.
+        double ore = shape.variation(pos.getX() * 7 + pos.getY(), pos.getZ() * 13 - pos.getY() * 5);
         BlockState material = distance < radius * 0.5 || seam < 0.22 ? Blocks.SHROOMLIGHT.defaultBlockState()
                 : seam < 0.4 ? Blocks.MAGMA_BLOCK.defaultBlockState()
+                : ore < SpellTuning.PLANETFALL_CORE_DEBRIS ? Blocks.ANCIENT_DEBRIS.defaultBlockState()
+                : ore < SpellTuning.PLANETFALL_CORE_DEBRIS + SpellTuning.PLANETFALL_CORE_DIAMOND ? Blocks.DEEPSLATE_DIAMOND_ORE.defaultBlockState()
+                : ore < SpellTuning.PLANETFALL_CORE_DEBRIS + SpellTuning.PLANETFALL_CORE_DIAMOND + SpellTuning.PLANETFALL_CORE_GOLD
+                        ? Blocks.DEEPSLATE_GOLD_ORE.defaultBlockState()
                 : shape.variation(pos.getX(), pos.getZ() + pos.getY()) < 0.45 ? Blocks.CRYING_OBSIDIAN.defaultBlockState()
                 : Blocks.OBSIDIAN.defaultBlockState();
         set(pos, material);

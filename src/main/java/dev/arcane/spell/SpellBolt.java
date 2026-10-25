@@ -1,11 +1,16 @@
 package dev.arcane.spell;
 
 import dev.arcane.network.SpellEffects;
+import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -89,11 +94,35 @@ final class SpellBolt {
                 victim.push(push.x, 0.25 + falloff * 0.45, push.z);
             }
         }
+        if (power >= 1) shardburst(blast, directTarget);
         // Use vanilla block resistance, drops, and TNT chain reactions. Do this after
         // spell damage so cover is evaluated before the terrain is destroyed.
         level.explode(owner, level.damageSources().indirectMagic(owner, owner), SpellTerrain.explosion(level, owner, mayBuild),
                 position, SpellTuning.terrainBlastStrength(power), false, Level.ExplosionInteraction.BLOCK);
+        level.playSound(null, position.x, position.y, position.z, ModSounds.BOLT_IMPACT, SoundSource.PLAYERS, 0.8f + 0.6f * power, 1.0f);
         SpellEffects.send(level, ModSpellEffects.IMPACT, position, direction, power, age, sourceId);
+    }
+
+    /**
+     * A fully charged bolt bursts into shards, each seeking a different creature near the blast, nearest first, that
+     * it can reach in a straight line: never the one it struck directly, nor any the blast has killed.
+     */
+    private void shardburst(Vec3 blast, LivingEntity directTarget) {
+        double range = SpellTuning.BOLT_SHARD_RANGE;
+        List<LivingEntity> targets = new ArrayList<>(level.getEntitiesOfClass(LivingEntity.class, new AABB(blast, blast).inflate(range),
+                e -> e != directTarget && e.isAlive() && SpellTargets.canHarm(owner, e)
+                        && e.getBoundingBox().getCenter().distanceTo(blast) <= range
+                        && SpellTargets.clearPath(level, blast, e.getBoundingBox().getCenter(), owner)));
+        targets.sort(Comparator.comparingDouble(e -> e.getBoundingBox().getCenter().distanceToSqr(blast)));
+        if (!targets.isEmpty()) level.playSound(null, blast.x, blast.y, blast.z, ModSounds.BOLT_SHARDS, SoundSource.PLAYERS, 0.9f, 1.0f);
+        for (LivingEntity target : targets.subList(0, Math.min(SpellTuning.BOLT_SHARDS, targets.size()))) {
+            Vec3 at = target.getBoundingBox().getCenter();
+            float damage = SpellReactions.shatter(level, target, SpellTuning.BOLT_SHARD_DAMAGE * spellPower);
+            // The blast may have hit it this very tick: without this, its moment of immunity would shrug the shard off.
+            target.invulnerableTime = 0;
+            target.hurtServer(level, level.damageSources().indirectMagic(owner, owner), damage);
+            SpellEffects.send(level, ModSpellEffects.BOLT_SHARD, blast, at.subtract(blast), 1, 0, sourceId);
+        }
     }
 
     /** Column-only check: unlike {@link Level#isLoaded}, positions above or below the build limit still count. */

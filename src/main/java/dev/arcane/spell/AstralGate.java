@@ -18,6 +18,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -190,6 +192,9 @@ public final class AstralGate extends MarkedSpell {
                 if (traveller == null) return;
             }
             traveller.resetFallDistance();
+            if (traveller instanceof LivingEntity living) {
+                living.addEffect(new MobEffectInstance(MobEffects.SPEED, SpellTuning.GATE_WAKE_TICKS, SpellTuning.GATE_WAKE_AMPLIFIER));
+            }
             arrived.put(traveller.getUUID(), to);
             if (from.level == to.level) {
                 SpellEffects.send(from.level, ModSpellEffects.GATE_CROSSING, start, to.position.subtract(start), weight, 0, id);

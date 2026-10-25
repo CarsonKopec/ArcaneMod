@@ -10,6 +10,7 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -135,7 +136,7 @@ final class JudgmentStrike {
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, column, e -> SpellTargets.canHarm(caster, e))) {
             Vec3 at = victim.getBoundingBox().getCenter();
             if (Mth.square(at.x - impact.x) + Mth.square(at.z - impact.z) > reach * reach) continue;
-            if (victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), SpellTuning.JUDGMENT_BEAM_DAMAGE * spellPower)) {
+            if (victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), SpellTuning.JUDGMENT_BEAM_DAMAGE * spellPower * smite(victim))) {
                 victim.igniteForSeconds(SpellTuning.JUDGMENT_BEAM_FIRE_SECONDS);
             }
         }
@@ -159,7 +160,8 @@ final class JudgmentStrike {
             double distance = at.distanceTo(impact);
             if (distance > radius) continue;
             float falloff = (float) (1 - distance / radius);
-            if (victim.hurtServer(level, level.damageSources().explosion(caster, caster), SpellTuning.JUDGMENT_BLAST_DAMAGE * falloff * spellPower)) {
+            if (victim.hurtServer(level, level.damageSources().explosion(caster, caster),
+                    SpellTuning.JUDGMENT_BLAST_DAMAGE * falloff * spellPower * smite(victim))) {
                 Vec3 away = new Vec3(at.x - impact.x, 0, at.z - impact.z);
                 away = away.lengthSqr() < 1.0e-6 ? Vec3.ZERO : away.normalize();
                 double push = SpellTuning.JUDGMENT_BLAST_KNOCKBACK * falloff;
@@ -216,5 +218,10 @@ final class JudgmentStrike {
         bolt.snapTo(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z)), z);
         bolt.setVisualOnly(true);
         level.addFreshEntity(bolt);
+    }
+
+    /** Smite: the light of judgment burns the undead hardest. */
+    private static float smite(LivingEntity victim) {
+        return victim.getType().is(EntityTypeTags.UNDEAD) ? SpellTuning.JUDGMENT_SMITE_MULTIPLIER : 1;
     }
 }

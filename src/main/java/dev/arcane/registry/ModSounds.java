@@ -13,12 +13,22 @@ import net.minecraft.sounds.SoundEvent;
 public final class ModSounds {
     public static final SoundEvent BOLT_CHARGE = register("spell.arcane_bolt.charge");
     public static final SoundEvent BOLT_CAST = register("spell.arcane_bolt.cast");
+    public static final SoundEvent BOLT_IMPACT = register("spell.arcane_bolt.impact");
+    /** A fully charged bolt's shards flying out of its blast. */
+    public static final SoundEvent BOLT_SHARDS = register("spell.arcane_bolt.shards");
     public static final SoundEvent CHAIN_CAST = register("spell.chain_lightning.cast");
     public static final SoundEvent CHAIN_HIT = register("spell.chain_lightning.hit");
+    /** Chain lightning's leftover leaps discharging at once. */
+    public static final SoundEvent CHAIN_OVERLOAD = register("spell.chain_lightning.overload");
+    /** Where the caster blinked from. */
     public static final SoundEvent BLINK = register("spell.blink");
+    public static final SoundEvent BLINK_ARRIVE = register("spell.blink.arrive");
+    public static final SoundEvent BLINK_AFTERIMAGE = register("spell.blink.afterimage");
     public static final SoundEvent WARD_RAISE = register("spell.arcane_ward.raise");
     public static final SoundEvent WARD_HIT = register("spell.arcane_ward.hit");
     public static final SoundEvent WARD_BREAK = register("spell.arcane_ward.break");
+    /** A broken ward bursting outwards. */
+    public static final SoundEvent WARD_REBOUND = register("spell.arcane_ward.rebound");
     public static final SoundEvent WARD_FADE = register("spell.arcane_ward.fade");
     public static final SoundEvent FROST_NOVA = register("spell.frost_nova");
     /** Every Astral Staff spell's channel. */
@@ -28,8 +38,10 @@ public final class ModSounds {
     public static final SoundEvent JUDGMENT_BLAST = register("spell.celestial_judgment.blast");
     public static final SoundEvent METEOR_FALL = register("spell.meteor_swarm.fall");
     public static final SoundEvent METEOR_IMPACT = register("spell.meteor_swarm.impact");
-    /** Six seconds long, as the singularity is. */
+    /** Six seconds long, until the black hole forms. */
     public static final SoundEvent SINGULARITY_OPEN = register("spell.singularity.open");
+    /** The singularity becoming a true black hole, played by each client as it draws it: as long as it lasts. */
+    public static final SoundEvent SINGULARITY_FORM = register("spell.singularity.form");
     public static final SoundEvent SINGULARITY_COLLAPSE = register("spell.singularity.collapse");
     public static final SoundEvent CHRONO_START = register("spell.chrono_field.start");
     public static final SoundEvent CHRONO_END = register("spell.chrono_field.end");

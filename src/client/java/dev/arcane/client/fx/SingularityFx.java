@@ -10,31 +10,39 @@ import static dev.arcane.client.fx.Fx.particlesVisible;
 import static dev.arcane.client.fx.Fx.proximity;
 import static dev.arcane.client.fx.Fx.scaled;
 import static dev.arcane.client.fx.Fx.unlight;
+import static dev.arcane.client.fx.Fx.world;
 
 import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.effect.SpellEffect;
+import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Singularity as the client sees it. Nebulon draws light, not darkness, so the hole itself is a knot of ink and smoke;
- * around it, a bright photon ring always faces the viewer, and three tilted accretion rings precess at different
- * speeds. Purple streams pour in from all sides, and its reach is marked on the ground. Then it collapses: the rings
- * crush inwards, and a flash and a shockwave burst out.
+ * Singularity as the client sees it. Nebulon draws light, not darkness, so at first the hole is a knot of ink and
+ * smoke; around it, a bright photon ring always faces the viewer, and three tilted accretion rings precess at
+ * different speeds. Purple streams pour in from all sides, and its reach is marked on the ground.
+ *
+ * <p>For its last {@link #FORM_BEFORE} ticks it becomes a true black hole, drawn by {@link SpaceTimeShader}: black,
+ * the world behind it bent round it, a white-hot disc whirling about it, and the rings and ink fade away. Without
+ * that pass it stays as it was. Then it collapses: it is crushed to nothing, and a flash and a shockwave burst out.
  */
 final class SingularityFx {
     private static final Fx.Tracker<Hole> HOLES = new Fx.Tracker<>();
     private static final ColorRgba VIOLET = ColorRgba.rgba(0xA05CFFFF);
     private static final ColorRgba MAGENTA = ColorRgba.rgba(0xE45CFFFF);
     private static final ColorRgba PALE = ColorRgba.rgba(0xEBD8FFFF);
+    /** The black hole's disc, lighting the ground. */
+    private static final ColorRgba DISC_LIGHT = ColorRgba.rgba(0xFFC48AFF);
     private static final ParticleOptions FLARE = ColorParticleOption.create(ParticleTypes.FLASH, 0xFFD9B8FF);
     private static final int TINT = 0x0E0418;
     /** The heart's radius: the unit its rings are sized in. */
@@ -42,6 +50,15 @@ final class SingularityFx {
     /** The rings crush inwards over this long before the blast. */
     private static final int IMPLODE_TICKS = 5;
     private static final int COLLAPSE_TICKS = 40;
+    /** The black hole's event horizon, in blocks from its centre; its shadow looks some 2.6 times as wide. */
+    private static final float HORIZON = 1.15f;
+    /** Its disc reaches as far as the singularity eats the ground. */
+    private static final float DISC = (float) SpellTuning.SINGULARITY_CONSUME_RADIUS;
+    /** It becomes a true black hole this many ticks before it collapses, taking {@link #FORM_TICKS} to form. */
+    private static final int FORM_BEFORE = 80;
+    private static final int FORM_TICKS = 20;
+    /** How fast its disc's inner edge turns, in radians a second; the rest turns slower, as orbits do. */
+    private static final float DISC_SPIN = 1.7f;
 
     private SingularityFx() {
     }
@@ -59,14 +76,25 @@ final class SingularityFx {
         final int duration;
         final Fx.Planes planes = new Fx.Planes();
         final RandomSource random = RandomSource.create();
+        /** The way its disc turns round: nearly upright, tipped a little to one side. */
+        final Vec3 axis;
+        /** Varies the disc's streaks from one black hole to the next. */
+        final float seed;
         PointLightHandle glow;
         int age;
         int collapseAge = -1;
+        /** Whether the black hole is being drawn by the screen pass, rather than not at all. */
+        boolean drawn;
 
         Hole(SpellEffect effect) {
             this.center = effect.position();
             this.reach = effect.power() > 0 ? effect.power() : SpellTuning.SINGULARITY_PULL_RADIUS;
             this.duration = effect.age() > 0 ? effect.age() : SpellTuning.SINGULARITY_DURATION_TICKS;
+            // Every client sees the same disc.
+            RandomSource shape = RandomSource.create(effect.sourceId() * 31L + Double.hashCode(center.x) + Double.hashCode(center.z));
+            double tip = 0.12 + 0.12 * shape.nextDouble(), toward = shape.nextDouble() * Mth.TWO_PI;
+            this.axis = new Vec3(Math.sin(tip) * Math.cos(toward), Math.cos(tip), Math.sin(tip) * Math.sin(toward));
+            this.seed = shape.nextFloat() * 100;
         }
 
         void collapse() {
@@ -76,7 +104,10 @@ final class SingularityFx {
         @Override public boolean tick() {
             age++;
             if (collapseAge >= 0) collapseAge++;
+            if (collapseAge < 0 && age == duration - FORM_BEFORE) form();
             if (collapseAge == IMPLODE_TICKS) burst();
+            drawn = SpaceTimeShader.available();
+            if (drawn && age >= duration - FORM_BEFORE && collapseAge <= IMPLODE_TICKS) SpaceTimeShader.show(this::write);
             SpellLighting.guarded(this::animate);
             if (particlesVisible(center)) particles();
             screen(proximity(center));
@@ -89,19 +120,48 @@ final class SingularityFx {
             return ease(age / 15f);
         }
 
+        /** How far it has become a true black hole, 0 to 1: forming before the collapse, then crushed with the rest. */
+        private float formed(float partialTick) {
+            float formed = ease((age + partialTick - (duration - FORM_BEFORE)) / FORM_TICKS);
+            if (collapseAge >= 0) formed *= Math.max(0, 1 - (collapseAge + partialTick) / IMPLODE_TICKS);
+            return formed;
+        }
+
+        /** How much of it the screen pass draws: the rest is drawn with rings and particles. */
+        private float shown() {
+            return drawn ? formed(0) : 0;
+        }
+
+        /** It becomes a true black hole: from here on, light bends round it. */
+        private void form() {
+            world().playLocalSound(center.x, center.y, center.z, ModSounds.SINGULARITY_FORM, SoundSource.PLAYERS, 4.0f, 1.0f, false);
+            ScreenEffects.shake(0.35f * proximity(center));
+        }
+
+        private void write(SpaceTimeShader.View view, float partialTick) {
+            float formed = formed(partialTick);
+            if (formed <= 0) return;
+            float seconds = (age + partialTick) / 20;
+            view.hole(center, HORIZON * formed, axis, DISC * (0.5f + 0.5f * formed), formed, seconds * DISC_SPIN, seed);
+        }
+
         private void animate() {
             float size = size();
             float pulse = 0.85f + 0.15f * Mth.sin(age * 0.5f);
+            // As the black hole forms, the rings and the halo give way to it.
+            float rings = 1 - shown();
             planes.begin();
-            if (size > 0) {
-                planes.halo(center, HEART * 0.55 * size, 0.25f, scaled(PALE, pulse));
+            if (size > 0 && rings > 0) {
+                planes.halo(center, HEART * 0.55 * size, 0.25f, scaled(PALE, pulse * rings));
                 ColorRgba[] colors = {VIOLET, MAGENTA, PALE};
                 for (int i = 0; i < 3; i++) {
                     // Each ring leans 20-35 degrees and precesses at its own speed.
                     double tilt = 0.35 + 0.12 * i, phase = age * (0.05 + 0.03 * i) + i * 2.1;
                     Vec3 normal = new Vec3(Math.sin(tilt) * Math.cos(phase), Math.cos(tilt), Math.sin(tilt) * Math.sin(phase));
-                    planes.ring(center, normal, HEART * (0.85 + 0.4 * i) * size, 0.4f - 0.07f * i, scaled(colors[i], 0.8f * pulse));
+                    planes.ring(center, normal, HEART * (0.85 + 0.4 * i) * size, 0.4f - 0.07f * i, scaled(colors[i], 0.8f * pulse * rings));
                 }
+            }
+            if (size > 0) {
                 // Its reach, on the ground beneath, with arcs spiralling inwards.
                 Vec3 ground = center.subtract(0, SpellTuning.SINGULARITY_LIFT - 0.08, 0);
                 planes.ring(ground, UP, reach, 0.25f, scaled(VIOLET, 0.35f * size));
@@ -121,22 +181,27 @@ final class SingularityFx {
                 }
             }
             planes.end();
-            float bright = collapseAge >= IMPLODE_TICKS ? 6 * Math.max(0, 1 - (collapseAge - IMPLODE_TICKS) / 25f) : 1.6f * size * pulse;
-            glow = bright > 0.01f ? light(glow, center, HEART * 6, bright, VIOLET) : unlight(glow);
+            // The black hole's disc lights the ground below it warm and bright.
+            float shown = shown();
+            float bright = collapseAge >= IMPLODE_TICKS ? 6 * Math.max(0, 1 - (collapseAge - IMPLODE_TICKS) / 25f)
+                    : 1.6f * size * pulse * (1 + 1.2f * shown);
+            glow = bright > 0.01f ? light(glow, center, HEART * 6, bright, shown > 0.5f ? DISC_LIGHT : VIOLET) : unlight(glow);
         }
 
         private void particles() {
             if (collapseAge >= 0) return;
             float size = size();
-            // The dark heart: ink and smoke, held close.
-            for (int i = 0, n = Fx.scaled(12); i < n; i++) {
+            // The dark heart: ink and smoke, held close, until the black hole's own darkness takes its place.
+            float ink = 1 - shown();
+            for (int i = 0, n = Fx.scaled(Math.round(12 * ink)); i < n; i++) {
                 particle(ParticleTypes.SQUID_INK, center.add(anyDirection(random).scale(HEART * 0.35 * size * random.nextDouble())), Vec3.ZERO);
             }
-            for (int i = 0, n = Fx.scaled(4); i < n; i++) {
+            for (int i = 0, n = Fx.scaled(Math.round(4 * ink)); i < n; i++) {
                 particle(ParticleTypes.LARGE_SMOKE, center.add(anyDirection(random).scale(HEART * 0.5 * size)), Vec3.ZERO);
             }
             // Portal particles fly from where they're aimed back to where they spawned: these all pour into the heart.
-            for (int i = 0, n = Fx.scaled(24); i < n; i++) {
+            // Particles are drawn over the black hole, so once it forms only a few still stream in across its darkness.
+            for (int i = 0, n = Fx.scaled(Math.round(24 * (0.25f + 0.75f * ink))); i < n; i++) {
                 particle(ParticleTypes.PORTAL, center, anyDirection(random).scale(4 + random.nextDouble() * 10));
             }
             // Dust swept across the ground towards it.
@@ -167,8 +232,11 @@ final class SingularityFx {
         private void screen(float near) {
             if (near <= 0) return;
             if (collapseAge < 0) {
-                ScreenEffects.tint(0.35f * near * size(), TINT);
-                ScreenEffects.shake(0.12f * near);
+                float formed = formed(0);
+                ScreenEffects.tint((0.35f + 0.2f * formed) * near * size(), TINT);
+                ScreenEffects.shake((0.12f + 0.08f * formed) * near);
+                // A true black hole draws the eye.
+                if (formed > 0) ScreenEffects.pull(center, 0.3f * formed * near);
             }
         }
 

@@ -45,7 +45,10 @@ public final class ChainLightning extends Spell {
         }
         Set<LivingEntity> struck = new HashSet<>();
         float damage = SpellTuning.CHAIN_DAMAGE * context.spellPower();
-        for (int jump = 0; target != null && jump < SpellTuning.CHAIN_MAX_TARGETS; jump++) {
+        int jump = 0;
+        LivingEntity last = target;
+        for (; target != null && jump < SpellTuning.CHAIN_MAX_TARGETS; jump++) {
+            last = target;
             Vec3 at = target.getBoundingBox().getCenter();
             // The arc's brightness falls with each leap, whatever the caster's spell power.
             float strength = (float) Math.pow(SpellTuning.CHAIN_DAMAGE_FALLOFF, jump);
@@ -61,7 +64,26 @@ public final class ChainLightning extends Spell {
             double range = SpellTuning.CHAIN_JUMP_RANGE * (wet ? SpellTuning.CONDUCTION_MULTIPLIER : 1);
             target = nextJump(level, caster, at, struck, range);
         }
+        if (jump < SpellTuning.CHAIN_MAX_TARGETS) overload(level, caster, last, SpellTuning.CHAIN_MAX_TARGETS - jump, context.spellPower());
         return true;
+    }
+
+    /**
+     * Overload: the chain ran out of targets with {@code leaps} leaps unspent, and they all discharge at once around
+     * the last creature it struck, hurting it and everything near it.
+     */
+    private static void overload(ServerLevel level, ServerPlayer caster, LivingEntity last, int leaps, float spellPower) {
+        Vec3 at = last.getBoundingBox().getCenter();
+        double radius = SpellTuning.CHAIN_OVERLOAD_RADIUS;
+        float damage = SpellTuning.CHAIN_OVERLOAD_DAMAGE * leaps * spellPower;
+        for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(radius),
+                e -> e.isAlive() && SpellTargets.canHarm(caster, e) && e.getBoundingBox().getCenter().distanceTo(at) <= radius)) {
+            // The last target was struck this very tick: without this, its moment of immunity would shrug the overload off.
+            victim.invulnerableTime = 0;
+            victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), damage);
+        }
+        level.playSound(null, at.x, at.y, at.z, ModSounds.CHAIN_OVERLOAD, SoundSource.PLAYERS, 0.9f, 1.0f);
+        SpellEffects.send(level, ModSpellEffects.CHAIN_OVERLOAD, at, Vec3.ZERO, leaps / (float) SpellTuning.CHAIN_MAX_TARGETS, 0, caster.getId());
     }
 
     /** The nearest living entity whose (slightly enlarged) hitbox the aim ray passes through. */

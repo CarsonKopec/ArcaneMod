@@ -6,7 +6,9 @@ import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.core.BlockPos;
@@ -28,12 +30,14 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Singularity, an Astral Staff spell: a black hole hangs over the marked ground for six seconds. It drags in creatures
+ * Singularity, an Astral Staff spell: a black hole hangs over the marked ground for ten seconds. It drags in creatures
  * (players under the server's PvP rules), dropped items, experience and projectiles, crushes whatever reaches its heart,
  * and devours the ground around it, nearest first: a few blocks a tick are torn loose and fly into it, the rest simply
  * vanish. Then it collapses in a blast that hurls everything outwards. Owns every singularity.
  *
- * <p>Nothing it pulls takes fall damage while caught; what it flings out at the end may.
+ * <p>Items and experience that reach its heart are held there, out of reach and unharmed, and those still loose when it
+ * collapses are taken in too: the blast that would destroy them throws them all back out instead. Nothing it pulls
+ * takes fall damage while caught; what it flings out at the end may.
  */
 public final class Singularity extends MarkedSpell {
     private static final List<Hole> HOLES = new ArrayList<>();
@@ -79,6 +83,8 @@ public final class Singularity extends MarkedSpell {
         final List<BlockPos> meal;
         /** Blocks it has torn loose, still flying in. */
         final List<FallingBlockEntity> debris = new ArrayList<>();
+        /** Items and experience held at its heart until it collapses. */
+        final Set<Entity> held = new HashSet<>();
         int eaten;
         int age;
 
@@ -130,12 +136,19 @@ public final class Singularity extends MarkedSpell {
         private void pull() {
             double radius = SpellTuning.SINGULARITY_PULL_RADIUS;
             for (Entity entity : level.getEntities((Entity) null, new AABB(center, center).inflate(radius), this::caught)) {
+                if (held.contains(entity)) {
+                    entity.setPos(center.x, center.y - entity.getBbHeight() / 2, center.z);
+                    continue;
+                }
                 Vec3 toward = center.subtract(entity.getBoundingBox().getCenter());
                 double distance = toward.length();
                 if (distance > radius) continue;
-                if (entity instanceof FallingBlockEntity && distance < SWALLOW_RADIUS) {
-                    entity.discard();
-                    continue;
+                if (distance < SWALLOW_RADIUS) {
+                    if (entity instanceof FallingBlockEntity) {
+                        entity.discard();
+                        continue;
+                    }
+                    if (hold(entity)) continue;
                 }
                 Vec3 direction = distance < 1.0e-3 ? Vec3.ZERO : toward.scale(1 / distance);
                 double strength = SpellTuning.SINGULARITY_PULL * (1 + 2 * (1 - distance / radius));
@@ -146,6 +159,32 @@ public final class Singularity extends MarkedSpell {
                 entity.hurtMarked = true;
                 entity.resetFallDistance();
             }
+        }
+
+        /**
+         * Holds an item or experience orb at its heart; returns false for anything else. It is pinned there afresh each
+         * tick rather than changed, so nothing about it is saved if its chunk unloads mid-spell.
+         */
+        private boolean hold(Entity entity) {
+            if (!(entity instanceof ItemEntity || entity instanceof ExperienceOrb)) return false;
+            entity.setDeltaMovement(Vec3.ZERO);
+            entity.setPos(center.x, center.y - entity.getBbHeight() / 2, center.z);
+            held.add(entity);
+            return true;
+        }
+
+        /** Throws everything it held back out, once the blast that would have destroyed it is over. */
+        private void release() {
+            for (Entity entity : held) {
+                if (entity.isRemoved()) continue;
+                entity.setInvulnerable(false);
+                if (entity instanceof ItemEntity item) item.setPickUpDelay(SpellTuning.SINGULARITY_RELEASE_PICKUP_DELAY);
+                double angle = level.random.nextDouble() * Mth.TWO_PI;
+                double speed = 0.4 + 0.5 * level.random.nextDouble();
+                entity.setDeltaMovement(Math.cos(angle) * speed, 0.35 + 0.35 * level.random.nextDouble(), Math.sin(angle) * speed);
+                entity.hurtMarked = true;
+            }
+            held.clear();
         }
 
         private void crush() {
@@ -196,7 +235,9 @@ public final class Singularity extends MarkedSpell {
             for (Entity entity : level.getEntities((Entity) null, new AABB(center, center).inflate(radius), this::caught)) {
                 Vec3 at = entity.getBoundingBox().getCenter();
                 double distance = at.distanceTo(center);
-                if (distance > radius) continue;
+                if (distance > radius || held.contains(entity)) continue;
+                // Loose items and experience are taken in, so the blast throws them out rather than destroying them.
+                if (hold(entity)) continue;
                 float falloff = (float) (1 - distance / radius);
                 if (entity instanceof LivingEntity victim
                         && !victim.hurtServer(level, level.damageSources().explosion(caster, caster),
@@ -209,9 +250,12 @@ public final class Singularity extends MarkedSpell {
                 entity.setDeltaMovement(away.x * push, 0.5 + 0.6 * falloff, away.z * push);
                 entity.hurtMarked = true;
             }
-            // Entities were thrown first, so the blast's terrain half can't add a second shove.
+            // Entities were thrown first, so the blast's terrain half can't add a second shove. What it held sits out the
+            // blast, for this tick only.
+            for (Entity entity : held) entity.setInvulnerable(true);
             level.explode(caster, level.damageSources().explosion(caster, caster), SpellTerrain.explosion(level, caster, mayBuild),
                     center, SpellTuning.SINGULARITY_COLLAPSE_TERRAIN_STRENGTH, false, Level.ExplosionInteraction.BLOCK);
+            release();
         }
     }
 }

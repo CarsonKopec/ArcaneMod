@@ -22,11 +22,13 @@ public final class AstralFx {
         PlanetfallFx.tick(client);
         SpaceSky.tick();
         PlanetfallShader.tick();
+        SpaceTimeShader.tick();
     }
 
     public static void clear() {
         for (Fx.Tracker<?> tracker : Fx.TRACKERS) tracker.clear();
         SpaceSky.clear();
         PlanetfallShader.clear();
+        SpaceTimeShader.clear();
     }
 }
