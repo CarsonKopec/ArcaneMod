@@ -19,7 +19,7 @@ layout(std140) uniform SpaceTimeView {
                          // z: the second hand, radians clockwise from twelve; w: the hands' brightness, 0 to 1
 };
 
-#moj_import <arcane_spells:screen_space.glsl>
+#moj_import <leyline:screen_space.glsl>
 
 uniform sampler2D InputColor;
 uniform sampler2D SceneDepth;

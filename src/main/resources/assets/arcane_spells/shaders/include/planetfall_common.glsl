@@ -29,7 +29,7 @@ float impactScale() {
     return Post.w > 0.0 ? Post.w : 1.0;
 }
 
-#moj_import <arcane_spells:screen_space.glsl>
+#moj_import <leyline:screen_space.glsl>
 
 // Random values for valueNoise; bound wherever noise is used.
 uniform sampler2D NoiseTile;

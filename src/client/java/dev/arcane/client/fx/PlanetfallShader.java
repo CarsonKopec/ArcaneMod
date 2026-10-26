@@ -4,39 +4,29 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import de.nexusrealms.nebulon.api.render.client.DynamicUniformBlock;
-import de.nexusrealms.nebulon.api.render.client.NebulonRenderSystem;
-import de.nexusrealms.nebulon.api.render.client.RenderStage;
 import de.nexusrealms.nebulon.api.render.client.ShaderMaterial;
-import de.nexusrealms.nebulon.api.render.client.post.NebulonPostProcessing;
 import de.nexusrealms.nebulon.api.render.client.post.PostPassContext;
-import de.nexusrealms.nebulon.api.render.client.post.PostPassHandle;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.client.config.ArcaneClientSettings;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.screen.ScreenPass;
+import dev.leyline.client.screen.ScreenPasses;
 import java.util.Arrays;
-import java.util.Locale;
-import java.util.OptionalInt;
 import java.util.function.Consumer;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
-import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 /**
- * Planetfall drawn straight into the finished frame, by a chain of full-screen shader passes run from Nebulon's
- * post-processing hook after the world is drawn and before the hand and HUD. They read the world's depth, so what they
+ * Planetfall drawn straight into the finished frame, by a chain of full-screen shader passes run as one Leyline
+ * {@link ScreenPass} after the world is drawn and before the hand and HUD. They read the world's depth, so what they
  * draw sits properly in the world: terrain in front hides it, and it hides what is behind it. They draw what flat
  * shapes and block displays can't: deep space over the sky, the rift as a black hole torn into another universe, the
  * planet itself (raytraced, with its air and the plasma of its entry), its light on the ground, the shock dome, the
@@ -45,9 +35,7 @@ import org.joml.Vector4f;
  * <p>Each frame, in order ({@code shaders/core/}), after {@code planetfall_noise} has drawn the tile of random values
  * the others' noise is read from:
  * <ol>
- *   <li>{@code planetfall_copy}: a copy of the frame, for the rest to read while the last draws over it. Copying
- *       textures directly ({@code copyTextureToTexture}, as Nebulon's compositor and scene snapshots do) loses the
- *       colour on the tested setup, so the frame is only ever copied with a draw.</li>
+ *   <li>A copy of the frame ({@link ScreenPasses#copy}), for the rest to read while the last draws over it.</li>
  *   <li>{@code planetfall_volume}: the volumes (the planet's burning sheath, the fireball, cloud and base surge),
  *       raymarched at half size.</li>
  *   <li>{@code planetfall}: everything else, over the frame, in high dynamic range: light can be many times brighter
@@ -65,17 +53,15 @@ import org.joml.Vector4f;
  * Planetfall draws itself the older way, with shapes and block displays.
  */
 final class PlanetfallShader {
-    private static final Identifier ID = ArcaneSpells.id("planetfall");
-    private static final Identifier VERTEX = Identifier.fromNamespaceAndPath("nebulon", "core/fullscreen_triangle");
-    private static final Matrix4f IDENTITY = new Matrix4f();
-    private static final boolean VULKAN_MOD = FabricLoader.getInstance().isModLoaded("vulkanmod");
+    private static final ScreenPass PASS = new ScreenPass(ArcaneSpells.id("planetfall"), 100, PlanetfallShader::render,
+            PlanetfallShader::release, "Planetfall's screen pass");
     /** The {@code PlanetfallView} block: a matrix and thirteen vectors, std140. */
     private static final int VIEW_BYTES = 64 + 13 * 16;
     private static final int BLOOM_LEVELS = 5;
     /** Spreads, in texels, of the lens streak's passes: each blurs the last further. */
     private static final float[] STREAK_SPREADS = {1, 4, 12};
 
-    private static ShaderMaterial noise, copy, volume, effect, extract, down, up, streak, composite;
+    private static ShaderMaterial noise, volume, effect, extract, down, up, streak, composite;
     /** The frame as the world drew it; the volumes, at half size; and the frame drawn over, in high dynamic range. */
     private static TextureTarget frame, volumes, hdr;
     /** Random values the shaders' noise is read from, drawn once whenever it is made. */
@@ -85,12 +71,9 @@ final class PlanetfallShader {
     private static final TextureTarget[] STREAK = new TextureTarget[2];
     private static DynamicUniformBlock<View> uniforms;
     private static DynamicUniformBlock<Vector4f> steps;
-    private static PostPassHandle handle;
     private static Scene requested, scene;
     private static int requestedPriority;
     private static final View VIEW = new View();
-    /** Set by the first failure; the pass then stays off until the game restarts. */
-    private static boolean failed;
     /** Whether to draw the glow, the bloom and lens streaks, when the setting leaves it to us: decided once. */
     private static Boolean glowByDefault;
 
@@ -102,18 +85,9 @@ final class PlanetfallShader {
         void write(View view, float partialTick);
     }
 
-    /**
-     * Whether the pass can run here; if not, spells fall back to drawing themselves with shapes and displays. Not with
-     * VulkanMod, which replaces the OpenGL renderer this pass is drawn through.
-     */
+    /** Whether the pass can run here ({@link ScreenPass#available}); if not, Planetfall draws itself with shapes and displays. */
     static boolean available() {
-        if (failed || NebulonGuard.disabled() || VULKAN_MOD) return false;
-        try {
-            return !NebulonRenderSystem.environment().irisShaderPackActive();
-        } catch (RuntimeException | LinkageError e) {
-            fail(e);
-            return false;
-        }
+        return PASS.available();
     }
 
     /** Asks for {@code scene} to be drawn this tick; when several ask, the highest priority wins. */
@@ -129,24 +103,16 @@ final class PlanetfallShader {
         scene = available() ? requested : null;
         requested = null;
         requestedPriority = Integer.MIN_VALUE;
-        if (scene != null && handle == null) {
-            NebulonGuard.cleanup(() -> handle = NebulonPostProcessing.register(ID, RenderStage.END_MAIN, 100, PlanetfallShader::render));
-        } else if (scene == null && handle != null) {
-            close();
-        }
+        PASS.run(scene != null);
     }
 
     /** Stops the passes. Safe from any thread: a disconnect clears effects from the network thread. */
     static void clear() {
         requested = scene = null;
-        if (RenderSystem.isOnRenderThread()) close();
-        else Minecraft.getInstance().execute(PlanetfallShader::close);
+        PASS.stop();
     }
 
-    private static void close() {
-        PostPassHandle closing = handle;
-        handle = null;
-        if (closing != null) NebulonGuard.cleanup(closing::close);
+    private static void release() {
         for (TextureTarget target : targets()) {
             if (target != null) NebulonGuard.cleanup(target::destroyBuffers);
         }
@@ -159,93 +125,83 @@ final class PlanetfallShader {
         return new TextureTarget[] {frame, volumes, hdr, noiseTile, BLOOM[0], BLOOM[1], BLOOM[2], BLOOM[3], BLOOM[4], STREAK[0], STREAK[1]};
     }
 
-    private static void fail(Throwable e) {
-        if (failed) return;
-        failed = true;
-        ArcaneSpells.LOGGER.error("Planetfall's screen pass failed; it will draw itself without it until the game restarts", e);
-    }
-
-    /** Runs inside world rendering, drawing over the whole frame. Any failure is logged once and switches the passes off. */
+    /** Runs inside world rendering, drawing over the whole frame. */
     private static void render(PostPassContext context) {
-        try {
-            if (copy == null) build();
-            RenderTarget main = context.main();
-            int width = main.width, height = main.height;
-            frame = sized(frame, "frame", width, height);
-            volumes = sized(volumes, "volumes", width / 2, height / 2);
-            hdr = sized(hdr, "light", width, height);
-            boolean glowing = glow();
-            if (glowing) {
-                for (int i = 0; i < BLOOM_LEVELS; i++) BLOOM[i] = sized(BLOOM[i], "bloom " + i, width >> (i + 1), height >> (i + 1));
-                for (int i = 0; i < STREAK.length; i++) STREAK[i] = sized(STREAK[i], "streak " + i, width >> 2, height >> 2);
-            }
-
-            Minecraft client = Minecraft.getInstance();
-            float partialTick = client.getDeltaTracker().getGameTimeDeltaPartialTick(true);
-            VIEW.reset(client.gameRenderer.getMainCamera());
-            Scene current = scene;
-            if (current != null) current.write(VIEW, partialTick);
-            if (!glowing) VIEW.post.set(0, 0, VIEW.post.z, VIEW.post.w);
-            uniforms.beginFrame();
-            steps.beginFrame();
-            GpuBufferSlice view = uniforms.upload(VIEW);
-            GpuBufferSlice transforms = RenderSystem.getDynamicUniforms().writeTransform(IDENTITY, new Vector4f(1), new Vector3f(), IDENTITY);
-            var nearest = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
-            var linear = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
-            var tiled = RenderSystem.getSamplerCache().getRepeat(FilterMode.LINEAR);
-            if (noiseTile == null) {
-                noiseTile = new TextureTarget("Planetfall noise", 256, 256, false);
-                draw(noiseTile, noise, transforms, pass -> { });
-            }
-            TextureTarget tile = noiseTile;
-
-            draw(frame, copy, transforms, pass -> pass.bindTexture("InSampler", main.getColorTextureView(), nearest));
-            draw(volumes, volume, transforms, pass -> {
-                pass.setUniform("PlanetfallView", view);
-                pass.bindTexture("SceneDepth", main.getDepthTextureView(), nearest);
-                pass.bindTexture("NoiseTile", tile.getColorTextureView(), tiled);
-            });
-            draw(hdr, effect, transforms, pass -> {
-                pass.setUniform("PlanetfallView", view);
-                pass.bindTexture("InputColor", frame.getColorTextureView(), linear);
-                pass.bindTexture("SceneDepth", main.getDepthTextureView(), nearest);
-                pass.bindTexture("Volume", volumes.getColorTextureView(), linear);
-                pass.bindTexture("NoiseTile", tile.getColorTextureView(), tiled);
-            });
-            // Without the glow its strengths are 0 (above), so the composite adds none, and any texture can stand in.
-            TextureTarget bloomed = hdr, streaked = hdr;
-            if (glowing) {
-                draw(BLOOM[0], extract, transforms, pass -> pass.bindTexture("InSampler", hdr.getColorTextureView(), nearest));
-                for (int i = 1; i < BLOOM_LEVELS; i++) {
-                    TextureTarget source = BLOOM[i - 1];
-                    draw(BLOOM[i], down, transforms, pass -> pass.bindTexture("InSampler", source.getColorTextureView(), linear));
-                }
-                TextureTarget streakSource = BLOOM[1];
-                for (int i = 0; i < STREAK_SPREADS.length; i++) {
-                    TextureTarget source = i == 0 ? streakSource : STREAK[(i + 1) % 2];
-                    GpuBufferSlice spread = steps.upload(new Vector4f(STREAK_SPREADS[i], 0, 0, 0));
-                    draw(STREAK[i % 2], streak, transforms, pass -> {
-                        pass.setUniform("PlanetfallStep", spread);
-                        pass.bindTexture("InSampler", source.getColorTextureView(), linear);
-                    });
-                }
-                streaked = STREAK[(STREAK_SPREADS.length - 1) % 2];
-                for (int i = BLOOM_LEVELS - 1; i > 0; i--) {
-                    TextureTarget source = BLOOM[i];
-                    draw(BLOOM[i - 1], up, transforms, pass -> pass.bindTexture("InSampler", source.getColorTextureView(), linear));
-                }
-                bloomed = BLOOM[0];
-            }
-            TextureTarget bloom = bloomed, lensStreak = streaked;
-            draw(main, composite, transforms, pass -> {
-                pass.setUniform("PlanetfallView", view);
-                pass.bindTexture("InSampler", hdr.getColorTextureView(), nearest);
-                pass.bindTexture("Bloom", bloom.getColorTextureView(), linear);
-                pass.bindTexture("Streak", lensStreak.getColorTextureView(), linear);
-            });
-        } catch (RuntimeException | LinkageError e) {
-            fail(e);
+        if (effect == null) build();
+        RenderTarget main = context.main();
+        int width = main.width, height = main.height;
+        frame = sized(frame, "frame", width, height);
+        volumes = sized(volumes, "volumes", width / 2, height / 2);
+        hdr = sized(hdr, "light", width, height);
+        boolean glowing = glow();
+        if (glowing) {
+            for (int i = 0; i < BLOOM_LEVELS; i++) BLOOM[i] = sized(BLOOM[i], "bloom " + i, width >> (i + 1), height >> (i + 1));
+            for (int i = 0; i < STREAK.length; i++) STREAK[i] = sized(STREAK[i], "streak " + i, width >> 2, height >> 2);
         }
+
+        Minecraft client = Minecraft.getInstance();
+        float partialTick = client.getDeltaTracker().getGameTimeDeltaPartialTick(true);
+        VIEW.reset(client.gameRenderer.getMainCamera());
+        Scene current = scene;
+        if (current != null) current.write(VIEW, partialTick);
+        if (!glowing) VIEW.post.set(0, 0, VIEW.post.z, VIEW.post.w);
+        uniforms.beginFrame();
+        steps.beginFrame();
+        GpuBufferSlice view = uniforms.upload(VIEW);
+        GpuBufferSlice transforms = ScreenPasses.transforms();
+        var nearest = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
+        var linear = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+        var tiled = RenderSystem.getSamplerCache().getRepeat(FilterMode.LINEAR);
+        if (noiseTile == null) {
+            noiseTile = new TextureTarget("Planetfall noise", 256, 256, false);
+            draw(noiseTile, noise, transforms, pass -> { });
+        }
+        TextureTarget tile = noiseTile;
+
+        ScreenPasses.copy(main, frame, transforms);
+        draw(volumes, volume, transforms, pass -> {
+            pass.setUniform("PlanetfallView", view);
+            pass.bindTexture("SceneDepth", main.getDepthTextureView(), nearest);
+            pass.bindTexture("NoiseTile", tile.getColorTextureView(), tiled);
+        });
+        draw(hdr, effect, transforms, pass -> {
+            pass.setUniform("PlanetfallView", view);
+            pass.bindTexture("InputColor", frame.getColorTextureView(), linear);
+            pass.bindTexture("SceneDepth", main.getDepthTextureView(), nearest);
+            pass.bindTexture("Volume", volumes.getColorTextureView(), linear);
+            pass.bindTexture("NoiseTile", tile.getColorTextureView(), tiled);
+        });
+        // Without the glow its strengths are 0 (above), so the composite adds none, and any texture can stand in.
+        TextureTarget bloomed = hdr, streaked = hdr;
+        if (glowing) {
+            draw(BLOOM[0], extract, transforms, pass -> pass.bindTexture("InSampler", hdr.getColorTextureView(), nearest));
+            for (int i = 1; i < BLOOM_LEVELS; i++) {
+                TextureTarget source = BLOOM[i - 1];
+                draw(BLOOM[i], down, transforms, pass -> pass.bindTexture("InSampler", source.getColorTextureView(), linear));
+            }
+            TextureTarget streakSource = BLOOM[1];
+            for (int i = 0; i < STREAK_SPREADS.length; i++) {
+                TextureTarget source = i == 0 ? streakSource : STREAK[(i + 1) % 2];
+                GpuBufferSlice spread = steps.upload(new Vector4f(STREAK_SPREADS[i], 0, 0, 0));
+                draw(STREAK[i % 2], streak, transforms, pass -> {
+                    pass.setUniform("PlanetfallStep", spread);
+                    pass.bindTexture("InSampler", source.getColorTextureView(), linear);
+                });
+            }
+            streaked = STREAK[(STREAK_SPREADS.length - 1) % 2];
+            for (int i = BLOOM_LEVELS - 1; i > 0; i--) {
+                TextureTarget source = BLOOM[i];
+                draw(BLOOM[i - 1], up, transforms, pass -> pass.bindTexture("InSampler", source.getColorTextureView(), linear));
+            }
+            bloomed = BLOOM[0];
+        }
+        TextureTarget bloom = bloomed, lensStreak = streaked;
+        draw(main, composite, transforms, pass -> {
+            pass.setUniform("PlanetfallView", view);
+            pass.bindTexture("InSampler", hdr.getColorTextureView(), nearest);
+            pass.bindTexture("Bloom", bloom.getColorTextureView(), linear);
+            pass.bindTexture("Streak", lensStreak.getColorTextureView(), linear);
+        });
     }
 
     /** Whether to draw the glow: as the Planetfall glow setting says, which by default is {@link #glowByDefault()}. */
@@ -265,20 +221,15 @@ final class PlanetfallShader {
      */
     private static boolean glowByDefault() {
         if (glowByDefault == null) {
-            var device = RenderSystem.getDevice();
-            String renderer = device.getRenderer();
-            boolean intel = (device.getVendor() + " " + renderer).toLowerCase(Locale.ROOT).contains("intel");
-            // Arc cards are discrete, with drivers of their own.
-            glowByDefault = !intel || renderer.contains("Arc");
+            glowByDefault = !ScreenPasses.intelIntegrated();
             if (!glowByDefault) ArcaneSpells.LOGGER.info("Planetfall draws without its glow on {}, whose drivers have hung drawing it;"
-                    + " the Planetfall glow setting can turn it on", renderer);
+                    + " the Planetfall glow setting can turn it on", RenderSystem.getDevice().getRenderer());
         }
         return glowByDefault;
     }
 
     private static void build() {
         noise = fullScreen("noise").build();
-        copy = fullScreen("copy").sampler("InSampler").build();
         volume = fullScreen("volume").sampler("SceneDepth").sampler("NoiseTile").uniformBlock("PlanetfallView").build();
         effect = fullScreen(null).sampler("InputColor").sampler("SceneDepth").sampler("Volume").sampler("NoiseTile")
                 .uniformBlock("PlanetfallView").build();
@@ -287,46 +238,24 @@ final class PlanetfallShader {
         up = fullScreen("bloom_up").sampler("InSampler").transparency(ShaderMaterial.Transparency.ADDITIVE).build();
         streak = fullScreen("streak").sampler("InSampler").uniformBlock("PlanetfallStep").build();
         composite = fullScreen("composite").sampler("InSampler").sampler("Bloom").sampler("Streak").uniformBlock("PlanetfallView").build();
-        for (ShaderMaterial built : new ShaderMaterial[] {noise, copy, volume, effect, extract, down, up, streak, composite}) {
-            built.precompile();
-            // A shader that fails to compile draws nothing at all, rather than throwing: treat it as a failure.
-            if (!RenderSystem.getDevice().precompilePipeline(built.pipeline()).isValid()) {
-                throw new IllegalStateException("A Planetfall shader did not compile; see the log above");
-            }
-        }
+        ScreenPasses.precompile("A Planetfall shader", noise, volume, effect, extract, down, up, streak, composite);
         uniforms = new DynamicUniformBlock<>("Planetfall view", VIEW_BYTES, 4, View::encode);
         steps = new DynamicUniformBlock<>("Planetfall step", 16, 4, (out, step) -> out.putVec4(step));
     }
 
-    /** A pass over the whole screen, drawn with Nebulon's full-screen triangle; its shader is {@code planetfall_<stage>}. */
+    /** A pass over the whole screen; its shader is {@code planetfall_<stage>}. */
     private static ShaderMaterial.Builder fullScreen(String stage) {
         String name = stage == null ? "planetfall" : "planetfall_" + stage;
-        return ShaderMaterial.builder(ArcaneSpells.id(name))
-                .shaders(VERTEX, ArcaneSpells.id("core/" + name))
-                .geometry(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
-                .transparency(ShaderMaterial.Transparency.OPAQUE)
-                .depth(DepthTestFunction.NO_DEPTH_TEST, false)
-                .cull(false);
+        return ScreenPasses.fullScreen(ArcaneSpells.id(name), ArcaneSpells.id("core/" + name));
     }
 
     /** {@code target}, made or resized to {@code width} by {@code height} (at least 1 by 1). */
     private static TextureTarget sized(TextureTarget target, String label, int width, int height) {
-        width = Math.max(1, width);
-        height = Math.max(1, height);
-        if (target == null) return new TextureTarget("Planetfall " + label, width, height, false);
-        if (target.width != width || target.height != height) target.resize(width, height);
-        return target;
+        return ScreenPasses.sized(target, "Planetfall " + label, width, height);
     }
 
     private static void draw(RenderTarget target, ShaderMaterial material, GpuBufferSlice transforms, Consumer<RenderPass> inputs) {
-        try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                () -> "Planetfall", target.getColorTextureView(), OptionalInt.empty())) {
-            pass.setPipeline(material.pipeline());
-            RenderSystem.bindDefaultUniforms(pass);
-            pass.setUniform("DynamicTransforms", transforms);
-            inputs.accept(pass);
-            pass.draw(0, 3);
-        }
+        ScreenPasses.draw(target, "Planetfall", material, transforms, inputs);
     }
 
     /**

@@ -4,65 +4,48 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.platform.DepthTestFunction;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import de.nexusrealms.nebulon.api.render.client.DynamicUniformBlock;
-import de.nexusrealms.nebulon.api.render.client.NebulonRenderSystem;
-import de.nexusrealms.nebulon.api.render.client.RenderStage;
 import de.nexusrealms.nebulon.api.render.client.ShaderMaterial;
-import de.nexusrealms.nebulon.api.render.client.post.NebulonPostProcessing;
 import de.nexusrealms.nebulon.api.render.client.post.PostPassContext;
-import de.nexusrealms.nebulon.api.render.client.post.PostPassHandle;
 import dev.arcane.ArcaneSpells;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.screen.ScreenPass;
+import dev.leyline.client.screen.ScreenPasses;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.OptionalInt;
-import java.util.function.Consumer;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
-import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 /**
  * Black holes and stopped time, drawn straight into the finished frame by one full-screen pass
- * ({@code shaders/core/spacetime.fsh}) run from Nebulon's post-processing hook, after the world is drawn and before
- * the hand and HUD. Like {@link PlanetfallShader}'s it reads the world's depth, so what lies in front of a black hole
+ * ({@code shaders/core/spacetime.fsh}), a Leyline {@link ScreenPass} run after the world is drawn and before the hand
+ * and HUD. Like {@link PlanetfallShader}'s it reads the world's depth, so what lies in front of a black hole
  * hides it; unlike that one it has no glow, which keeps it clear of the chain of passes that hung Intel's drivers.
  *
- * <p>Each frame, the frame is copied ({@code planetfall_copy}, by a draw, for the reason given there), and the pass
- * draws over the frame from the copy: it traces the light bent past each black hole and reads the copy again where
- * that light comes from, drains the colour from what lies inside each Chrono Field, and lays its clock's hands on the
- * ground.
+ * <p>Each frame, the frame is copied ({@link ScreenPasses#copy}), and the pass draws over the frame from the copy: it
+ * traces the light bent past each black hole and reads the copy again where that light comes from, drains the colour
+ * from what lies inside each Chrono Field, and lays its clock's hands on the ground.
  *
  * <p>Any number of spells can ask for it at once ({@link #show}, every tick they want it); up to {@link View#SLOTS}
  * black holes and as many fields are drawn. It costs nothing while none do. With a shader pack or VulkanMod, or after
  * the pass has failed once, {@link #available} is false and spells draw themselves without it.
  */
 final class SpaceTimeShader {
-    private static final Identifier ID = ArcaneSpells.id("spacetime");
-    private static final Identifier VERTEX = Identifier.fromNamespaceAndPath("nebulon", "core/fullscreen_triangle");
-    private static final Matrix4f IDENTITY = new Matrix4f();
-    private static final boolean VULKAN_MOD = FabricLoader.getInstance().isModLoaded("vulkanmod");
+    private static final ScreenPass PASS = new ScreenPass(ArcaneSpells.id("spacetime"), 90, SpaceTimeShader::render,
+            SpaceTimeShader::release, "The black hole and Chrono Field screen pass");
 
-    private static ShaderMaterial copy, effect;
+    private static ShaderMaterial effect;
     /** The frame as the world drew it. */
     private static TextureTarget frame;
     private static DynamicUniformBlock<View> uniforms;
-    private static PostPassHandle handle;
     private static List<Scene> requested = new ArrayList<>(), scenes = List.of();
     private static final View VIEW = new View();
-    /** Set by the first failure; the pass then stays off until the game restarts. */
-    private static boolean failed;
 
     private SpaceTimeShader() {
     }
@@ -72,15 +55,9 @@ final class SpaceTimeShader {
         void write(View view, float partialTick);
     }
 
-    /** Whether the pass can run here: as for {@link PlanetfallShader#available}. */
+    /** Whether the pass can run here ({@link ScreenPass#available}); if not, black holes and fields draw themselves without it. */
     static boolean available() {
-        if (failed || NebulonGuard.disabled() || VULKAN_MOD) return false;
-        try {
-            return !NebulonRenderSystem.environment().irisShaderPackActive();
-        } catch (RuntimeException | LinkageError e) {
-            fail(e);
-            return false;
-        }
+        return PASS.available();
     }
 
     /** Asks for {@code scene} to be drawn this tick. */
@@ -92,104 +69,51 @@ final class SpaceTimeShader {
     static void tick() {
         scenes = available() ? requested : List.of();
         requested = new ArrayList<>();
-        if (!scenes.isEmpty() && handle == null) {
-            NebulonGuard.cleanup(() -> handle = NebulonPostProcessing.register(ID, RenderStage.END_MAIN, 90, SpaceTimeShader::render));
-        } else if (scenes.isEmpty() && handle != null) {
-            close();
-        }
+        PASS.run(!scenes.isEmpty());
     }
 
     /** Stops the pass. Safe from any thread: a disconnect clears effects from the network thread. */
     static void clear() {
         requested = new ArrayList<>();
         scenes = List.of();
-        if (RenderSystem.isOnRenderThread()) close();
-        else Minecraft.getInstance().execute(SpaceTimeShader::close);
+        PASS.stop();
     }
 
-    private static void close() {
-        PostPassHandle closing = handle;
-        handle = null;
-        if (closing != null) NebulonGuard.cleanup(closing::close);
+    private static void release() {
         TextureTarget target = frame;
         if (target != null) NebulonGuard.cleanup(target::destroyBuffers);
         frame = null;
     }
 
-    private static void fail(Throwable e) {
-        if (failed) return;
-        failed = true;
-        ArcaneSpells.LOGGER.error("The black hole and Chrono Field screen pass failed; they will draw themselves without it until the game restarts", e);
-    }
-
-    /** Runs inside world rendering, drawing over the whole frame. Any failure is logged once and switches the pass off. */
+    /** Runs inside world rendering, drawing over the whole frame. */
     private static void render(PostPassContext context) {
-        try {
-            if (copy == null) build();
-            RenderTarget main = context.main();
-            frame = sized(frame, main.width, main.height);
-            Minecraft client = Minecraft.getInstance();
-            float partialTick = client.getDeltaTracker().getGameTimeDeltaPartialTick(true);
-            VIEW.reset(client.gameRenderer.getMainCamera(), partialTick);
-            for (Scene scene : scenes) scene.write(VIEW, partialTick);
-            uniforms.beginFrame();
-            GpuBufferSlice view = uniforms.upload(VIEW);
-            GpuBufferSlice transforms = RenderSystem.getDynamicUniforms().writeTransform(IDENTITY, new Vector4f(1), new Vector3f(), IDENTITY);
-            var nearest = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
-            var linear = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
-            TextureTarget copied = frame;
-            draw(copied, copy, transforms, pass -> pass.bindTexture("InSampler", main.getColorTextureView(), nearest));
-            draw(main, effect, transforms, pass -> {
-                pass.setUniform("SpaceTimeView", view);
-                pass.bindTexture("InputColor", copied.getColorTextureView(), linear);
-                pass.bindTexture("SceneDepth", main.getDepthTextureView(), nearest);
-            });
-        } catch (RuntimeException | LinkageError e) {
-            fail(e);
-        }
+        if (effect == null) build();
+        RenderTarget main = context.main();
+        frame = ScreenPasses.sized(frame, "Space-time frame", main.width, main.height);
+        Minecraft client = Minecraft.getInstance();
+        float partialTick = client.getDeltaTracker().getGameTimeDeltaPartialTick(true);
+        VIEW.reset(client.gameRenderer.getMainCamera(), partialTick);
+        for (Scene scene : scenes) scene.write(VIEW, partialTick);
+        uniforms.beginFrame();
+        GpuBufferSlice view = uniforms.upload(VIEW);
+        GpuBufferSlice transforms = ScreenPasses.transforms();
+        var nearest = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
+        var linear = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+        TextureTarget copied = frame;
+        ScreenPasses.copy(main, copied, transforms);
+        ScreenPasses.draw(main, "Space-time", effect, transforms, pass -> {
+            pass.setUniform("SpaceTimeView", view);
+            pass.bindTexture("InputColor", copied.getColorTextureView(), linear);
+            pass.bindTexture("SceneDepth", main.getDepthTextureView(), nearest);
+        });
     }
 
     private static void build() {
-        copy = fullScreen("spacetime_copy", "planetfall_copy").sampler("InSampler").build();
-        effect = fullScreen("spacetime", "spacetime").sampler("InputColor").sampler("SceneDepth").uniformBlock("SpaceTimeView").build();
-        for (ShaderMaterial built : new ShaderMaterial[] {copy, effect}) {
-            built.precompile();
-            // A shader that fails to compile draws nothing at all, rather than throwing: treat it as a failure.
-            if (!RenderSystem.getDevice().precompilePipeline(built.pipeline()).isValid()) {
-                throw new IllegalStateException("The space-time shader did not compile; see the log above");
-            }
-        }
+        ShaderMaterial built = ScreenPasses.fullScreen(ArcaneSpells.id("spacetime"), ArcaneSpells.id("core/spacetime"))
+                .sampler("InputColor").sampler("SceneDepth").uniformBlock("SpaceTimeView").build();
+        ScreenPasses.precompile("The space-time shader", built);
         uniforms = new DynamicUniformBlock<>("Space-time view", View.BYTES, 4, View::encode);
-    }
-
-    /** A pass over the whole screen, drawn with Nebulon's full-screen triangle, named {@code name} and drawn by {@code shader}. */
-    private static ShaderMaterial.Builder fullScreen(String name, String shader) {
-        return ShaderMaterial.builder(ArcaneSpells.id(name))
-                .shaders(VERTEX, ArcaneSpells.id("core/" + shader))
-                .geometry(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
-                .transparency(ShaderMaterial.Transparency.OPAQUE)
-                .depth(DepthTestFunction.NO_DEPTH_TEST, false)
-                .cull(false);
-    }
-
-    /** {@code target}, made or resized to {@code width} by {@code height} (at least 1 by 1). */
-    private static TextureTarget sized(TextureTarget target, int width, int height) {
-        width = Math.max(1, width);
-        height = Math.max(1, height);
-        if (target == null) return new TextureTarget("Space-time frame", width, height, false);
-        if (target.width != width || target.height != height) target.resize(width, height);
-        return target;
-    }
-
-    private static void draw(RenderTarget target, ShaderMaterial material, GpuBufferSlice transforms, Consumer<RenderPass> inputs) {
-        try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                () -> "Space-time", target.getColorTextureView(), OptionalInt.empty())) {
-            pass.setPipeline(material.pipeline());
-            RenderSystem.bindDefaultUniforms(pass);
-            pass.setUniform("DynamicTransforms", transforms);
-            inputs.accept(pass);
-            pass.draw(0, 3);
-        }
+        effect = built;
     }
 
     /**

@@ -207,8 +207,9 @@ src/client/java/dev/arcane/          client-only code
   mixin/client/SkyRendererMixin,     apply SpaceSky to the sky, stars and fog
         FogRendererMixin
 src/main/resources/assets/arcane_spells/shaders/
-                                     the screen passes (core/planetfall.fsh, core/spacetime.fsh), their frame copy, and
-                                       their shared ray and projection helpers (include/screen_space.glsl)
+                                     the screen passes (core/planetfall.fsh, core/spacetime.fsh) and Planetfall's shared
+                                       view and noise (include/planetfall_common.glsl); the frame copy and the ray and
+                                       projection helpers they import are Leyline's (leyline:screen_space.glsl)
 src/main/resources/data/arcane_spells/tags/arcane_spells/spell/
                                      each staff's spells
 src/main/resources/data/arcane_spells/enchantment/, advancement/
