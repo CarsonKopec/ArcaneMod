@@ -25,6 +25,7 @@ import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
+import dev.arcane.spell.SpellTuning;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ColorParticleOption;
@@ -40,8 +41,9 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Meteor Swarm as the client sees it: a burning seal over the target area, its edge marked in red on the ground, and
  * each meteor a white-hot ball shedding sparks and trailing flame and lingering smoke, flown here from its launch
- * message until it strikes in a flash. The Dread Star, last, is the same at its own far larger size, and its shockwave
- * drives a wall of dust out across the ground.
+ * message until it strikes: a fireball, a shockwave racing out across the ground and debris flung high, drawn as big
+ * as the server's blast. The Dread Star, last, is the same at its own far larger size, and its shockwave drives a wall
+ * of dust out across the ground.
  */
 final class MeteorFx {
     private static final Fx.Tracker<Swarm> SWARMS = new Fx.Tracker<>();
@@ -143,6 +145,11 @@ final class MeteorFx {
         final int lifetime;
         /** 1 for a meteor; the Dread Star is several times that. */
         final float size;
+        /**
+         * How big its impact looks, 1 for a blast reaching 6 blocks: drawn to scale with the blast the server deals, so
+         * a meteor's lands far bigger than its head looks, and the Dread Star's bigger still.
+         */
+        final float impact;
         final Fx.Planes planes = new Fx.Planes();
         final RandomSource random = RandomSource.create();
         PointLightHandle light;
@@ -155,6 +162,7 @@ final class MeteorFx {
             this.velocity = launch.direction();
             this.lifetime = Math.max(1, launch.age());
             this.size = Math.max(1, launch.power());
+            this.impact = (float) ((size > 1 ? SpellTuning.DREAD_STAR_BLAST_RADIUS : SpellTuning.METEOR_BLAST_RADIUS) / 6);
             this.position = start;
         }
 
@@ -163,14 +171,14 @@ final class MeteorFx {
             impactAge = 0;
             position = at;
             float near = proximity(at);
-            ScreenEffects.shake(Math.min(1, 0.35f * size) * near);
-            ScreenEffects.flash(Math.min(1, 0.12f * size * size) * near);
+            ScreenEffects.shake(Math.min(1, 0.3f * impact) * near);
+            ScreenEffects.flash(Math.min(1, 0.06f * impact * impact) * near);
             if (particlesVisible(at)) impactParticles();
         }
 
         /** How long its impact keeps glowing: longer for the Dread Star. */
         private int impactTicks() {
-            return Math.round(IMPACT_TICKS * (float) Math.sqrt(size));
+            return Math.round(IMPACT_TICKS * (float) Math.sqrt(impact));
         }
 
         @Override public boolean tick() {
@@ -198,27 +206,31 @@ final class MeteorFx {
                 }
                 light = light(light, position, 14 * size, 3.5f * size, FIRE);
             } else {
-                int glowTicks = Math.round(10 * size), ringTicks = ringTicks();
+                int glowTicks = Math.round(10 * impact), ringTicks = ringTicks();
                 float fade = 1 - impactAge / (float) impactTicks();
                 if (impactAge <= glowTicks) {
-                    planes.glow(position.add(0, size, 0), size * (2 + 5 * ease(impactAge / 3f)), scaled(BLAZE, 1 - impactAge / (float) glowTicks));
+                    // The fireball, and a white-hot core flaring at its heart for the first instants.
+                    planes.glow(position.add(0, impact, 0), impact * (2 + 5 * ease(impactAge / 3f)), scaled(BLAZE, 1 - impactAge / (float) glowTicks));
+                    if (impactAge <= 4) planes.glow(position.add(0, impact, 0), impact * 2.5f, scaled(ColorRgba.WHITE, 1 - impactAge / 5f));
                 }
                 if (impactAge <= ringTicks) {
                     float left = 1 - impactAge / (float) ringTicks;
-                    planes.ring(position.add(0, 0.2, 0), UP, shockwave(), size * 0.5f * left + 0.05f, scaled(FIRE, left));
+                    planes.ring(position.add(0, 0.2, 0), UP, shockwave(), impact * 0.5f * left + 0.05f, scaled(FIRE, left));
+                    // Behind it, the ground glowing where the blast scoured it.
+                    planes.ring(position.add(0, 0.25, 0), UP, shockwave() * 0.55, impact * 0.9f * left + 0.05f, scaled(CRIMSON, 0.6f * left));
                 }
-                light = light(light, position.add(0, 1.5, 0), 14 * size, 4 * size * fade * fade, FIRE);
+                light = light(light, position.add(0, 1.5, 0), 14 * impact, 4 * impact * fade * fade, FIRE);
             }
             planes.end();
         }
 
         private int ringTicks() {
-            return Math.round(9 * size);
+            return Math.round(9 * impact);
         }
 
         /** How far the impact's shockwave has raced out across the ground. */
         private double shockwave() {
-            return size * (1 + 8 * ease(impactAge / (float) (ringTicks() - 1)));
+            return impact * (1 + 8 * ease(impactAge / (float) (ringTicks() - 1)));
         }
 
         /** The Dread Star's shockwave, driving a wall of dust and grit out across the ground and leaving a haze. */
@@ -260,23 +272,23 @@ final class MeteorFx {
         }
 
         private void impactParticles() {
-            particle(FLARE, position.add(0, size, 0), Vec3.ZERO);
-            for (int i = 0; i < Math.round(size * size); i++) {
-                particle(ParticleTypes.EXPLOSION_EMITTER, position.add(upwards(random, 0.3).scale(random.nextDouble() * 2 * (size - 1))), Vec3.ZERO);
+            particle(FLARE, position.add(0, impact, 0), Vec3.ZERO);
+            for (int i = 0; i < Math.round(impact * impact); i++) {
+                particle(ParticleTypes.EXPLOSION_EMITTER, position.add(upwards(random, 0.3).scale(random.nextDouble() * 2.4 * impact)), Vec3.ZERO);
             }
-            for (int i = 0, n = Fx.scaled(Math.round(6 * size)); i < n; i++) {
-                particle(ParticleTypes.EXPLOSION, position.add(upwards(random, 0.2).scale(size * (1 + random.nextDouble() * 2.5))), Vec3.ZERO);
+            for (int i = 0, n = Fx.scaled(Math.round(6 * impact)); i < n; i++) {
+                particle(ParticleTypes.EXPLOSION, position.add(upwards(random, 0.2).scale(impact * (1 + random.nextDouble() * 2.5))), Vec3.ZERO);
             }
-            for (int i = 0, n = Fx.scaled(Math.round(30 * size)); i < n; i++) {
-                particle(ParticleTypes.FLAME, position.add(0, 0.5, 0), upwards(random, 0.3).scale(Math.sqrt(size) * (0.2 + random.nextDouble() * 0.4)));
+            for (int i = 0, n = Fx.scaled(Math.round(30 * impact)); i < n; i++) {
+                particle(ParticleTypes.FLAME, position.add(0, 0.5, 0), upwards(random, 0.3).scale(Math.sqrt(impact) * (0.2 + random.nextDouble() * 0.4)));
             }
             BlockParticleOption debris = new BlockParticleOption(ParticleTypes.BLOCK, ground());
-            for (int i = 0, n = Fx.scaled(Math.round(30 * size)); i < n; i++) {
-                particle(debris, position.add(0, 0.5, 0), upwards(random, 0.6).scale(Math.sqrt(size) * (0.4 + random.nextDouble() * 0.6)));
+            for (int i = 0, n = Fx.scaled(Math.round(30 * impact)); i < n; i++) {
+                particle(debris, position.add(0, 0.5, 0), upwards(random, 0.6).scale(Math.sqrt(impact) * (0.4 + random.nextDouble() * 0.6)));
             }
-            for (int i = 0, n = Fx.scaled(Math.round(10 * size)); i < n; i++) particle(ParticleTypes.LAVA, position, Vec3.ZERO);
-            for (int i = 0, n = Fx.scaled(Math.round(4 * size)); i < n; i++) {
-                particle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, position.add(upwards(random, 0).scale(random.nextDouble() * 2 * size)), new Vec3(0, 0.07, 0));
+            for (int i = 0, n = Fx.scaled(Math.round(10 * impact)); i < n; i++) particle(ParticleTypes.LAVA, position, Vec3.ZERO);
+            for (int i = 0, n = Fx.scaled(Math.round(4 * impact)); i < n; i++) {
+                particle(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, position.add(upwards(random, 0).scale(random.nextDouble() * 2 * impact)), new Vec3(0, 0.07, 0));
             }
         }
 

@@ -58,7 +58,7 @@
 	"spell.arcane_spells.meteor_swarm": "Meteor Swarm",
 	"spell.arcane_spells.meteor_swarm.description": "Channel, then release: a burning sigil opens over the marked ground and rains meteors across it, half of them seeking out creatures.",
 	"spell.arcane_spells.singularity": "Singularity",
-	"spell.arcane_spells.singularity.description": "Channel, then release: a black hole drags in everything nearby, devours the ground, bends the light round it, then collapses, throwing back what it held.",
+	"spell.arcane_spells.singularity.description": "Channel, then release: a black hole drags in everything nearby, devours the ground and grows as it feeds, bends the light round it, then collapses, the harder the bigger it grew, throwing back what it held.",
 	"spell.arcane_spells.chrono_field": "Chrono Field",
 	"spell.arcane_spells.chrono_field.description": "Channel, then release: time stops in a dome around you. Blows struck inside it land at once, harder, when it ends, and projectiles fly back the way they came.",
 	"spell.arcane_spells.astral_gate": "Astral Gate",

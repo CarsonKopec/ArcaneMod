@@ -17,9 +17,6 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -176,22 +173,7 @@ final class JudgmentStrike {
     private void carveCrater() {
         int perTick = Mth.ceil(crater.size() / (float) SpellTuning.JUDGMENT_CARVE_TICKS);
         for (int i = 0; i < perTick && carved < crater.size(); i++) vaporise(crater.get(carved++));
-        if (age == END) scorch();
-    }
-
-    /** Sears the crater's exposed floor and walls: natural ground turns partly to blackstone, basalt and magma. */
-    private void scorch() {
-        for (BlockPos pos : shell) {
-            BlockState state = level.getBlockState(pos);
-            if (!SpellTerrain.isGround(state) || !SpellTerrain.mayVaporise(level, caster, mayBuild, pos, state)
-                    || !SpellTerrain.exposed(level, pos)) continue;
-            float roll = random.nextFloat();
-            BlockState seared = roll < 0.15f ? Blocks.MAGMA_BLOCK.defaultBlockState()
-                    : roll < 0.5f ? Blocks.BLACKSTONE.defaultBlockState()
-                    : roll < 0.65f ? Blocks.BASALT.defaultBlockState()
-                    : null;
-            if (seared != null) level.setBlock(pos, seared, Block.UPDATE_ALL);
-        }
+        if (age == END) SpellTerrain.scorch(level, caster, mayBuild, shell, random);
     }
 
     private void vaporise(BlockPos pos) {

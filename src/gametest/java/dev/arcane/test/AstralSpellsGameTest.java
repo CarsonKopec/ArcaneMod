@@ -99,13 +99,16 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
                 if (level.getBlockState(pos).isAir() && pos.getZ() <= 69) broken++;
             }
             check(broken >= 200, "Meteors broke only " + broken + " blocks of the plateau's top");
-            // The Dread Star lands on the mark itself, and its blast is far bigger than a meteor's. Like any explosion it
-            // gets only a couple of blocks into stone, so look one layer under the top, which a lone meteor can't reach.
-            boolean cratered = false;
-            for (BlockPos pos : BlockPos.betweenClosed(MARK.offset(-1, -1, -1), MARK.offset(1, -1, 1))) {
-                cratered |= level.getBlockState(pos).isAir();
+            // The Dread Star lands on the mark itself, and its crater is far bigger than a meteor's: deeper under the mark
+            // than any one meteor's reaches, and the plateau's top gone 12 blocks out every way.
+            boolean deep = false;
+            for (BlockPos pos : BlockPos.betweenClosed(MARK.offset(-1, -6, -1), MARK.offset(1, -6, 1))) {
+                deep |= level.getBlockState(pos).isAir();
             }
-            check(cratered, "The Dread Star left no crater at the mark");
+            check(deep, "The Dread Star's crater isn't 6 blocks deep at the mark");
+            for (BlockPos edge : List.of(MARK.east(12), MARK.west(12), MARK.north(12), MARK.south(12))) {
+                check(level.getBlockState(edge).isAir(), "The Dread Star's crater doesn't reach " + edge);
+            }
             // Killed pigs are soon gone altogether, so count the pigs left unharmed.
             long unharmed = level.getEntities(EntityType.PIG, pig -> pig.isAlive() && pig.getHealth() == pig.getMaxHealth()).size();
             check(unharmed < 5, "No pig was hit by " + SpellTuning.METEOR_COUNT + " meteors and the Dread Star");
@@ -116,7 +119,7 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
 
     /**
      * Seeking: every other meteor aims at a creature in the area. With one pig there, out near the edge, every seeker
-     * aims at it, where by chance alone two or three meteors would land near it. (Among several creatures dying at
+     * aims at it, where the whole swarm landing by chance would reach it some six times. (Among several creatures dying at
      * random, the share left for any one of them is chance too.) The pig takes no harm but logs every blast that
      * reaches it; with terrain_damage off the ground under it stays flat.
      */
@@ -152,6 +155,13 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
         server.runCommand("summon minecraft:pig -11.5 -43 40.5");
         server.runCommand("summon minecraft:pig 0.5 -43 52.5");
         server.runCommand("summon minecraft:item 0.5 -43 30.5 {Item:{id:\"minecraft:diamond\",count:1}}");
+        // And one 40 blocks off, out of the pull's reach and beyond a fresh singularity's collapse, that takes no harm
+        // but logs every blow: only one that has grown by eating the ground reaches it.
+        Pig[] far = new Pig[1];
+        server.runOnServer(s -> {
+            DamageLog.clear();
+            far[0] = DamageLog.spawn(s.overworld(), EntityType.PIG, MARK_TOP.add(40, 0, 0));
+        });
         context.waitTicks(5);
         Vec3 center = MARK_TOP.add(0, SpellTuning.SINGULARITY_LIFT, 0);
         server.runOnServer(s -> check(castAt(s, ModSpells.SINGULARITY, MARK_TOP), "Singularity was refused"));
@@ -160,7 +170,7 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
         context.waitTicks(40);
         context.takeScreenshot("astral-singularity");
         server.runOnServer(s -> {
-            for (Pig pig : s.overworld().getEntities(EntityType.PIG, pig -> pig.isAlive())) {
+            for (Pig pig : s.overworld().getEntities(EntityType.PIG, pig -> pig != far[0] && pig.isAlive())) {
                 check(pig.getBoundingBox().getCenter().distanceTo(center) < 8, "A pig wasn't dragged in: " + pig.position());
             }
             List<ItemEntity> items = s.overworld().getEntitiesOfClass(ItemEntity.class, new AABB(center, center).inflate(20));
@@ -177,15 +187,22 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
         context.takeScreenshot("astral-singularity-collapse");
         server.runOnServer(s -> {
             check(s.overworld().getBlockState(MARK).isAir(), "The ground under the singularity wasn't eaten");
-            long dead = s.overworld().getEntities(EntityType.PIG, pig -> !pig.isAlive()).size()
-                    + 3 - s.overworld().getEntities(EntityType.PIG, pig -> true).size();
+            long dead = s.overworld().getEntities(EntityType.PIG, pig -> pig != far[0] && !pig.isAlive()).size()
+                    + 3 - s.overworld().getEntities(EntityType.PIG, pig -> pig != far[0]).size();
             check(dead >= 1, "The singularity crushed no pig");
             // What it swallowed, it gives back.
             List<ItemEntity> items = s.overworld().getEntitiesOfClass(ItemEntity.class, new AABB(center, center).inflate(48),
                     item -> item.getItem().is(Items.DIAMOND));
             check(!items.isEmpty(), "The singularity destroyed the diamond it swallowed");
+            // Having eaten its fill of the plateau, it grew, and its collapse reached far beyond a fresh one's.
+            check(DamageLog.of(far[0]).stream().anyMatch(blow -> blow.source().is(DamageTypeTags.IS_EXPLOSION)),
+                    "The collapse didn't reach the pig 40 blocks off: the singularity didn't grow as it ate");
+            far[0].discard();
         });
-        context.waitTicks(10);
+        // Its crater is carved over the next second, wider than the hollow it ate, which reaches some 10 blocks out at the top.
+        context.waitTicks(Math.max(10, SpellTuning.SINGULARITY_CARVE_TICKS + 2));
+        server.runOnServer(s -> check(s.overworld().getBlockState(MARK.offset(15, 0, 0)).isAir()
+                && s.overworld().getBlockState(MARK.offset(-15, 0, 0)).isAir(), "The collapse left no crater wider than what it ate"));
         context.runOnClient(client -> check(!spaceTimePass(), "The black hole outlived the singularity"));
         server.runCommand("kill @e[type=!minecraft:player]");
         server.runCommand("gamemode survival @a");

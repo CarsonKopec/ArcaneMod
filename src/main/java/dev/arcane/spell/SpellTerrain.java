@@ -1,11 +1,13 @@
 package dev.arcane.spell;
 
 import dev.arcane.registry.ModGameRules;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Explosion;
@@ -77,5 +79,19 @@ final class SpellTerrain {
     /** Removes the block without drops; a container still spills what it held. */
     static void vaporise(ServerLevel level, BlockPos pos) {
         level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+    }
+
+    /** Sears a crater's exposed floor and walls ({@code shell}): natural ground turns partly to blackstone, basalt and magma. */
+    static void scorch(ServerLevel level, ServerPlayer caster, boolean mayBuild, List<BlockPos> shell, RandomSource random) {
+        for (BlockPos pos : shell) {
+            BlockState state = level.getBlockState(pos);
+            if (!isGround(state) || !mayVaporise(level, caster, mayBuild, pos, state) || !exposed(level, pos)) continue;
+            float roll = random.nextFloat();
+            BlockState seared = roll < 0.15f ? Blocks.MAGMA_BLOCK.defaultBlockState()
+                    : roll < 0.5f ? Blocks.BLACKSTONE.defaultBlockState()
+                    : roll < 0.65f ? Blocks.BASALT.defaultBlockState()
+                    : null;
+            if (seared != null) level.setBlock(pos, seared, Block.UPDATE_ALL);
+        }
     }
 }

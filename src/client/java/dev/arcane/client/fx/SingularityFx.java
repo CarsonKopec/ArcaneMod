@@ -35,6 +35,9 @@ import net.minecraft.world.phys.Vec3;
  * <p>For its last {@link #FORM_BEFORE} ticks it becomes a true black hole, drawn by {@link SpaceTimeShader}: black,
  * the world behind it bent round it, a white-hot disc whirling about it, and the rings and ink fade away. Without
  * that pass it stays as it was. Then it collapses: it is crushed to nothing, and a flash and a shockwave burst out.
+ *
+ * <p>As it eats it grows (the server says by how much), and everything about it grows with it: the black hole and its
+ * disc, its rings, its light, and in the end its collapse.
  */
 final class SingularityFx {
     private static final Fx.Tracker<Hole> HOLES = new Fx.Tracker<>();
@@ -49,7 +52,8 @@ final class SingularityFx {
     private static final float HEART = (float) SpellTuning.SINGULARITY_CRUSH_RADIUS;
     /** The rings crush inwards over this long before the blast. */
     private static final int IMPLODE_TICKS = 5;
-    private static final int COLLAPSE_TICKS = 40;
+    /** Long enough for the blast of the biggest hole to fade. */
+    private static final int COLLAPSE_TICKS = 60;
     /** The black hole's event horizon, in blocks from its centre; its shadow looks some 2.6 times as wide. */
     private static final float HORIZON = 1.15f;
     /** Its disc reaches as far as the singularity eats the ground. */
@@ -65,9 +69,13 @@ final class SingularityFx {
 
     static void register() {
         SpellEffectRenderers.register(ModSpellEffects.SINGULARITY,
-                (effect, level) -> HOLES.get(effect.sourceId(), level, id -> new Hole(effect)));
+                (effect, level) -> HOLES.get(effect.sourceId(), level, id -> Hole.opened(effect)));
+        // A hole first heard of as it grows or collapses was opened before this client came in range.
+        SpellEffectRenderers.register(ModSpellEffects.SINGULARITY_GROWTH,
+                (effect, level) -> HOLES.get(effect.sourceId(), level, id -> new Hole(effect, effect.age())).grow(effect.power()));
         SpellEffectRenderers.register(ModSpellEffects.SINGULARITY_COLLAPSE,
-                (effect, level) -> HOLES.get(effect.sourceId(), level, id -> new Hole(effect)).collapse());
+                (effect, level) -> HOLES.get(effect.sourceId(), level, id -> new Hole(effect, SpellTuning.SINGULARITY_DURATION_TICKS))
+                        .collapse(effect.power()));
     }
 
     private static final class Hole implements Fx.Animation {
@@ -85,25 +93,50 @@ final class SingularityFx {
         int collapseAge = -1;
         /** Whether the black hole is being drawn by the screen pass, rather than not at all. */
         boolean drawn;
+        /** How many times its first size the server last said it is. */
+        float growth = 1;
+        /** The size it's drawn at, following {@link #growth} smoothly rather than in steps. */
+        float grown = 1;
 
-        Hole(SpellEffect effect) {
-            this.center = effect.position();
-            this.reach = effect.power() > 0 ? effect.power() : SpellTuning.SINGULARITY_PULL_RADIUS;
-            this.duration = effect.age() > 0 ? effect.age() : SpellTuning.SINGULARITY_DURATION_TICKS;
+        /** As it opens. */
+        static Hole opened(SpellEffect effect) {
+            return new Hole(effect.position(), effect.power() > 0 ? effect.power() : SpellTuning.SINGULARITY_PULL_RADIUS,
+                    effect.age() > 0 ? effect.age() : SpellTuning.SINGULARITY_DURATION_TICKS, 0, effect.sourceId());
+        }
+
+        /** Already {@code age} ticks old, heard of from {@code effect}, which isn't the one it opened with. */
+        Hole(SpellEffect effect, int age) {
+            this(effect.position(), SpellTuning.SINGULARITY_PULL_RADIUS, SpellTuning.SINGULARITY_DURATION_TICKS, age, effect.sourceId());
+        }
+
+        private Hole(Vec3 center, double reach, int duration, int age, int sourceId) {
+            this.center = center;
+            this.reach = reach;
+            this.duration = duration;
+            this.age = age;
             // Every client sees the same disc.
-            RandomSource shape = RandomSource.create(effect.sourceId() * 31L + Double.hashCode(center.x) + Double.hashCode(center.z));
+            RandomSource shape = RandomSource.create(sourceId * 31L + Double.hashCode(center.x) + Double.hashCode(center.z));
             double tip = 0.12 + 0.12 * shape.nextDouble(), toward = shape.nextDouble() * Mth.TWO_PI;
             this.axis = new Vec3(Math.sin(tip) * Math.cos(toward), Math.cos(tip), Math.sin(tip) * Math.sin(toward));
             this.seed = shape.nextFloat() * 100;
         }
 
-        void collapse() {
+        Hole grow(float size) {
+            growth = Math.max(growth, size);
+            return this;
+        }
+
+        /** It collapses, {@code size} times its first size: its blast as much bigger. */
+        void collapse(float size) {
+            grow(size);
+            grown = growth;
             if (collapseAge < 0) collapseAge = 0;
         }
 
         @Override public boolean tick() {
             age++;
             if (collapseAge >= 0) collapseAge++;
+            grown += (growth - grown) * 0.15f;
             if (collapseAge < 0 && age == duration - FORM_BEFORE) form();
             if (collapseAge == IMPLODE_TICKS) burst();
             drawn = SpaceTimeShader.available();
@@ -142,7 +175,9 @@ final class SingularityFx {
             float formed = formed(partialTick);
             if (formed <= 0) return;
             float seconds = (age + partialTick) / 20;
-            view.hole(center, HORIZON * formed, axis, DISC * (0.5f + 0.5f * formed), formed, seconds * DISC_SPIN, seed);
+            // The disc widens more slowly than the hole, as its inner edge, three times the horizon out, must stay inside it.
+            view.hole(center, HORIZON * formed * grown, axis, DISC * (float) Math.sqrt(grown) * (0.5f + 0.5f * formed), formed,
+                    seconds * DISC_SPIN, seed);
         }
 
         private void animate() {
@@ -152,13 +187,14 @@ final class SingularityFx {
             float rings = 1 - shown();
             planes.begin();
             if (size > 0 && rings > 0) {
-                planes.halo(center, HEART * 0.55 * size, 0.25f, scaled(PALE, pulse * rings));
+                planes.halo(center, HEART * 0.55 * size * grown, 0.25f * grown, scaled(PALE, pulse * rings));
                 ColorRgba[] colors = {VIOLET, MAGENTA, PALE};
                 for (int i = 0; i < 3; i++) {
                     // Each ring leans 20-35 degrees and precesses at its own speed.
                     double tilt = 0.35 + 0.12 * i, phase = age * (0.05 + 0.03 * i) + i * 2.1;
                     Vec3 normal = new Vec3(Math.sin(tilt) * Math.cos(phase), Math.cos(tilt), Math.sin(tilt) * Math.sin(phase));
-                    planes.ring(center, normal, HEART * (0.85 + 0.4 * i) * size, 0.4f - 0.07f * i, scaled(colors[i], 0.8f * pulse * rings));
+                    planes.ring(center, normal, HEART * (0.85 + 0.4 * i) * size * grown, (0.4f - 0.07f * i) * grown,
+                            scaled(colors[i], 0.8f * pulse * rings));
                 }
             }
             if (size > 0) {
@@ -172,20 +208,26 @@ final class SingularityFx {
                 }
             }
             if (collapseAge >= IMPLODE_TICKS) {
+                // The bigger it grew, the bigger and longer the blast: its flash, and a shockwave out to the blast's reach.
                 int burst = collapseAge - IMPLODE_TICKS;
-                if (burst <= 16) planes.glow(center, HEART * (0.8f + 5 * ease(burst / 4f)), scaled(PALE, 1 - burst / 16f));
-                if (burst <= 14) {
+                float last = (float) Math.sqrt(grown);
+                int glowTicks = Math.round(16 * last), ringTicks = Math.round(14 * last);
+                if (burst <= glowTicks) planes.glow(center, HEART * grown * (0.8f + 5 * ease(burst / (4f * last))), scaled(PALE, 1 - burst / (float) glowTicks));
+                if (burst <= ringTicks) {
                     Vec3 ground = center.subtract(0, SpellTuning.SINGULARITY_LIFT - 0.15, 0);
-                    double radius = 1 + SpellTuning.SINGULARITY_COLLAPSE_RADIUS * 1.3 * ease(burst / 12f);
-                    planes.ring(ground, UP, radius, 2f * (1 - burst / 14f) + 0.1f, scaled(MAGENTA, 1 - burst / 14f));
+                    double radius = 1 + SpellTuning.SINGULARITY_COLLAPSE_RADIUS * grown * 1.3 * ease(burst / (ringTicks - 2f));
+                    float left = 1 - burst / (float) ringTicks;
+                    planes.ring(ground, UP, radius, 2f * grown * left + 0.1f, scaled(MAGENTA, left));
+                    // A second, slower front of dust and light behind the first.
+                    planes.ring(ground.add(0, 0.1, 0), UP, radius * 0.7, 1.2f * grown * left + 0.1f, scaled(PALE, 0.6f * left));
                 }
             }
             planes.end();
             // The black hole's disc lights the ground below it warm and bright.
             float shown = shown();
-            float bright = collapseAge >= IMPLODE_TICKS ? 6 * Math.max(0, 1 - (collapseAge - IMPLODE_TICKS) / 25f)
+            float bright = collapseAge >= IMPLODE_TICKS ? 6 * grown * Math.max(0, 1 - (collapseAge - IMPLODE_TICKS) / (25f * (float) Math.sqrt(grown)))
                     : 1.6f * size * pulse * (1 + 1.2f * shown);
-            glow = bright > 0.01f ? light(glow, center, HEART * 6, bright, shown > 0.5f ? DISC_LIGHT : VIOLET) : unlight(glow);
+            glow = bright > 0.01f ? light(glow, center, HEART * 6 * grown, bright, shown > 0.5f ? DISC_LIGHT : VIOLET) : unlight(glow);
         }
 
         private void particles() {
@@ -193,11 +235,11 @@ final class SingularityFx {
             float size = size();
             // The dark heart: ink and smoke, held close, until the black hole's own darkness takes its place.
             float ink = 1 - shown();
-            for (int i = 0, n = Fx.scaled(Math.round(12 * ink)); i < n; i++) {
-                particle(ParticleTypes.SQUID_INK, center.add(anyDirection(random).scale(HEART * 0.35 * size * random.nextDouble())), Vec3.ZERO);
+            for (int i = 0, n = Fx.scaled(Math.round(12 * ink * grown)); i < n; i++) {
+                particle(ParticleTypes.SQUID_INK, center.add(anyDirection(random).scale(HEART * 0.35 * size * grown * random.nextDouble())), Vec3.ZERO);
             }
-            for (int i = 0, n = Fx.scaled(Math.round(4 * ink)); i < n; i++) {
-                particle(ParticleTypes.LARGE_SMOKE, center.add(anyDirection(random).scale(HEART * 0.5 * size)), Vec3.ZERO);
+            for (int i = 0, n = Fx.scaled(Math.round(4 * ink * grown)); i < n; i++) {
+                particle(ParticleTypes.LARGE_SMOKE, center.add(anyDirection(random).scale(HEART * 0.5 * size * grown)), Vec3.ZERO);
             }
             // Portal particles fly from where they're aimed back to where they spawned: these all pour into the heart.
             // Particles are drawn over the black hole, so once it forms only a few still stream in across its darkness.
@@ -212,20 +254,23 @@ final class SingularityFx {
             }
         }
 
-        /** The blast as it collapses: flares, a ring of light flung outwards, fireballs. */
+        /** The blast as it collapses: flares, a ring of light flung outwards, fireballs, all as much bigger as it grew. */
         private void burst() {
-            float near = proximity(center);
-            ScreenEffects.flash(0.5f * near);
-            ScreenEffects.shake(0.7f * near);
+            // Felt further off, the bigger it is.
+            float near = Math.min(1, proximity(center) * (0.6f + 0.4f * grown));
+            ScreenEffects.flash(Math.min(1, 0.35f + 0.15f * grown) * near);
+            ScreenEffects.shake(Math.min(1, 0.5f + 0.2f * grown) * near);
             if (!particlesVisible(center)) return;
-            for (int i = 0; i < 3; i++) particle(FLARE, center.add(anyDirection(random)), Vec3.ZERO);
+            for (int i = 0; i < 3; i++) particle(FLARE, center.add(anyDirection(random).scale(grown)), Vec3.ZERO);
             particle(ParticleTypes.EXPLOSION_EMITTER, center, Vec3.ZERO);
-            for (int i = 0; i < 4; i++) particle(ParticleTypes.EXPLOSION_EMITTER, center.add(anyDirection(random).scale(HEART)), Vec3.ZERO);
-            for (int i = 0, n = Fx.scaled(240); i < n; i++) {
-                particle(ParticleTypes.REVERSE_PORTAL, center, anyDirection(random).scale(0.8 + random.nextDouble() * 1.4));
+            for (int i = 0, n = Math.round(4 * grown * grown); i < n; i++) {
+                particle(ParticleTypes.EXPLOSION_EMITTER, center.add(anyDirection(random).scale(HEART * grown * random.nextDouble())), Vec3.ZERO);
             }
-            for (int i = 0, n = Fx.scaled(120); i < n; i++) {
-                particle(ParticleTypes.END_ROD, center, anyDirection(random).scale(0.6 + random.nextDouble() * 1.0));
+            for (int i = 0, n = Fx.scaled(Math.round(240 * grown)); i < n; i++) {
+                particle(ParticleTypes.REVERSE_PORTAL, center, anyDirection(random).scale((0.8 + random.nextDouble() * 1.4) * grown));
+            }
+            for (int i = 0, n = Fx.scaled(Math.round(120 * grown)); i < n; i++) {
+                particle(ParticleTypes.END_ROD, center, anyDirection(random).scale((0.6 + random.nextDouble() * 1.0) * Math.sqrt(grown)));
             }
         }
 

@@ -226,19 +226,26 @@ public final class SpellTuning {
     public static final double METEOR_SPEED = 3.5;
     /** A meteor that hits nothing burns out after this long. */
     public static final int METEOR_LIFETIME_TICKS = 80;
-    public static final double METEOR_BLAST_RADIUS = 6;
+    public static final double METEOR_BLAST_RADIUS = 10;
     /** At the centre of each impact, falling to nothing at its edge; it also sets things alight. */
     public static final float METEOR_DAMAGE = 30;
     public static final int METEOR_FIRE_SECONDS = 8;
     /** Seeking: one meteor in this many aims at a creature in the area, if there is one. */
     public static final int METEOR_SEEKING_EVERY = 2;
-    /** Vanilla explosion strength for terrain: a charged creeper's. TNT is 4. */
-    public static final float METEOR_TERRAIN_STRENGTH = 6;
+    /** Each impact blasts out a crater this wide (from its centre) and this deep, whatever the ground is made of. */
+    public static final double METEOR_CRATER_RADIUS = 5;
+    public static final double METEOR_CRATER_DEPTH = 3.5;
+    /** Vanilla explosion strength for terrain beyond the crater, where weaker blocks break further: twice TNT's. */
+    public static final float METEOR_TERRAIN_STRENGTH = 8;
     /** The swarm ends with the Dread Star: one colossal, slower meteor straight onto the mark. */
     public static final double DREAD_STAR_SPEED = 2.2;
-    public static final double DREAD_STAR_BLAST_RADIUS = 16;
+    public static final double DREAD_STAR_BLAST_RADIUS = 32;
     public static final float DREAD_STAR_DAMAGE = 80;
-    public static final float DREAD_STAR_TERRAIN_STRENGTH = 12;
+    /** The Dread Star's crater, its floor and walls left seared: carved over {@link #DREAD_STAR_CARVE_TICKS} ticks. */
+    public static final double DREAD_STAR_CRATER_RADIUS = 16;
+    public static final double DREAD_STAR_CRATER_DEPTH = 9;
+    public static final int DREAD_STAR_CARVE_TICKS = 12;
+    public static final float DREAD_STAR_TERRAIN_STRENGTH = 16;
     /** How much larger the Dread Star looks than a meteor. */
     public static final float DREAD_STAR_SIZE = 4;
     public static final int MAX_ACTIVE_SWARMS = 8;
@@ -259,7 +266,20 @@ public final class SpellTuning {
     public static final double SINGULARITY_PULL_RADIUS = 32;
     /** Speed added towards the hole each tick at the edge of its pull, tripling at its heart. */
     public static final double SINGULARITY_PULL = 0.12;
-    /** Anything this close to the heart is crushed every {@link #SINGULARITY_CRUSH_INTERVAL} ticks. */
+    /**
+     * As it eats, it grows: its size climbs towards this many times its first, its heart with it, and so does its
+     * collapse.
+     */
+    public static final float SINGULARITY_MAX_GROWTH = 3;
+    /**
+     * Mass that takes it most of the way there (63%): each block it eats counts 1, each item or experience orb it takes
+     * in 1, each creature it crushes to death that creature's health. Solid ground under it is some 1100 blocks.
+     */
+    public static final float SINGULARITY_GROWTH_MASS = 800;
+    /**
+     * Anything this close to the heart is crushed every {@link #SINGULARITY_CRUSH_INTERVAL} ticks: at its first size, and
+     * as many times further as it has grown.
+     */
     public static final double SINGULARITY_CRUSH_RADIUS = 4;
     public static final float SINGULARITY_CRUSH_DAMAGE = 10;
     public static final int SINGULARITY_CRUSH_INTERVAL = 10;
@@ -268,12 +288,23 @@ public final class SpellTuning {
     public static final int SINGULARITY_CONSUME_PER_TICK = 30;
     /** Of the blocks it eats each tick, this many are torn loose and fly into it, rather than simply vanishing. */
     public static final int SINGULARITY_DEBRIS_PER_TICK = 3;
-    /** The collapse hurls everything this close outwards. */
+    /**
+     * The collapse hurls everything this close outwards: at its first size, and as many times further as the hole has
+     * grown, up to 72 blocks.
+     */
     public static final double SINGULARITY_COLLAPSE_RADIUS = 24;
+    /**
+     * The collapse's damage, knockback, terrain blast and crater at the hole's first size. Grown to g times that, each is
+     * (1 + g) / 2 times as much: twice, at its largest.
+     */
     public static final float SINGULARITY_COLLAPSE_DAMAGE = 60;
     public static final double SINGULARITY_COLLAPSE_KNOCKBACK = 4.0;
-    /** Vanilla explosion strength of the collapse, for terrain. TNT is 4. */
+    /** Vanilla explosion strength, for terrain beyond the crater. TNT is 4. */
     public static final float SINGULARITY_COLLAPSE_TERRAIN_STRENGTH = 8;
+    /** The crater the collapse leaves in the ground below, carved over {@link #SINGULARITY_CARVE_TICKS} ticks. */
+    public static final double SINGULARITY_CRATER_RADIUS = 12;
+    public static final double SINGULARITY_CRATER_DEPTH = 7;
+    public static final int SINGULARITY_CARVE_TICKS = 20;
     /** Items it held are thrown out of reach for this many ticks, so they scatter before anyone grabs them. */
     public static final int SINGULARITY_RELEASE_PICKUP_DELAY = 20;
     public static final int MAX_ACTIVE_SINGULARITIES = 4;

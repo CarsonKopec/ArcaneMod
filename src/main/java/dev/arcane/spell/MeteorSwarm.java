@@ -25,8 +25,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Meteor Swarm, an Astral Staff spell: a burning sigil opens high over the marked ground and looses a meteor every few
  * ticks onto random points across it, then, after a breath, the Dread Star: one colossal meteor straight onto the mark.
- * Each meteor is an explosion: damage, fire and knockback, and terrain broken under the bolt's rules. Owns every swarm
- * and meteor in flight.
+ * Each meteor is an explosion: damage, fire and knockback, and terrain broken under the bolt's rules, a crater carved
+ * where it lands (the Dread Star's vast and seared). Owns every swarm and meteor in flight.
  *
  * <p>Clients are told when each meteor launches and where it lands; they fly it themselves in between.
  */
@@ -157,6 +157,7 @@ public final class MeteorSwarm extends MarkedSpell {
         final int id;
         /** How large it looks, sent to clients: 1 for a meteor. */
         final float size;
+        final boolean dreadStar;
         final double blastRadius;
         final float damage;
         final float terrainStrength;
@@ -171,6 +172,7 @@ public final class MeteorSwarm extends MarkedSpell {
             this.position = start;
             this.velocity = velocity;
             this.id = id;
+            this.dreadStar = dreadStar;
             this.size = dreadStar ? SpellTuning.DREAD_STAR_SIZE : 1;
             this.blastRadius = dreadStar ? SpellTuning.DREAD_STAR_BLAST_RADIUS : SpellTuning.METEOR_BLAST_RADIUS;
             this.damage = (dreadStar ? SpellTuning.DREAD_STAR_DAMAGE : SpellTuning.METEOR_DAMAGE) * spellPower;
@@ -210,8 +212,8 @@ public final class MeteorSwarm extends MarkedSpell {
 
         private void detonate() {
             SpellEffects.send(level, ModSpellEffects.METEOR_IMPACT, position, velocity, size, 0, id);
-            level.playSound(null, position.x, position.y, position.z, ModSounds.METEOR_IMPACT, SoundSource.PLAYERS, 4.0f * size,
-                    (0.85f + level.getRandom().nextFloat() * 0.3f) / (float) Math.sqrt(size));
+            level.playSound(null, position.x, position.y, position.z, ModSounds.METEOR_IMPACT, SoundSource.PLAYERS, 6.0f * size,
+                    (0.7f + level.getRandom().nextFloat() * 0.25f) / (float) Math.sqrt(size));
             double radius = blastRadius;
             for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(position, position).inflate(radius),
                     e -> SpellTargets.canHarm(caster, e))) {
@@ -229,6 +231,14 @@ public final class MeteorSwarm extends MarkedSpell {
             Vec3 blast = position.subtract(velocity.normalize().scale(0.3));
             level.explode(caster, level.damageSources().explosion(caster, caster), SpellTerrain.explosion(level, caster, mayBuild),
                     blast, terrainStrength, false, Level.ExplosionInteraction.BLOCK);
+            // A vanilla blast hardly dents stone, so the crater is carved: a meteor's at once, the Dread Star's over a few
+            // ticks, its floor and walls left seared.
+            if (dreadStar) {
+                Carving.start(level, caster, mayBuild, position, SpellTuning.DREAD_STAR_CRATER_RADIUS, SpellTuning.DREAD_STAR_CRATER_DEPTH,
+                        SpellTuning.DREAD_STAR_CARVE_TICKS, true);
+            } else {
+                Carving.start(level, caster, mayBuild, position, SpellTuning.METEOR_CRATER_RADIUS, SpellTuning.METEOR_CRATER_DEPTH, 1, false);
+            }
         }
     }
 }

@@ -33,7 +33,9 @@ import net.minecraft.world.phys.Vec3;
  * Singularity, an Astral Staff spell: a black hole hangs over the marked ground for ten seconds. It drags in creatures
  * (players under the server's PvP rules), dropped items, experience and projectiles, crushes whatever reaches its heart,
  * and devours the ground around it, nearest first: a few blocks a tick are torn loose and fly into it, the rest simply
- * vanish. Then it collapses in a blast that hurls everything outwards. Owns every singularity.
+ * vanish. Everything it eats makes it bigger, up to three times its first size, and its heart, where it crushes, grows
+ * with it. Then it collapses in a blast that hurls everything outwards and leaves a crater, both as much bigger as it
+ * grew. Owns every singularity.
  *
  * <p>Items and experience that reach its heart are held there, out of reach and unharmed, and those still loose when it
  * collapses are taken in too: the blast that would destroy them throws them all back out instead. Nothing it pulls
@@ -87,6 +89,12 @@ public final class Singularity extends MarkedSpell {
         final Set<Entity> held = new HashSet<>();
         int eaten;
         int age;
+        /** What it has eaten, which it grows by: see {@link SpellTuning#SINGULARITY_GROWTH_MASS}. */
+        float mass;
+        /** How many times its first size it is, from 1 towards {@link SpellTuning#SINGULARITY_MAX_GROWTH}. */
+        float growth = 1;
+        /** The size clients were last told of. */
+        float told = 1;
 
         Hole(ServerLevel level, ServerPlayer caster, Vec3 center, float spellPower, int id) {
             this.level = level;
@@ -119,9 +127,26 @@ public final class Singularity extends MarkedSpell {
             pull();
             if (age % SpellTuning.SINGULARITY_CRUSH_INTERVAL == 0) crush();
             consume();
-            if (age < SpellTuning.SINGULARITY_DURATION_TICKS) return false;
+            if (age < SpellTuning.SINGULARITY_DURATION_TICKS) {
+                tell();
+                return false;
+            }
             collapse();
             return true;
+        }
+
+        /** Eats {@code amount} of mass, and grows by it. */
+        private void feed(float amount) {
+            mass += amount;
+            float fed = 1 - (float) Math.exp(-mass / SpellTuning.SINGULARITY_GROWTH_MASS);
+            growth = 1 + (SpellTuning.SINGULARITY_MAX_GROWTH - 1) * fed;
+        }
+
+        /** Tells clients how big it has grown: as it grows, and once a second for anyone who has just come in range. */
+        private void tell() {
+            if (growth - told < 0.05f && age % 20 != 0) return;
+            told = growth;
+            SpellEffects.send(level, ModSpellEffects.SINGULARITY_GROWTH, center, Vec3.ZERO, growth, age, id);
         }
 
         /** Creatures it may hurt, loose items, experience and projectiles. Never the caster, nor anyone in creative. */
@@ -143,7 +168,7 @@ public final class Singularity extends MarkedSpell {
                 Vec3 toward = center.subtract(entity.getBoundingBox().getCenter());
                 double distance = toward.length();
                 if (distance > radius) continue;
-                if (distance < SWALLOW_RADIUS) {
+                if (distance < SWALLOW_RADIUS * growth) {
                     if (entity instanceof FallingBlockEntity) {
                         entity.discard();
                         continue;
@@ -169,7 +194,7 @@ public final class Singularity extends MarkedSpell {
             if (!(entity instanceof ItemEntity || entity instanceof ExperienceOrb)) return false;
             entity.setDeltaMovement(Vec3.ZERO);
             entity.setPos(center.x, center.y - entity.getBbHeight() / 2, center.z);
-            held.add(entity);
+            if (held.add(entity)) feed(1);
             return true;
         }
 
@@ -187,11 +212,14 @@ public final class Singularity extends MarkedSpell {
             held.clear();
         }
 
+        /** Crushes what has reached its heart; what dies there feeds it. */
         private void crush() {
-            double radius = SpellTuning.SINGULARITY_CRUSH_RADIUS;
+            double radius = SpellTuning.SINGULARITY_CRUSH_RADIUS * growth;
             for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(radius), this::caught)) {
-                if (victim.getBoundingBox().getCenter().distanceTo(center) <= radius) {
-                    victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), SpellTuning.SINGULARITY_CRUSH_DAMAGE * spellPower);
+                if (victim.getBoundingBox().getCenter().distanceTo(center) <= radius
+                        && victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), SpellTuning.SINGULARITY_CRUSH_DAMAGE * spellPower)
+                        && victim.isDeadOrDying()) {
+                    feed(victim.getMaxHealth());
                 }
             }
         }
@@ -214,6 +242,7 @@ public final class Singularity extends MarkedSpell {
                 }
                 vaporised++;
             }
+            if (vaporised > 0) feed(vaporised);
             debris.removeIf(Entity::isRemoved);
         }
 
@@ -225,13 +254,20 @@ public final class Singularity extends MarkedSpell {
             debris.add(block);
         }
 
+        /**
+         * Collapses, as much bigger as it grew: its blast reaches as many times further as it grew, and hits, throws,
+         * breaks and carves (1 + growth) / 2 times as hard.
+         */
         private void collapse() {
             // Whatever it hadn't swallowed yet goes with it.
             debris.forEach(Entity::discard);
             debris.clear();
-            SpellEffects.send(level, ModSpellEffects.SINGULARITY_COLLAPSE, center, Vec3.ZERO, 1, 0, id);
-            level.playSound(null, center.x, center.y, center.z, ModSounds.SINGULARITY_COLLAPSE, SoundSource.PLAYERS, 8.0f, 1.0f);
-            double radius = SpellTuning.SINGULARITY_COLLAPSE_RADIUS;
+            float size = growth, force = (1 + size) / 2;
+            SpellEffects.send(level, ModSpellEffects.SINGULARITY_COLLAPSE, center, Vec3.ZERO, size, 0, id);
+            // Bigger sounds deeper, and carries further.
+            level.playSound(null, center.x, center.y, center.z, ModSounds.SINGULARITY_COLLAPSE, SoundSource.PLAYERS, 8.0f * size,
+                    1 / (float) Math.sqrt(size));
+            double radius = SpellTuning.SINGULARITY_COLLAPSE_RADIUS * size;
             for (Entity entity : level.getEntities((Entity) null, new AABB(center, center).inflate(radius), this::caught)) {
                 Vec3 at = entity.getBoundingBox().getCenter();
                 double distance = at.distanceTo(center);
@@ -241,20 +277,24 @@ public final class Singularity extends MarkedSpell {
                 float falloff = (float) (1 - distance / radius);
                 if (entity instanceof LivingEntity victim
                         && !victim.hurtServer(level, level.damageSources().explosion(caster, caster),
-                                SpellTuning.SINGULARITY_COLLAPSE_DAMAGE * falloff * spellPower)) {
+                                SpellTuning.SINGULARITY_COLLAPSE_DAMAGE * falloff * spellPower * force)) {
                     continue;
                 }
                 Vec3 away = at.subtract(center);
                 away = away.lengthSqr() < 1.0e-6 ? new Vec3(0, 1, 0) : away.normalize();
-                double push = SpellTuning.SINGULARITY_COLLAPSE_KNOCKBACK * Mth.clamp(falloff, 0.3f, 1);
-                entity.setDeltaMovement(away.x * push, 0.5 + 0.6 * falloff, away.z * push);
+                double push = SpellTuning.SINGULARITY_COLLAPSE_KNOCKBACK * force * Mth.clamp(falloff, 0.3f, 1);
+                entity.setDeltaMovement(away.x * push, Math.min(1.2, (0.5 + 0.6 * falloff) * force), away.z * push);
                 entity.hurtMarked = true;
             }
             // Entities were thrown first, so the blast's terrain half can't add a second shove. What it held sits out the
             // blast, for this tick only.
             for (Entity entity : held) entity.setInvulnerable(true);
             level.explode(caster, level.damageSources().explosion(caster, caster), SpellTerrain.explosion(level, caster, mayBuild),
-                    center, SpellTuning.SINGULARITY_COLLAPSE_TERRAIN_STRENGTH, false, Level.ExplosionInteraction.BLOCK);
+                    center, SpellTuning.SINGULARITY_COLLAPSE_TERRAIN_STRENGTH * force, false, Level.ExplosionInteraction.BLOCK);
+            // And a crater in the ground it hung over, beyond the hollow it ate.
+            Carving.start(level, caster, mayBuild, center.subtract(0, SpellTuning.SINGULARITY_LIFT, 0),
+                    SpellTuning.SINGULARITY_CRATER_RADIUS * force, SpellTuning.SINGULARITY_CRATER_DEPTH * force,
+                    SpellTuning.SINGULARITY_CARVE_TICKS, false);
             release();
         }
     }

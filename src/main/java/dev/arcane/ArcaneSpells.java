@@ -22,6 +22,7 @@ import dev.arcane.spell.ArcaneBolt;
 import dev.arcane.spell.ArcaneWard;
 import dev.arcane.spell.AstralGate;
 import dev.arcane.spell.Blink;
+import dev.arcane.spell.Carving;
 import dev.arcane.spell.CelestialJudgment;
 import dev.arcane.spell.ChronoField;
 import dev.arcane.spell.ManaLimits;
@@ -78,6 +79,7 @@ public final class ArcaneSpells implements ModInitializer {
         ChronoField.register();
         AstralGate.register();
         Planetfall.register();
+        Carving.register();
         ManaLimits.register();
     }
 }

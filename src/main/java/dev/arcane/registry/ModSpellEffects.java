@@ -57,7 +57,12 @@ public final class ModSpellEffects {
     public static final SpellEffectType METEOR_IMPACT = register("meteor_impact");
     /** Singularity {@code sourceId} opened at {@code position}, pulling within {@code power} blocks, for {@code age} ticks. */
     public static final SpellEffectType SINGULARITY = register("singularity");
-    /** Singularity {@code sourceId} collapsed at {@code position}. */
+    /**
+     * Singularity {@code sourceId} at {@code position}, {@code age} ticks old, has grown to {@code power} times its first
+     * size. Sent as it grows, and once a second for anyone who has just come in range.
+     */
+    public static final SpellEffectType SINGULARITY_GROWTH = register("singularity_growth");
+    /** Singularity {@code sourceId} collapsed at {@code position}, {@code power} times its first size. */
     public static final SpellEffectType SINGULARITY_COLLAPSE = register("singularity_collapse");
     /** Chrono field {@code sourceId} stopped time within {@code power} blocks of {@code position}, for {@code age} ticks. */
     public static final SpellEffectType CHRONO_FIELD = register("chrono_field");
