@@ -469,8 +469,9 @@ vec3 groundLight(vec3 point, vec3 normal) {
         light += vec3(1.0, 0.45, 0.12) * lightShare(point, normal, PlanetCenter.xyz, PlanetCenter.w * 10.0) * Glow.x;
     }
     if (Glow.y > 0.0) light += vec3(0.45, 0.25, 1.0) * max(dot(normal, normalize(RiftCenter.xyz - point)), 0.0) * Glow.y;
-    if (Glow.z > 0.0) light += vec3(1.0, 0.8, 0.5) * lightShare(point, normal, Shock.xyz + vec3(0.0, 12.0, 0.0), 150.0) * Glow.z;
-    if (Glow.w > 0.0) light += vec3(1.0, 0.35, 0.08) * lightShare(point, normal, Shock.xyz - vec3(0.0, 8.0, 0.0), 70.0) * Glow.w;
+    float scale = impactScale();
+    if (Glow.z > 0.0) light += vec3(1.0, 0.8, 0.5) * lightShare(point, normal, Shock.xyz + vec3(0.0, 12.0 * scale, 0.0), 150.0 * scale) * Glow.z;
+    if (Glow.w > 0.0) light += vec3(1.0, 0.35, 0.08) * lightShare(point, normal, Shock.xyz - vec3(0.0, 8.0 * scale, 0.0), 70.0 * scale) * Glow.w;
     return light;
 }
 
@@ -485,7 +486,7 @@ vec2 heatHaze(vec2 uv, vec3 dir, float sceneDistance) {
     }
     if (ShockState.w > 0.0 && sceneDistance < FAR) {
         vec3 point = rayOrigin + dir * sceneDistance;
-        mask = max(mask, ShockState.w * falloff(15.0, 55.0, length((point - Shock.xyz).xz)));
+        mask = max(mask, ShockState.w * falloff(15.0 * impactScale(), 55.0 * impactScale(), length((point - Shock.xyz).xz)));
     }
     vec2 wobble = vec2(valueNoise(vec3(uv * 55.0, Clock.x * 3.0)), valueNoise(vec3(uv * 55.0 + 17.0, Clock.x * 3.0 + 5.0))) - 0.5;
     return wobble * 0.007 * strength * mask;

@@ -119,12 +119,15 @@ float blast(vec3 p, float t, float core, float surge, out float heat) {
     return max(coreDensity, surgeDensity);
 }
 
+// The cloud is shaped at one size and marched at the impact's scale: positions are shrunk into its own frame, and
+// distances and optical depths grown back out, so a bigger blast looks the same, only bigger.
 vec4 marchBlast(vec3 dir, float sceneDistance) {
     float t = Blast.x;
     if (t < 0.0 || Blast.z + Blast.w <= 0.001) return vec4(0.0);
+    float scale = impactScale();
     vec3 base = Shock.xyz;
-    float bound = 130.0;
-    vec2 span = sphereHits(dir, base + vec3(0.0, 40.0, 0.0), bound);
+    float bound = 130.0 * scale;
+    vec2 span = sphereHits(dir, base + vec3(0.0, 40.0 * scale, 0.0), bound);
     if (span.y <= 0.0) return vec4(0.0);
     float start = max(span.x, 0.0);
     float end = min(span.y, sceneDistance);
@@ -138,13 +141,13 @@ vec4 marchBlast(vec3 dir, float sceneDistance) {
     float through = 1.0;
     for (int i = 0; i < 56; i++) {
         if (!(march <= end) || through < 0.02) break;
-        vec3 p = rayOrigin + dir * march - base;
+        vec3 p = (rayOrigin + dir * march - base) / scale;
         float core, surge;
         float shape = blastShape(p, t, core, surge);
         if (shape > 18.0) {
             // Well clear of every part of the cloud: leap ahead by the distance to it, less the furthest its billows
             // reach.
-            march += max(stepLength, shape - 17.0);
+            march += max(stepLength, (shape - 17.0) * scale);
         } else {
             float heat;
             float density = blast(p, t, core, surge, heat);
@@ -160,7 +163,7 @@ vec4 marchBlast(vec3 dir, float sceneDistance) {
                 // The fire beneath lights the column's underside, near the stem.
                 smoke += vec3(1.0, 0.42, 0.12) * Blast.y * falloff(0.0, 60.0, p.y) * falloff(10.0, 40.0, length(p.xz)) * 0.6;
                 vec3 glow = heatColor(heat) * heat * 5.0;
-                float absorbed = 1.0 - exp(-density * stepLength * 0.3);
+                float absorbed = 1.0 - exp(-density * stepLength / scale * 0.3);
                 light += through * absorbed * (smoke + glow);
                 through *= 1.0 - absorbed;
             }

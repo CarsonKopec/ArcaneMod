@@ -97,6 +97,11 @@ final class PlanetfallFx {
     private static final float R = (float) SpellTuning.PLANETFALL_PLANET_RADIUS;
     private static final double CRATER = SpellTuning.PLANETFALL_CRATER_RADIUS;
     private static final double LIFT = SpellTuning.PLANETFALL_LIFT_RADIUS;
+    /**
+     * The impact's fireball, mushroom cloud, flares and fountain were shaped for a 72-block blast; they're drawn this
+     * many times that size, to match the server's. The screen pass is told it too.
+     */
+    private static final float BLAST = (float) (SpellTuning.PLANETFALL_IMPACT_RADIUS / 72);
     /** The rift's outer radius, drawn with rings of light. */
     private static final double RIFT = R * 3.3;
     /** The rift's radius as the screen pass draws it, a tear wide enough for the planet with room to spare. */
@@ -111,7 +116,7 @@ final class PlanetfallFx {
     /** How long the screen pass's mushroom cloud lingers after the impact, fading over its last few seconds. */
     private static final int CLOUD_TICKS = 260;
     /** The shock dome shows this long, growing on past the pressure front's reach as it fades. */
-    private static final float DOME_TICKS = 48;
+    private static final float DOME_TICKS = SpellTuning.PLANETFALL_PRESSURE_TICKS + 20;
     /** Blocks a tick the shock front travels once past the pressure front's reach; its boom arrives with it. */
     private static final double SHOCK_SPEED = 8;
     private static final int RIFT_TINT = 0x160628, FIRE_TINT = 0x3A1400;
@@ -157,7 +162,7 @@ final class PlanetfallFx {
             view.clock.x = (player.tickCount + partialTick) / 20;
             view.lens.set(0.5f * focus, 0.3f * focus * focus, 0, 0);
             view.grade.set(0.86f, 0.82f, 1.14f, 0.5f * focus);
-            view.post.set(focus, 0.5f * focus, 0.4f * focus, 0);
+            view.post.set(focus, 0.5f * focus, 0.4f * focus, BLAST);
         }, Integer.MIN_VALUE + 1);
     }
 
@@ -497,27 +502,33 @@ final class PlanetfallFx {
         /** The moment of impact: flares, fireballs across a dome, stardust and sparks, a fountain of debris and lava. */
         private void impactParticles() {
             if (!Minecraft.getInstance().options.hideLightningFlash().get()) {
-                for (int i = 0, n = Fx.scaled(5); i < n; i++) particle(FLARE, mark.add(jitter(random, 16), 2 + random.nextDouble() * 12, jitter(random, 16)), Vec3.ZERO);
+                for (int i = 0, n = Fx.scaled(Math.round(5 * BLAST)); i < n; i++) {
+                    particle(FLARE, mark.add(jitter(random, 16 * BLAST), (2 + random.nextDouble() * 12) * BLAST, jitter(random, 16 * BLAST)), Vec3.ZERO);
+                }
             }
             // With the screen pass, its raymarched fireball stands in for these.
             if (!drawn) {
-                for (int i = 0, n = Fx.scaled(4); i < n; i++) {
-                    particle(ParticleTypes.EXPLOSION_EMITTER, mark.add(upwards(random, 0.3).scale(random.nextDouble() * 12)), Vec3.ZERO);
+                for (int i = 0, n = Fx.scaled(Math.round(4 * BLAST * BLAST)); i < n; i++) {
+                    particle(ParticleTypes.EXPLOSION_EMITTER, mark.add(upwards(random, 0.3).scale(random.nextDouble() * 12 * BLAST)), Vec3.ZERO);
                 }
-                for (int i = 0, n = Fx.scaled(24); i < n; i++) {
+                for (int i = 0, n = Fx.scaled(Math.round(24 * BLAST)); i < n; i++) {
                     Vec3 out = upwards(random, 0.3);
-                    particle(ModParticles.PLANETFALL_FIRE, mark.add(out.scale(3 + random.nextDouble() * 11)), out.scale(0.8));
+                    particle(ModParticles.PLANETFALL_FIRE, mark.add(out.scale((3 + random.nextDouble() * 11) * BLAST)), out.scale(0.8 * BLAST));
                 }
             }
-            for (int i = 0, n = Fx.scaled(120); i < n; i++) {
+            double fling = Math.sqrt(BLAST);
+            for (int i = 0, n = Fx.scaled(Math.round(120 * BLAST)); i < n; i++) {
                 particle(i % 3 == 0 ? ParticleTypes.LAVA : ModParticles.GOLD,
-                        mark.add(0, 3, 0), upwards(random, 0.15).scale(1.2 + random.nextDouble() * 3));
+                        mark.add(0, 3, 0), upwards(random, 0.15).scale((1.2 + random.nextDouble() * 3) * fling));
             }
             BlockParticleOption debris = new BlockParticleOption(ParticleTypes.BLOCK, debrisMaterial);
-            for (int i = 0, n = Fx.scaled(160); i < n; i++) {
-                particle(debris, mark.add(jitter(random, 10), 1, jitter(random, 10)), new Vec3(jitter(random, 2.4), 0.8 + random.nextDouble() * 1.6, jitter(random, 2.4)));
+            for (int i = 0, n = Fx.scaled(Math.round(160 * BLAST)); i < n; i++) {
+                particle(debris, mark.add(jitter(random, 10 * BLAST), 1, jitter(random, 10 * BLAST)),
+                        new Vec3(jitter(random, 2.4 * fling), (0.8 + random.nextDouble() * 1.6) * fling, jitter(random, 2.4 * fling)));
             }
-            for (int i = 0, n = Fx.scaled(60); i < n; i++) particle(ParticleTypes.LAVA, mark.add(jitter(random, 12), 1, jitter(random, 12)), Vec3.ZERO);
+            for (int i = 0, n = Fx.scaled(Math.round(60 * BLAST)); i < n; i++) {
+                particle(ParticleTypes.LAVA, mark.add(jitter(random, 12 * BLAST), 1, jitter(random, 12 * BLAST)), Vec3.ZERO);
+            }
         }
 
         /**
@@ -573,10 +584,10 @@ final class PlanetfallFx {
         /** Without the screen pass: the fireball's billows, the dust wall and the mushroom cloud, in particles. */
         private void cloudParticles(int t) {
             if (t <= 20) {
-                double radius = 7 + 21 * ease(t / 20f);
+                double radius = (7 + 21 * ease(t / 20f)) * BLAST;
                 for (int i = 0, n = Fx.scaled(6); i < n; i++) {
                     Vec3 out = upwards(random, 0.2);
-                    Vec3 at = mark.add(0, 3 + t * 0.35, 0).add(out.scale(radius * (0.65 + random.nextDouble() * 0.35)));
+                    Vec3 at = mark.add(0, (3 + t * 0.35) * BLAST, 0).add(out.scale(radius * (0.65 + random.nextDouble() * 0.35)));
                     particle(ModParticles.PLANETFALL_FIRE, at, out.scale(0.3 + random.nextDouble() * 0.45).add(0, 0.2, 0));
                 }
             }
@@ -602,10 +613,10 @@ final class PlanetfallFx {
             }
             if (t >= 8 && t <= 110) {
                 float rise = ease((t - 8) / 100f);
-                double top = 18 + 64 * rise, spread = 10 + 25 * rise;
+                double top = (18 + 64 * rise) * BLAST, spread = (10 + 25 * rise) * BLAST;
                 if (t % 2 == 0) {
                     for (int i = 0, n = Fx.scaled(3); i < n; i++) {
-                        Vec3 at = onCircle(mark, random.nextDouble() * 9, random.nextDouble() * Mth.TWO_PI,
+                        Vec3 at = onCircle(mark, random.nextDouble() * 9 * BLAST, random.nextDouble() * Mth.TWO_PI,
                                 4 + random.nextDouble() * (top - 4));
                         particle(t < 24 && i == 0 ? ModParticles.PLANETFALL_FIRE : ModParticles.PLANETFALL_SMOKE,
                                 at, new Vec3(jitter(random, 0.12), 0.35 + random.nextDouble() * 0.3, jitter(random, 0.12)));
@@ -614,7 +625,7 @@ final class PlanetfallFx {
                 if (t % 3 == 0) {
                     for (int i = 0, n = Fx.scaled(6); i < n; i++) {
                         double angle = (i + random.nextDouble()) * Mth.TWO_PI / n;
-                        Vec3 at = onCircle(mark, spread * (0.6 + random.nextDouble() * 0.45), angle, top + jitter(random, 9));
+                        Vec3 at = onCircle(mark, spread * (0.6 + random.nextDouble() * 0.45), angle, top + jitter(random, 9 * BLAST));
                         particle(ModParticles.PLANETFALL_SMOKE, at,
                                 new Vec3(Math.cos(angle) * 0.32, 0.12, Math.sin(angle) * 0.32));
                     }
@@ -631,7 +642,8 @@ final class PlanetfallFx {
                 double speed = 0.6 + terrain.fractureReach(i) / 85;
                 double distance = 3 + t * speed;
                 double angle = terrain.fractureAngle(i, distance);
-                double height = 2 + (1.5 + (i % 3) * 0.2) * t - 0.034 * t * t;
+                // Their reach follows the fractures'; their arcs are as much taller as the blast is bigger.
+                double height = (2 + (1.5 + (i % 3) * 0.2) * t - 0.034 * t * t) * BLAST;
                 Vec3 at = onCircle(mark, distance, angle, height);
                 Vec3 ground = surface(at);
                 if (ground == null || at.y < ground.y) continue;
@@ -782,12 +794,12 @@ final class PlanetfallFx {
                     view.lens.set(0.3f * open * near, 0, 0, 0);
                     view.grade.set(0.86f, 0.82f, 1.12f, 0.45f * open);
                     view.glow.set(0, 0.35f * open, 0, 0);
-                    view.post.set(1, 0.6f, 0.5f, 0);
+                    view.post.set(1, 0.6f, 0.5f, BLAST);
                 } else {
                     view.lens.set((0.3f + 0.4f * p * p) * near, 0.6f * p * p * p * near, 0.9f * p * p * p * p * near, 0.6f * p * p);
                     view.grade.set(Mth.lerp(p, 0.86f, 1.15f), Mth.lerp(p, 0.82f, 0.86f), Mth.lerp(p, 1.12f, 0.7f), 0.45f);
                     view.glow.set(0.2f + 1.2f * p * p, 0.35f * open * (1 - p), 0, 0);
-                    view.post.set(1, 0.6f + 0.4f * p, 0.5f + 0.3f * p, 0);
+                    view.post.set(1, 0.6f + 0.4f * p, 0.5f + 0.3f * p, BLAST);
                 }
             } else {
                 float ti = impactAge + partialTick;
@@ -805,7 +817,7 @@ final class PlanetfallFx {
                 float lingering = Mth.clamp((CLOUD_TICKS - ti) / 80, 0, 1);
                 view.blast.set(ti, (float) Math.exp(-ti / 30), Math.min(1, ti / 4) * lingering,
                         Math.min(1, ti / 3) * Mth.clamp((170 - ti) / 70, 0, 1));
-                view.post.set(lingering, 0.9f * lingering, 0.6f * lingering, 0);
+                view.post.set(lingering, 0.9f * lingering, 0.6f * lingering, BLAST);
             }
         }
 

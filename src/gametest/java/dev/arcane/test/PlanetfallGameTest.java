@@ -33,7 +33,9 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
     private static final BlockPos OBSIDIAN = MARK.offset(7, -7, 0);
     private static final BlockPos BEDROCK = MARK.offset(-6, -6, 0);
     private static final BlockPos CHEST = MARK.offset(10, -3, 0);
-    private static final String CASTER = "execute as @a at @s anchored eyes run tp @s 0.5 -19 -50.5 facing 0.5 -19 24.5";
+    private static final String CASTER = "execute as @a at @s anchored eyes run tp @s 0.5 -19 -78.5 facing 0.5 -19 24.5";
+    /** How far the stone site reaches each way from the mark: past the fractures that run out beyond the rim. */
+    private static final int SITE = (int) Math.ceil(SpellTuning.PLANETFALL_CRATER_RADIUS * 1.6) + 4;
     private static final int STRIKE_TICKS = SpellTuning.PLANETFALL_RIFT_TICKS + SpellTuning.PLANETFALL_FALL_TICKS
             + SpellTuning.PLANETFALL_CARVE_TICKS;
 
@@ -49,11 +51,14 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
             TestServerContext server = game.getServer();
             server.runCommand("time set 6000");
             server.runCommand("weather clear");
-            server.runCommand("forceload add -96 -96 112 128");
+            server.runCommand("forceload add -112 -96 112 144");
             // A deep, broad site: the old smaller Astral test plateau clips both the bowl and the outward fractures.
-            for (int y = -58; y <= -20; y++)
-                server.runCommand("fill -74 " + y + " -50 74 " + y + " 98 minecraft:stone");
-            server.runCommand("fill -2 -20 -54 2 -20 -48 minecraft:stone");
+            // /fill takes at most 32768 blocks, so each layer goes in two halves.
+            for (int y = MARK.getY() - (int) SpellTuning.PLANETFALL_CRATER_DEPTH - 4; y <= MARK.getY(); y++) {
+                server.runCommand(String.format("fill %d %d %d -1 %d %d minecraft:stone", -SITE, y, MARK.getZ() - SITE, y, MARK.getZ() + SITE));
+                server.runCommand(String.format("fill 0 %d %d %d %d %d minecraft:stone", y, MARK.getZ() - SITE, SITE, y, MARK.getZ() + SITE));
+            }
+            server.runCommand("fill -2 -20 -82 2 -20 -76 minecraft:stone");
             server.runCommand("gamemode survival @a");
             server.runCommand("give @a arcane_spells:astral_staff");
             server.runCommand(CASTER);
@@ -89,8 +94,8 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
                 ((ChestBlockEntity) level.getBlockEntity(CHEST)).setItem(0, new ItemStack(Items.DIAMOND));
             });
             server.runCommand("summon minecraft:pig 0.5 -19 24.5 {NoAI:1b}");
-            server.runCommand("summon minecraft:pig 62.5 -14 24.5 {NoAI:1b,NoGravity:1b,Tags:[\"planetfall_wave_near\"]}");
-            server.runCommand("summon minecraft:pig 68.5 -14 24.5 {NoAI:1b,NoGravity:1b,Tags:[\"planetfall_wave_far\"]}");
+            server.runCommand("summon minecraft:pig 86.5 -14 24.5 {NoAI:1b,NoGravity:1b,Tags:[\"planetfall_wave_near\"]}");
+            server.runCommand("summon minecraft:pig 95.5 -14 24.5 {NoAI:1b,NoGravity:1b,Tags:[\"planetfall_wave_far\"]}");
             server.runOnServer(s -> {
                 for (String tag : new String[] {"planetfall_wave_near", "planetfall_wave_far"}) {
                     Pig pig = waveProbe(s.overworld(), tag);
@@ -159,11 +164,11 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
             capture(context, "planetfall-wide-aftermath", new Vec3(0, 6, 24));
             // A dense site may finish its bounded terrain queue after the visible shockwave; never force a final burst.
             waitUntil(context, server, impactAt[0] + SpellTuning.PLANETFALL_CARVE_TICKS + 120);
-            server.runCommand("execute as @a at @s anchored eyes run tp @s 35 40 -4 facing 0 -37 24");
+            server.runCommand("execute as @a at @s anchored eyes run tp @s 55 60 -30 facing 0 -48 24");
             context.waitTicks(18);
-            context.runOnClient(client -> check(client.player.position().distanceToSqr(new Vec3(35, 40, -4)) < 4,
+            context.runOnClient(client -> check(client.player.position().distanceToSqr(new Vec3(55, 60, -30)) < 4,
                     "The crater camera teleport has not reached the client"));
-            capture(context, "planetfall-crater", new Vec3(0, -37, 24));
+            capture(context, "planetfall-crater", new Vec3(0, -48, 24));
             context.runOnClient(client -> check(planetDisplays(client.level) == 0, "Planetfall left client block displays behind"));
             // The screen pass's mushroom cloud lingers a while longer, then the pass must stop.
             waitUntil(context, server, impactAt[0] + 275);
@@ -190,8 +195,8 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
         server.runOnServer(s -> {
             check(s.overworld().getBlockState(MARK).is(Blocks.STONE), failure);
             check(s.overworld().getBlockState(MARK.below(16)).is(Blocks.STONE), failure);
-            check(s.overworld().getBlockState(MARK.offset(36, 1, 0)).isAir(), failure + " (raised rim)");
-            for (BlockPos pos : BlockPos.betweenClosed(MARK.offset(-12, -33, -12), MARK.offset(12, 0, 12))) {
+            check(s.overworld().getBlockState(MARK.offset((int) (SpellTuning.PLANETFALL_CRATER_RADIUS * 1.1), 1, 0)).isAir(), failure + " (raised rim)");
+            for (BlockPos pos : BlockPos.betweenClosed(MARK.offset(-12, -(int) SpellTuning.PLANETFALL_CRATER_DEPTH - 4, -12), MARK.offset(12, 0, 12))) {
                 check(!riches(s.overworld().getBlockState(pos)), failure + " (ore at " + pos + ")");
             }
         });
@@ -202,18 +207,21 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
         check(level.getBlockState(MARK.offset(-10, -18, 0)).isAir(), "The expanded Planetfall bowl did not cut deeply enough");
         check(level.getBlockState(OBSIDIAN).is(Blocks.OBSIDIAN), "Planetfall destroyed obsidian");
         check(level.getBlockState(BEDROCK).is(Blocks.BEDROCK), "Planetfall destroyed an unbreakable block");
-        check(level.getBlockState(MARK.offset(74, 0, 0)).is(Blocks.STONE), "Planetfall escaped its terrain footprint");
+        check(level.getBlockState(MARK.offset(SITE - 1, 0, 0)).is(Blocks.STONE), "Planetfall escaped its terrain footprint");
         check(level.getBlockState(CHEST).isAir(), "The breakable chest did not get excavated");
-        check(!level.getEntitiesOfClass(ItemEntity.class, new AABB(MARK).inflate(35), item -> item.getItem().is(Items.DIAMOND)).isEmpty(),
+        check(!level.getEntitiesOfClass(ItemEntity.class, new AABB(MARK).inflate(35, SpellTuning.PLANETFALL_CRATER_DEPTH + 8, 35),
+                item -> item.getItem().is(Items.DIAMOND)).isEmpty(),
                 "Planetfall silently deleted the excavated chest's contents");
         int hot = 0, lining = 0, raised = 0, fissures = 0, glow = 0, gold = 0, diamond = 0;
-        for (BlockPos pos : BlockPos.betweenClosed(-71, -53, -47, 71, -8, 95)) {
+        double crater = SpellTuning.PLANETFALL_CRATER_RADIUS;
+        for (BlockPos pos : BlockPos.betweenClosed(-SITE + 3, MARK.getY() - (int) SpellTuning.PLANETFALL_CRATER_DEPTH - 4, MARK.getZ() - SITE + 3,
+                SITE - 3, -8, MARK.getZ() + SITE - 3)) {
             BlockState state = level.getBlockState(pos);
             double distance = Math.hypot(pos.getX() - MARK.getX(), pos.getZ() - MARK.getZ());
             if (state.is(Blocks.MAGMA_BLOCK) || state.is(Blocks.CRYING_OBSIDIAN)) hot++;
             if (state.is(Blocks.BLACKSTONE) || state.is(Blocks.BASALT) || state.is(Blocks.COBBLED_DEEPSLATE)) lining++;
-            if (pos.getY() >= -19 && distance > 36 && !state.isAir()) raised++;
-            if (pos.getY() == -22 && distance > 50 && state.isAir()) fissures++;
+            if (pos.getY() >= -19 && distance > crater * 0.82 && !state.isAir()) raised++;
+            if (pos.getY() == -22 && distance > crater * 1.14 && state.isAir()) fissures++;
             if (state.is(Blocks.SHROOMLIGHT)) glow++;
             if (state.is(Blocks.DEEPSLATE_GOLD_ORE)) gold++;
             if (state.is(Blocks.DEEPSLATE_DIAMOND_ORE)) diamond++;

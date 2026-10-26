@@ -20,8 +20,14 @@ layout(std140) uniform PlanetfallView {
     vec4 Grade;        // rgb: colour grade; a: how much
     vec4 Glow;         // ground lit by x: the planet; y: the rift; z: the impact's flash; w: the crater
     vec4 Blast;        // x: ticks since the impact, below 0 before it; y: fire; z: smoke; w: dust
-    vec4 Post;         // x: bloom; y: lens streaks; z: film grain
+    vec4 Post;         // x: bloom; y: lens streaks; z: film grain; w: the impact's scale (see impactScale)
 };
+
+// How many times the size the impact's fireball, cloud and glow were shaped for (a 72-block blast) it is drawn at,
+// to match the server's blast.
+float impactScale() {
+    return Post.w > 0.0 ? Post.w : 1.0;
+}
 
 #moj_import <arcane_spells:screen_space.glsl>
 

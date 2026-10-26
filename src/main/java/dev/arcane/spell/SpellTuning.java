@@ -359,8 +359,8 @@ public final class SpellTuning {
     /** 3 s: the longest channel of any spell. */
     public static final int PLANETFALL_CHARGE_TICKS = 60;
     public static final double PLANETFALL_RANGE = 160;
-    /** Well outside the crater and the falling planet. */
-    public static final double PLANETFALL_MIN_DISTANCE = 72;
+    /** Well outside the crater, the fissures running out from it and the falling planet. */
+    public static final double PLANETFALL_MIN_DISTANCE = 100;
     /** The rift opens this high above the mark, and {@link #PLANETFALL_RIFT_LEAD} blocks beyond it, away from the caster. */
     public static final double PLANETFALL_RIFT_HEIGHT = 150;
     public static final double PLANETFALL_RIFT_LEAD = 45;
@@ -373,26 +373,29 @@ public final class SpellTuning {
     public static final double PLANETFALL_SINK = 0.35;
     /** Anything the planet itself touches on the way down. */
     public static final float PLANETFALL_CRUSH_DAMAGE = 1000;
-    /** The impact: up to this much damage at the mark, falling to none at the edge of its radius. */
-    public static final double PLANETFALL_IMPACT_RADIUS = 72;
+    /**
+     * The impact: up to this much damage at the mark, falling to none at the edge of its radius. The client draws the
+     * fireball, mushroom cloud and impact light to scale with this radius.
+     */
+    public static final double PLANETFALL_IMPACT_RADIUS = 100;
     public static final float PLANETFALL_IMPACT_DAMAGE = 400;
-    public static final double PLANETFALL_IMPACT_KNOCKBACK = 5.0;
-    public static final double PLANETFALL_CRATER_RADIUS = 44;
-    public static final double PLANETFALL_CRATER_DEPTH = 28;
-    /** The air-pressure front reaches the edge in 1.4 seconds; entities are struck once as it passes. */
-    public static final int PLANETFALL_PRESSURE_TICKS = 28;
-    /** The slower earth rupture reaches the tips of the fracture field in 3.2 seconds. */
-    public static final int PLANETFALL_RUPTURE_TICKS = 64;
+    public static final double PLANETFALL_IMPACT_KNOCKBACK = 6.0;
+    public static final double PLANETFALL_CRATER_RADIUS = 62;
+    public static final double PLANETFALL_CRATER_DEPTH = 39;
+    /** The air-pressure front reaches the edge in about 2 seconds; entities are struck once as it passes. */
+    public static final int PLANETFALL_PRESSURE_TICKS = 39;
+    /** The slower earth rupture reaches the tips of the fracture field in 4.5 seconds. */
+    public static final int PLANETFALL_RUPTURE_TICKS = 90;
     /** Nominal settling time; exceptionally dense terrain finishes under the same fixed work budget. */
-    public static final int PLANETFALL_CARVE_TICKS = 96;
+    public static final int PLANETFALL_CARVE_TICKS = 160;
     /** Within this radius of the mark, gravity fails while the planet comes: creatures float and ground tears loose. */
     public static final double PLANETFALL_LIFT_RADIUS = 48;
     /** At most this many blocks torn loose to float, a few each tick. */
     public static final int PLANETFALL_LIFTED_BLOCKS = 160;
     public static final int PLANETFALL_LIFT_PER_TICK = 2;
     /** The rim thrown up around the crater: its width and nominal height before asymmetric collapse. */
-    public static final double PLANETFALL_RIM_WIDTH = 10;
-    public static final double PLANETFALL_RIM_HEIGHT = 8;
+    public static final double PLANETFALL_RIM_WIDTH = 14;
+    public static final double PLANETFALL_RIM_HEIGHT = 11;
     /**
      * From this far through its fall, burning shards break off the planet's leading face, one every
      * {@link #PLANETFALL_SHED_INTERVAL_TICKS}, each streaking down to crater the ground somewhere in the lift radius.
