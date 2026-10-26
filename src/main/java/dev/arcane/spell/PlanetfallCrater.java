@@ -1,5 +1,6 @@
 package dev.arcane.spell;
 
+import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -170,7 +171,7 @@ final class PlanetfallCrater {
         if (!available(support)) return null;
         BlockState beneath = level.getBlockState(support);
         // Deposits need actual, breakable natural ground; never build atop protected blocks, containers or canopies.
-        if (!SpellTerrain.isGround(beneath) || !SpellTerrain.mayVaporise(level, caster, true, support, beneath)) return null;
+        if (!TerrainRules.isGround(beneath) || !TerrainRules.mayVaporise(level, caster, true, support, beneath)) return null;
         double width = SpellTuning.PLANETFALL_RIM_WIDTH;
         double variation = shape.variation(x, z);
         int height;
@@ -220,8 +221,8 @@ final class PlanetfallCrater {
                     set(pos, roll < 0.42 ? Blocks.BLACKSTONE.defaultBlockState()
                             : roll < 0.75 ? Blocks.COBBLED_DEEPSLATE.defaultBlockState()
                             : roll < 0.90 ? Blocks.BASALT.defaultBlockState() : Blocks.TUFF.defaultBlockState());
-                } else if (SpellTerrain.mayVaporise(level, caster, true, pos, state)) {
-                    SpellTerrain.vaporise(level, pos);
+                } else if (TerrainRules.mayVaporise(level, caster, true, pos, state)) {
+                    TerrainRules.vaporise(level, pos);
                     changes++;
                 }
             }
@@ -234,7 +235,7 @@ final class PlanetfallCrater {
         BlockPos pos = surface.pos();
         if (!available(pos)) return;
         BlockState state = level.getBlockState(pos);
-        if (!SpellTerrain.isGround(state) || !SpellTerrain.mayVaporise(level, caster, true, pos, state) || !exposed(pos)) return;
+        if (!TerrainRules.isGround(state) || !TerrainRules.mayVaporise(level, caster, true, pos, state) || !exposed(pos)) return;
         double roll = shape.variation(pos.getX() + pos.getY(), pos.getZ());
         BlockState material;
         if (surface.fracture() > 0.33) {
@@ -261,7 +262,7 @@ final class PlanetfallCrater {
         double brokenRadius = radius * (0.9 + 0.075 * Math.sin(angle * 3 + local.y) + 0.045 * Math.sin(angle * 7 - local.y * 1.5));
         if (distance > brokenRadius || !available(pos)) return;
         BlockState state = level.getBlockState(pos);
-        if (!(state.canBeReplaced() || SpellTerrain.mayVaporise(level, caster, true, pos, state))
+        if (!(state.canBeReplaced() || TerrainRules.mayVaporise(level, caster, true, pos, state))
                 || state.hasBlockEntity() || !level.mayInteract(caster, pos)) return;
         double seam = Math.abs(Math.sin(Math.atan2(local.z, local.x) * 3 + local.y * 0.7));
         // Riches: the planet's heart, studded with ore for the caster to dig out.

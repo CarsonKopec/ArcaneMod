@@ -4,6 +4,7 @@ import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModDamageTypes;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -175,7 +176,7 @@ final class PlanetfallStrike {
             BlockPos pos = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z);
             if (!available(pos) || pos.getY() > mark.y + 32 || pos.getY() < mark.y - 12) continue;
             BlockState state = level.getBlockState(pos);
-            if (state.hasBlockEntity() || !state.getFluidState().isEmpty() || !SpellTerrain.mayVaporise(level, caster, mayBuild, pos, state)) continue;
+            if (state.hasBlockEntity() || !state.getFluidState().isEmpty() || !TerrainRules.mayVaporise(level, caster, mayBuild, pos, state)) continue;
             FallingBlockEntity block = FallingBlockEntity.fall(level, pos, state);
             // Never lands as a block, and never drops one.
             block.disableDrop();
@@ -240,7 +241,7 @@ final class PlanetfallStrike {
                 victim.push(away.x, 0.3 + falloff * 0.5, away.z);
             }
         }
-        level.explode(caster, damage, SpellTerrain.explosion(level, caster, mayBuild), at.add(0, 0.5, 0),
+        level.explode(caster, damage, TerrainRules.explosion(level, caster, mayBuild), at.add(0, 0.5, 0),
                 SpellTuning.PLANETFALL_SHARD_TERRAIN_STRENGTH, false, Level.ExplosionInteraction.BLOCK);
         return true;
     }
@@ -383,7 +384,7 @@ final class PlanetfallStrike {
             hasColumn = y >= bottom;
             if (!available(pos) || pos.getCenter().distanceToSqr(from) <= R * R) return;
             BlockState state = level.getBlockState(pos);
-            if (SpellTerrain.mayVaporise(level, caster, mayBuild, pos, state)) SpellTerrain.vaporise(level, pos);
+            if (TerrainRules.mayVaporise(level, caster, mayBuild, pos, state)) TerrainRules.vaporise(level, pos);
         }
     }
 }

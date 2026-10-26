@@ -24,6 +24,7 @@ import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.screen.ScreenEffects;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

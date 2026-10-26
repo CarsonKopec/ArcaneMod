@@ -417,8 +417,6 @@ public final class SpellTuning {
     public static final double PLANETFALL_CORE_DEBRIS = 0.015;
     public static final int MAX_ACTIVE_PLANETFALLS = 2;
 
-    /** Blocks at least this blast resistant survive spells that vaporise terrain, as obsidian (1200) does. */
-    public static final float VAPORISE_RESISTANCE_LIMIT = 1200;
 
     /** Players farther than this are not sent effects; also the client's light and rune render distance. */
     public static final double EFFECT_RANGE = 448;

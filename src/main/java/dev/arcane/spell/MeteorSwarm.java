@@ -4,6 +4,8 @@ import dev.arcane.api.spell.SpellContext;
 import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.terrain.Carving;
+import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -229,7 +231,7 @@ public final class MeteorSwarm extends MarkedSpell {
             }
             // Back the blast off the struck surface a little, so the wall doesn't hide every ray.
             Vec3 blast = position.subtract(velocity.normalize().scale(0.3));
-            level.explode(caster, level.damageSources().explosion(caster, caster), SpellTerrain.explosion(level, caster, mayBuild),
+            level.explode(caster, level.damageSources().explosion(caster, caster), TerrainRules.explosion(level, caster, mayBuild),
                     blast, terrainStrength, false, Level.ExplosionInteraction.BLOCK);
             // A vanilla blast hardly dents stone, so the crater is carved: a meteor's at once, the Dread Star's over a few
             // ticks, its floor and walls left seared.

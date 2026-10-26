@@ -4,6 +4,7 @@ import com.mojang.math.Transformation;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.spell.PlanetfallTerrain;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -226,7 +227,7 @@ final class PlanetfallDebris {
             if (!state.getFluidState().isEmpty()) return null;
             if (open && !state.hasBlockEntity() && !state.getCollisionShape(level, cursor).isEmpty()
                     && state.getDestroySpeed(level, cursor) >= 0
-                    && state.getBlock().getExplosionResistance() < SpellTuning.VAPORISE_RESISTANCE_LIMIT) {
+                    && state.getBlock().getExplosionResistance() < TerrainRules.VAPORISE_RESISTANCE_LIMIT) {
                 BlockState below = y > level.getMinY() ? level.getBlockState(cursor.below()) : state;
                 if (below.isAir() || !below.getFluidState().isEmpty() || below.hasBlockEntity()) below = state;
                 return new Surface(y + 1, state, below);

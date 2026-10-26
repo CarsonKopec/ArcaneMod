@@ -3,6 +3,8 @@ package dev.arcane.spell;
 import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.terrain.Crater;
+import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -166,18 +168,18 @@ final class JudgmentStrike {
             }
         }
         Crater plan = Crater.plan(level, impact, SpellTuning.JUDGMENT_CRATER_RADIUS, SpellTuning.JUDGMENT_CRATER_DEPTH, random);
-        crater = plan.blocks;
-        shell = plan.shell;
+        crater = plan.blocks();
+        shell = plan.shell();
     }
 
     private void carveCrater() {
         int perTick = Mth.ceil(crater.size() / (float) SpellTuning.JUDGMENT_CARVE_TICKS);
         for (int i = 0; i < perTick && carved < crater.size(); i++) vaporise(crater.get(carved++));
-        if (age == END) SpellTerrain.scorch(level, caster, mayBuild, shell, random);
+        if (age == END) TerrainRules.scorch(level, caster, mayBuild, shell, random);
     }
 
     private void vaporise(BlockPos pos) {
-        if (SpellTerrain.mayVaporise(level, caster, mayBuild, pos, level.getBlockState(pos))) SpellTerrain.vaporise(level, pos);
+        if (TerrainRules.mayVaporise(level, caster, mayBuild, pos, level.getBlockState(pos))) TerrainRules.vaporise(level, pos);
     }
 
     /** The block positions in row {@code y} within {@code radius} of the beam's axis. */

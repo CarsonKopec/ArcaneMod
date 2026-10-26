@@ -4,6 +4,8 @@ import dev.arcane.api.spell.SpellContext;
 import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.terrain.Carving;
+import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -234,11 +236,11 @@ public final class Singularity extends MarkedSpell {
                     && vaporised < SpellTuning.SINGULARITY_CONSUME_PER_TICK; checked++) {
                 BlockPos pos = meal.get(eaten++);
                 BlockState state = level.getBlockState(pos);
-                if (!SpellTerrain.mayVaporise(level, caster, mayBuild, pos, state)) continue;
+                if (!TerrainRules.mayVaporise(level, caster, mayBuild, pos, state)) continue;
                 if (vaporised < SpellTuning.SINGULARITY_DEBRIS_PER_TICK && !state.hasBlockEntity() && state.getFluidState().isEmpty()) {
                     tearLoose(pos, state);
                 } else {
-                    SpellTerrain.vaporise(level, pos);
+                    TerrainRules.vaporise(level, pos);
                 }
                 vaporised++;
             }
@@ -289,7 +291,7 @@ public final class Singularity extends MarkedSpell {
             // Entities were thrown first, so the blast's terrain half can't add a second shove. What it held sits out the
             // blast, for this tick only.
             for (Entity entity : held) entity.setInvulnerable(true);
-            level.explode(caster, level.damageSources().explosion(caster, caster), SpellTerrain.explosion(level, caster, mayBuild),
+            level.explode(caster, level.damageSources().explosion(caster, caster), TerrainRules.explosion(level, caster, mayBuild),
                     center, SpellTuning.SINGULARITY_COLLAPSE_TERRAIN_STRENGTH * force, false, Level.ExplosionInteraction.BLOCK);
             // And a crater in the ground it hung over, beyond the hollow it ate.
             Carving.start(level, caster, mayBuild, center.subtract(0, SpellTuning.SINGULARITY_LIFT, 0),

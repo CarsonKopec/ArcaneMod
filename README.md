@@ -5,8 +5,9 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
 ## Install
 
 1. Install Fabric Loader **0.19.5 or later** for Minecraft **1.21.11** (https://fabricmc.net/use/installer/). Minecraft needs Java 21 or newer.
-2. Put these eight JARs in the instance's `mods` folder. Choose the **Fabric / Minecraft 1.21.11** files:
+2. Put these nine JARs in the instance's `mods` folder. Choose the **Fabric / Minecraft 1.21.11** files:
    - `arcane-spells-0.7.0.jar` (from `build/libs/`, not the `-sources` JAR)
+   - `leyline-0.1.0.jar`, the library mod Arcane Spells is built on (from the Leyline repository's `build/libs/`)
    - [Fabric API 0.141.6+1.21.11](https://modrinth.com/mod/fabric-api/versions?g=1.21.11)
    - [Nebulon 0.1.2-beta+mc1.21.11.20260928.19](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/0.1.2-beta+mc1.21.11.20260928.19/nebulon-0.1.2-beta+mc1.21.11.20260928.19.jar)
    - [Player Animation Library 1.1.10+mc.1.21.11](https://modrinth.com/mod/player-animation-library/version/wJLdv4ZQ)
@@ -14,7 +15,7 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
    - [Cardinal Components API 7.3.2](https://modrinth.com/mod/cardinal-components-api/version/HZMLTuxY) (the complete release JAR)
    - [owo-lib 0.13.0+1.21.11](https://modrinth.com/mod/owo-lib/version/33Ei8Thm)
    - [Trinkets Updated 3.11.0-beta.2+1.21.11](https://modrinth.com/mod/trinkets-updated/version/3.11.0-beta.2+1.21.11)
-3. For multiplayer, install all eight on the server **and** every client, with the same Arcane Spells version on both. 0.7 is not network-compatible with 0.6.
+3. For multiplayer, install all nine on the server **and** every client, with the same Arcane Spells version on both. 0.7 is not network-compatible with 0.6.
 
 These libraries power player casting poses, animated 3D staffs, saved player progression, the spell book and settings screens, and the trinket slots.
 
@@ -119,6 +120,8 @@ PAL's upper-body animations live in `assets/arcane_spells/player_animations/`. G
 
 ### Build and test
 
+Arcane Spells builds against Leyline, a library mod in its own repository. Build it there first with `gradlew.bat publishToMavenLocal`, which puts it in the local Maven repository this build reads it from; do that again whenever Leyline changes.
+
 | Task | Command (Windows; use `./gradlew` elsewhere) |
 | --- | --- |
 | Build the mod JAR | `gradlew.bat build` → `build/libs/` |
@@ -172,10 +175,9 @@ src/main/java/dev/arcane/          common code (runs on server and client)
   spell/ChainLightning, Blink,       the other spells
         ArcaneWard, FrostNova
   spell/MarkedSpell.java             every Astral spell's channel and aiming: the ring, full channel, where it lands
-  spell/SpellTerrain.java            the terrain rules every spell shares: who may break what, explosions, vaporising
+  spell/SpellTerrain.java            whether a spell may break blocks at all (the rules block by block are Leyline's)
   spell/CelestialJudgment,           Celestial Judgment: the strike's phases, terrain and damage
         JudgmentStrike
-  spell/Crater, Carving              a crater's plan (Judgment's, meteors', a collapse's), and carving one over a few ticks
   spell/MeteorSwarm, Singularity,    the other Astral spells, each owning its swarms, holes, fields or gates
         ChronoField, AstralGate
   spell/Planetfall, PlanetfallStrike Planetfall: the strike's phases, lifting and damage
@@ -200,12 +202,9 @@ src/client/java/dev/arcane/          client-only code
   client/fx/VoxelPlanet,             the planet's shattered blocks and the ground it throws up, as client-only block
         PlanetfallDebris               displays (and the whole planet, without the shader pass)
   client/fx/SpaceSky.java            turns the sky to space while a Planetfall's rift is open
-  client/fx/ScreenEffects.java       screen shake, flash and darkening, within the accessibility settings
   client/fx/CorruptionFx.java        the corruption haze at the screen's edges, and a backlash's lurch
   client/particle/ArcaneSpark.java   the tinted glow particle
   client/particle/PlanetfallCloud    Planetfall's billows of dust, smoke and fire
-  mixin/client/CameraMixin.java      turns the camera (never the aim) for screen shake and to draw the eye
-  mixin/client/GameRendererMixin     widens, narrows and rolls the view
   mixin/client/SkyRendererMixin,     apply SpaceSky to the sky, stars and fog
         FogRendererMixin
 src/main/resources/assets/arcane_spells/shaders/

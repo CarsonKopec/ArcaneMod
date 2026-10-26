@@ -37,6 +37,7 @@
 		"java": ">=21",
 		"fabric-api": ">=${fabric_api_version}",
 		"nebulon": "~${nebulon_version}",
+		"leyline": "~${leyline_version}",
 		"player_animation_library": "~${player_animation_version}",
 		"geckolib": "~${geckolib_version}",
 		"cardinal-components-base": "~${cca_version}",

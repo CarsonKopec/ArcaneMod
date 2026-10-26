@@ -4,6 +4,11 @@ plugins {
 }
 
 repositories {
+	// Leyline, the library mod split out of this one, from its own repository: build it there with
+	// `gradlew publishToMavenLocal` first.
+	mavenLocal() {
+		content { includeGroup 'dev.leyline' }
+	}
 	// Nebulon (dynamic lights, rune circles, arcs)
 	maven { url = 'https://maven.riftrealms.de/releases' }
 	mavenCentral()
@@ -68,6 +73,8 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	modImplementation "de.nexusrealms:nebulon:${project.nebulon_version}"
+	// Terrain rules, craters and screen effects, shared with other mods. A separate mod, not bundled in this one.
+	modImplementation "dev.leyline:leyline:${project.leyline_version}"
 
 	// These are external runtime mods, matching the existing Fabric API/Nebulon install model.
 	// Keep Fabric modules on the explicitly selected fabric_api_version rather than mixing older builds.
@@ -97,6 +104,7 @@ processResources {
 		// rejects its next minor release, which may break the API.
 		fabric_api_version: project.fabric_api_version,
 		nebulon_version   : project.nebulon_version,
+		leyline_version   : project.leyline_version,
 		player_animation_version: project.player_animation_version,
 		geckolib_version  : project.geckolib_version,
 		cca_version       : project.cca_version,

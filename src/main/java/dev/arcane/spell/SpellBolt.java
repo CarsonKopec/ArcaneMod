@@ -3,6 +3,7 @@ package dev.arcane.spell;
 import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -97,7 +98,7 @@ final class SpellBolt {
         if (power >= 1) shardburst(blast, directTarget);
         // Use vanilla block resistance, drops, and TNT chain reactions. Do this after
         // spell damage so cover is evaluated before the terrain is destroyed.
-        level.explode(owner, level.damageSources().indirectMagic(owner, owner), SpellTerrain.explosion(level, owner, mayBuild),
+        level.explode(owner, level.damageSources().indirectMagic(owner, owner), TerrainRules.explosion(level, owner, mayBuild),
                 position, SpellTuning.terrainBlastStrength(power), false, Level.ExplosionInteraction.BLOCK);
         level.playSound(null, position.x, position.y, position.z, ModSounds.BOLT_IMPACT, SoundSource.PLAYERS, 0.8f + 0.6f * power, 1.0f);
         SpellEffects.send(level, ModSpellEffects.IMPACT, position, direction, power, age, sourceId);
