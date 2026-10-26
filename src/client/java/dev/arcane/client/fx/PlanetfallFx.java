@@ -1,21 +1,21 @@
 package dev.arcane.client.fx;
 
-import static dev.arcane.client.fx.Fx.RENDER_DISTANCE;
-import static dev.arcane.client.fx.Fx.UP;
-import static dev.arcane.client.fx.Fx.anyDirection;
-import static dev.arcane.client.fx.Fx.camera;
-import static dev.arcane.client.fx.Fx.circle;
-import static dev.arcane.client.fx.Fx.ease;
-import static dev.arcane.client.fx.Fx.hide;
-import static dev.arcane.client.fx.Fx.jitter;
-import static dev.arcane.client.fx.Fx.onCircle;
-import static dev.arcane.client.fx.Fx.particle;
-import static dev.arcane.client.fx.Fx.particlesVisible;
-import static dev.arcane.client.fx.Fx.scaled;
-import static dev.arcane.client.fx.Fx.show;
-import static dev.arcane.client.fx.Fx.upwards;
-import static dev.arcane.client.fx.Fx.whiter;
-import static dev.arcane.client.fx.Fx.world;
+import static dev.leyline.client.fx.Fx.RENDER_DISTANCE;
+import static dev.leyline.client.fx.Fx.UP;
+import static dev.leyline.client.fx.Fx.anyDirection;
+import static dev.leyline.client.fx.Fx.camera;
+import static dev.leyline.client.fx.Fx.circle;
+import static dev.leyline.client.fx.Fx.ease;
+import static dev.leyline.client.fx.Fx.hide;
+import static dev.leyline.client.fx.Fx.jitter;
+import static dev.leyline.client.fx.Fx.onCircle;
+import static dev.leyline.client.fx.Fx.particle;
+import static dev.leyline.client.fx.Fx.particlesVisible;
+import static dev.leyline.client.fx.Fx.scaled;
+import static dev.leyline.client.fx.Fx.show;
+import static dev.leyline.client.fx.Fx.upwards;
+import static dev.leyline.client.fx.Fx.whiter;
+import static dev.leyline.client.fx.Fx.world;
 
 import com.mojang.math.Transformation;
 import de.nexusrealms.nebulon.api.render.ColorRgba;
@@ -34,6 +34,8 @@ import dev.arcane.spell.Planetfall;
 import dev.arcane.spell.PlanetfallTerrain;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.fx.Fx;
+import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -122,8 +124,8 @@ final class PlanetfallFx {
     private static final double SHOCK_SPEED = 8;
     private static final int RIFT_TINT = 0x160628, FIRE_TINT = 0x3A1400;
 
-    private static final Fx.Tracker<Fall> FALLS = new Fx.Tracker<>();
-    private static final Fx.Tracker<Shard> SHARDS = new Fx.Tracker<>();
+    private static final Fx.Tracker<Fall> FALLS = AstralFx.TRACKERS.create();
+    private static final Fx.Tracker<Shard> SHARDS = AstralFx.TRACKERS.create();
 
     private PlanetfallFx() {
     }
@@ -290,7 +292,7 @@ final class PlanetfallFx {
             }
             // Once the sky has cleared there is nothing left for the screen pass to draw.
             if (drawn && impactAge < CLOUD_TICKS) PlanetfallShader.show(this, -Math.round((float) camera().distanceTo(mark)));
-            SpellLighting.guarded(this::animate);
+            NebulonGuard.guarded(this::animate);
             if (particlesVisible(mark) || particlesVisible(planetAt)) particles();
             screen();
             if (impactAge >= 0) {
@@ -832,7 +834,7 @@ final class PlanetfallFx {
         @Override public void release() {
             planes.clear();
             for (EffectHandle<?> handle : new EffectHandle<?>[] {riftRunes, groundRunes}) {
-                if (handle != null) SpellLighting.cleanup(handle::remove);
+                if (handle != null) NebulonGuard.cleanup(handle::remove);
             }
         }
     }
@@ -881,7 +883,7 @@ final class PlanetfallFx {
             float t = Math.min(1, age / (float) flight);
             at = from.lerp(to, t * (0.55f + 0.45f * t));
             pose();
-            SpellLighting.guarded(this::animate);
+            NebulonGuard.guarded(this::animate);
             if (particlesVisible(at)) trail(last);
             if (age < flight) return false;
             if (particlesVisible(to)) strike();

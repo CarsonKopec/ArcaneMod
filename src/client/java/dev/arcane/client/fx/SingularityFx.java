@@ -1,16 +1,16 @@
 package dev.arcane.client.fx;
 
-import static dev.arcane.client.fx.Fx.UP;
-import static dev.arcane.client.fx.Fx.anyDirection;
-import static dev.arcane.client.fx.Fx.ease;
-import static dev.arcane.client.fx.Fx.light;
-import static dev.arcane.client.fx.Fx.onCircle;
-import static dev.arcane.client.fx.Fx.particle;
-import static dev.arcane.client.fx.Fx.particlesVisible;
-import static dev.arcane.client.fx.Fx.proximity;
-import static dev.arcane.client.fx.Fx.scaled;
-import static dev.arcane.client.fx.Fx.unlight;
-import static dev.arcane.client.fx.Fx.world;
+import static dev.leyline.client.fx.Fx.UP;
+import static dev.leyline.client.fx.Fx.anyDirection;
+import static dev.leyline.client.fx.Fx.ease;
+import static dev.leyline.client.fx.Fx.light;
+import static dev.leyline.client.fx.Fx.onCircle;
+import static dev.leyline.client.fx.Fx.particle;
+import static dev.leyline.client.fx.Fx.particlesVisible;
+import static dev.leyline.client.fx.Fx.proximity;
+import static dev.leyline.client.fx.Fx.scaled;
+import static dev.leyline.client.fx.Fx.unlight;
+import static dev.leyline.client.fx.Fx.world;
 
 import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
@@ -19,6 +19,8 @@ import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.fx.Fx;
+import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
@@ -41,7 +43,7 @@ import net.minecraft.world.phys.Vec3;
  * disc, its rings, its light, and in the end its collapse.
  */
 final class SingularityFx {
-    private static final Fx.Tracker<Hole> HOLES = new Fx.Tracker<>();
+    private static final Fx.Tracker<Hole> HOLES = AstralFx.TRACKERS.create();
     private static final ColorRgba VIOLET = ColorRgba.rgba(0xA05CFFFF);
     private static final ColorRgba MAGENTA = ColorRgba.rgba(0xE45CFFFF);
     private static final ColorRgba PALE = ColorRgba.rgba(0xEBD8FFFF);
@@ -142,7 +144,7 @@ final class SingularityFx {
             if (collapseAge == IMPLODE_TICKS) burst();
             drawn = SpaceTimeShader.available();
             if (drawn && age >= duration - FORM_BEFORE && collapseAge <= IMPLODE_TICKS) SpaceTimeShader.show(this::write);
-            SpellLighting.guarded(this::animate);
+            NebulonGuard.guarded(this::animate);
             if (particlesVisible(center)) particles();
             screen(proximity(center));
             return collapseAge > COLLAPSE_TICKS || collapseAge < 0 && age > duration + 40;

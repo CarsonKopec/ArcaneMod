@@ -1,17 +1,17 @@
 package dev.arcane.client.fx;
 
-import static dev.arcane.client.fx.Fx.UP;
-import static dev.arcane.client.fx.Fx.circle;
-import static dev.arcane.client.fx.Fx.ease;
-import static dev.arcane.client.fx.Fx.light;
-import static dev.arcane.client.fx.Fx.onCircle;
-import static dev.arcane.client.fx.Fx.particle;
-import static dev.arcane.client.fx.Fx.particlesVisible;
-import static dev.arcane.client.fx.Fx.scaled;
-import static dev.arcane.client.fx.Fx.show;
-import static dev.arcane.client.fx.Fx.unlight;
-import static dev.arcane.client.fx.Fx.whiter;
-import static dev.arcane.client.fx.Fx.world;
+import static dev.leyline.client.fx.Fx.UP;
+import static dev.leyline.client.fx.Fx.circle;
+import static dev.leyline.client.fx.Fx.ease;
+import static dev.leyline.client.fx.Fx.light;
+import static dev.leyline.client.fx.Fx.onCircle;
+import static dev.leyline.client.fx.Fx.particle;
+import static dev.leyline.client.fx.Fx.particlesVisible;
+import static dev.leyline.client.fx.Fx.scaled;
+import static dev.leyline.client.fx.Fx.show;
+import static dev.leyline.client.fx.Fx.unlight;
+import static dev.leyline.client.fx.Fx.whiter;
+import static dev.leyline.client.fx.Fx.world;
 
 import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.EffectHandle;
@@ -22,6 +22,8 @@ import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellCasting;
+import dev.leyline.client.fx.Fx;
+import dev.leyline.client.fx.NebulonGuard;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -35,7 +37,7 @@ import net.minecraft.world.phys.Vec3;
  * caster's staff holds.
  */
 final class ChannelFx {
-    private static final Fx.Tracker<Channel> CHANNELS = new Fx.Tracker<>();
+    private static final Fx.Tracker<Channel> CHANNELS = AstralFx.TRACKERS.create();
     private static final ColorRgba GOLD = ColorRgba.rgba(0xFFD27AFF);
     private static final ColorRgba RED = ColorRgba.rgba(0xFF4A4AFF);
     /** A channel not updated for this long has ended: released, or interrupted. */
@@ -77,7 +79,7 @@ final class ChannelFx {
             // Thick enough to read on a wide ring, thin enough not to swamp a small one.
             float line = (float) Mth.clamp(radius * 0.025, 0.06, 0.3);
             Vec3 mark = effect.position().add(0, 0.08, 0);
-            SpellLighting.guarded(() -> {
+            NebulonGuard.guarded(() -> {
                 if (caster != null) {
                     // Dim: a magic circle adds most of its colour across its whole disc.
                     feet = show(feet, circle(caster.position().add(0, 0.05, 0), UP, 1.2 + 0.6 * power, 0.04f,

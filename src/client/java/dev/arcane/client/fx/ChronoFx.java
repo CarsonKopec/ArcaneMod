@@ -1,16 +1,16 @@
 package dev.arcane.client.fx;
 
-import static dev.arcane.client.fx.Fx.UP;
-import static dev.arcane.client.fx.Fx.camera;
-import static dev.arcane.client.fx.Fx.ease;
-import static dev.arcane.client.fx.Fx.light;
-import static dev.arcane.client.fx.Fx.onCircle;
-import static dev.arcane.client.fx.Fx.particle;
-import static dev.arcane.client.fx.Fx.particlesVisible;
-import static dev.arcane.client.fx.Fx.proximity;
-import static dev.arcane.client.fx.Fx.scaled;
-import static dev.arcane.client.fx.Fx.unlight;
-import static dev.arcane.client.fx.Fx.world;
+import static dev.leyline.client.fx.Fx.UP;
+import static dev.leyline.client.fx.Fx.camera;
+import static dev.leyline.client.fx.Fx.ease;
+import static dev.leyline.client.fx.Fx.light;
+import static dev.leyline.client.fx.Fx.onCircle;
+import static dev.leyline.client.fx.Fx.particle;
+import static dev.leyline.client.fx.Fx.particlesVisible;
+import static dev.leyline.client.fx.Fx.proximity;
+import static dev.leyline.client.fx.Fx.scaled;
+import static dev.leyline.client.fx.Fx.unlight;
+import static dev.leyline.client.fx.Fx.world;
 
 import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
@@ -20,6 +20,8 @@ import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.fx.Fx;
+import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundSource;
@@ -40,7 +42,7 @@ import net.minecraft.world.phys.Vec3;
  * and fades.
  */
 final class ChronoFx {
-    private static final Fx.Tracker<Field> FIELDS = new Fx.Tracker<>();
+    private static final Fx.Tracker<Field> FIELDS = AstralFx.TRACKERS.create();
     private static final ColorRgba TEAL = ColorRgba.rgba(0x7FFFE6FF);
     private static final ColorRgba PALE = ColorRgba.rgba(0xDFFFF8FF);
     private static final int TINT = 0x08201C;
@@ -91,7 +93,7 @@ final class ChronoFx {
             age++;
             if (endAge >= 0) endAge++;
             boolean drained = SpaceTimeShader.available();
-            SpellLighting.guarded(this::animate);
+            NebulonGuard.guarded(this::animate);
             if (endAge < 0 && particlesVisible(center)) particles(drained);
             // Tick, tock: once a second, as the second hand steps.
             if (endAge < 0 && age % TICK == 0 && age < duration) {

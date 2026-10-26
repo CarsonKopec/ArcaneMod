@@ -1,6 +1,7 @@
 package dev.arcane.client.fx;
 
 import com.mojang.math.Transformation;
+import dev.leyline.client.fx.Fx;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;

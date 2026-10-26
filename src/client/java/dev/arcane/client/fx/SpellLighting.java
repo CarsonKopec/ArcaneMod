@@ -7,7 +7,6 @@ import de.nexusrealms.nebulon.api.render.effect.ArcChain;
 import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
-import dev.arcane.ArcaneSpells;
 import dev.arcane.api.SpellRegistries;
 import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.effect.SpellEffect;
@@ -16,6 +15,7 @@ import dev.arcane.item.ArcaneStaffItem;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.fx.NebulonGuard;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -34,9 +34,9 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>Owns and expires every library handle: no permanent lights are left behind by a spell.
  *
- * <p>Nebulon is a beta library driving the GPU directly, so every call into it is {@linkplain #guarded guarded}.
- * The first failure switches lighting off and spells carry on with particles alone; an exception escaping the
- * packet handler would otherwise disconnect the player.
+ * <p>Nebulon is a beta library driving the GPU directly, so every call into it goes through Leyline's
+ * {@link NebulonGuard}: the first failure switches Nebulon off, these lights are let go, and spells carry on with
+ * particles alone.
  */
 public final class SpellLighting {
     private static final ColorRgba VIOLET = ColorRgba.rgba(0xAD55FFFF);
@@ -55,13 +55,12 @@ public final class SpellLighting {
     private static long ticks;
     /** One-off flashes count down from -1, clear of {@link #key} (never negative) and {@link #STAFF_GLOW_KEY}. */
     private static long nextFlashKey = -1;
-    /** Set by the first Nebulon failure; lighting then stays off until the game restarts. */
-    private static boolean disabled;
 
     private SpellLighting() {
     }
 
     public static void register() {
+        NebulonGuard.onFailure(SpellLighting::release);
         on(ModSpellEffects.CHARGE, SpellLighting::charge);
         on(ModSpellEffects.BOLT, SpellLighting::bolt);
         on(ModSpellEffects.IMPACT, SpellLighting::impact);
@@ -77,18 +76,18 @@ public final class SpellLighting {
     }
 
     private static void on(SpellEffectType type, BiConsumer<ClientLevel, SpellEffect> play) {
-        SpellEffectRenderers.register(type, (effect, level) -> guarded(() -> {
+        SpellEffectRenderers.register(type, (effect, level) -> NebulonGuard.guarded(() -> {
             ensureWorld(level);
             play.accept(level, effect);
         }));
     }
 
     public static void tick(Minecraft client) {
-        guarded(() -> tickGlows(client));
+        NebulonGuard.guarded(() -> tickGlows(client));
     }
 
     public static void clear() {
-        guarded(SpellLighting::closeAll);
+        NebulonGuard.guarded(SpellLighting::closeAll);
         GLOWS.clear();
         world = null;
         ticks = 0;
@@ -342,39 +341,16 @@ public final class SpellLighting {
         GLOWS.clear();
     }
 
-    /**
-     * Runs Nebulon work. The first failure is logged once and turns Nebulon off for the rest of the session, for every
-     * spell; other owners of Nebulon handles check {@link #disabled()} and let theirs go.
-     */
-    static void guarded(Runnable action) {
-        if (disabled) return;
-        try {
-            action.run();
-        } catch (RuntimeException | LinkageError e) { // LinkageError: an installed Nebulon with a different API
-            disabled = true;
-            ArcaneSpells.LOGGER.error("Nebulon effects failed; spells will use particles only until the game restarts", e);
-            for (Glow glow : GLOWS.values()) {
-                try {
-                    glow.close();
-                } catch (RuntimeException | LinkageError ignored) {
-                    // Nebulon is already failing: release what still can be released.
-                }
+    /** Nebulon has failed: lets go of every light and rune it still can. */
+    private static void release() {
+        for (Glow glow : GLOWS.values()) {
+            try {
+                glow.close();
+            } catch (RuntimeException | LinkageError ignored) {
+                // Nebulon is already failing: release what still can be released.
             }
-            GLOWS.clear();
         }
-    }
-
-    static boolean disabled() {
-        return disabled;
-    }
-
-    /** Cleanup must still run after rendering fails; one broken handle must not strand the other effects. */
-    static void cleanup(Runnable action) {
-        try {
-            action.run();
-        } catch (RuntimeException | LinkageError e) {
-            if (!disabled) guarded(() -> { throw e; });
-        }
+        GLOWS.clear();
     }
 
     private static final class Glow {

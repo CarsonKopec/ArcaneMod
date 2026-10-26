@@ -120,7 +120,7 @@ PAL's upper-body animations live in `assets/arcane_spells/player_animations/`. G
 
 ### Build and test
 
-Arcane Spells builds against Leyline, a library mod in its own repository. Build it there first with `gradlew.bat publishToMavenLocal`, which puts it in the local Maven repository this build reads it from; do that again whenever Leyline changes.
+Arcane Spells builds against [Leyline](https://github.com/CarsonKopec/Leyline), a library mod in its own repository. Build it there first with `gradlew.bat publishToMavenLocal`, which puts it in the local Maven repository this build reads it from; do that again whenever Leyline changes.
 
 | Task | Command (Windows; use `./gradlew` elsewhere) |
 | --- | --- |
@@ -190,9 +190,9 @@ src/client/java/dev/arcane/          client-only code
   client/gui/SpellWheelScreen.java   the radial spell wheel
   client/gui/SpellHud.java           mana bar, corruption bar and active-spell slot
   client/fx/SpellParticles.java      particle choreography for every built-in effect
-  client/fx/SpellLighting.java       Nebulon lights, rune circles and arcs
-  client/fx/AstralFx.java            the Astral spells' visuals, registered and ticked together
-  client/fx/Fx.java                  their shared tools: shapes that update in place, lights, particles, trackers
+  client/fx/SpellLighting.java       Nebulon lights, rune circles and arcs, through Leyline's NebulonGuard
+  client/fx/AstralFx.java            the Astral spells' visuals, registered and ticked together (their shared
+                                       tools, shapes that update in place, lights, particles and trackers, are Leyline's Fx)
   client/fx/ChannelFx.java           every Astral spell's channel ring
   client/fx/JudgmentFx, MeteorFx,    each Astral spell's visuals
         SingularityFx, ChronoFx, GateFx, PlanetfallFx

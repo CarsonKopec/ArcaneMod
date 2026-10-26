@@ -1,22 +1,22 @@
 package dev.arcane.client.fx;
 
-import static dev.arcane.client.fx.Fx.DOWN;
-import static dev.arcane.client.fx.Fx.RENDER_DISTANCE;
-import static dev.arcane.client.fx.Fx.UP;
-import static dev.arcane.client.fx.Fx.circle;
-import static dev.arcane.client.fx.Fx.ease;
-import static dev.arcane.client.fx.Fx.hide;
-import static dev.arcane.client.fx.Fx.jitter;
-import static dev.arcane.client.fx.Fx.light;
-import static dev.arcane.client.fx.Fx.onCircle;
-import static dev.arcane.client.fx.Fx.particle;
-import static dev.arcane.client.fx.Fx.particlesVisible;
-import static dev.arcane.client.fx.Fx.proximity;
-import static dev.arcane.client.fx.Fx.scaled;
-import static dev.arcane.client.fx.Fx.show;
-import static dev.arcane.client.fx.Fx.unlight;
-import static dev.arcane.client.fx.Fx.upwards;
-import static dev.arcane.client.fx.Fx.world;
+import static dev.leyline.client.fx.Fx.DOWN;
+import static dev.leyline.client.fx.Fx.RENDER_DISTANCE;
+import static dev.leyline.client.fx.Fx.UP;
+import static dev.leyline.client.fx.Fx.circle;
+import static dev.leyline.client.fx.Fx.ease;
+import static dev.leyline.client.fx.Fx.hide;
+import static dev.leyline.client.fx.Fx.jitter;
+import static dev.leyline.client.fx.Fx.light;
+import static dev.leyline.client.fx.Fx.onCircle;
+import static dev.leyline.client.fx.Fx.particle;
+import static dev.leyline.client.fx.Fx.particlesVisible;
+import static dev.leyline.client.fx.Fx.proximity;
+import static dev.leyline.client.fx.Fx.scaled;
+import static dev.leyline.client.fx.Fx.show;
+import static dev.leyline.client.fx.Fx.unlight;
+import static dev.leyline.client.fx.Fx.upwards;
+import static dev.leyline.client.fx.Fx.world;
 
 import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.EffectHandle;
@@ -32,6 +32,8 @@ import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.fx.Fx;
+import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
 import java.util.ArrayList;
 import java.util.List;
@@ -93,7 +95,7 @@ final class JudgmentFx {
     private static final double SHOCKWAVE = SpellTuning.JUDGMENT_BLAST_RADIUS * 1.8;
     private static final int TINT = 0x0C0620;
 
-    private static final Fx.Tracker<Strike> STRIKES = new Fx.Tracker<>();
+    private static final Fx.Tracker<Strike> STRIKES = AstralFx.TRACKERS.create();
 
     private JudgmentFx() {
     }
@@ -207,7 +209,7 @@ final class JudgmentFx {
             age++;
             if (blastAge >= 0) blastAge++;
             else if (beamAge >= 0) beamAge++;
-            SpellLighting.guarded(this::animate);
+            NebulonGuard.guarded(this::animate);
             if (particlesVisible(impact)) particles();
             screen(proximity(impact));
             if (blastAge >= 0) return blastAge > AFTERMATH_TICKS;

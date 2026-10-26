@@ -1,18 +1,18 @@
 package dev.arcane.client.fx;
 
-import static dev.arcane.client.fx.Fx.UP;
-import static dev.arcane.client.fx.Fx.anyDirection;
-import static dev.arcane.client.fx.Fx.camera;
-import static dev.arcane.client.fx.Fx.ease;
-import static dev.arcane.client.fx.Fx.hide;
-import static dev.arcane.client.fx.Fx.light;
-import static dev.arcane.client.fx.Fx.particle;
-import static dev.arcane.client.fx.Fx.particlesVisible;
-import static dev.arcane.client.fx.Fx.proximity;
-import static dev.arcane.client.fx.Fx.scaled;
-import static dev.arcane.client.fx.Fx.show;
-import static dev.arcane.client.fx.Fx.unlight;
-import static dev.arcane.client.fx.Fx.world;
+import static dev.leyline.client.fx.Fx.UP;
+import static dev.leyline.client.fx.Fx.anyDirection;
+import static dev.leyline.client.fx.Fx.camera;
+import static dev.leyline.client.fx.Fx.ease;
+import static dev.leyline.client.fx.Fx.hide;
+import static dev.leyline.client.fx.Fx.light;
+import static dev.leyline.client.fx.Fx.particle;
+import static dev.leyline.client.fx.Fx.particlesVisible;
+import static dev.leyline.client.fx.Fx.proximity;
+import static dev.leyline.client.fx.Fx.scaled;
+import static dev.leyline.client.fx.Fx.show;
+import static dev.leyline.client.fx.Fx.unlight;
+import static dev.leyline.client.fx.Fx.world;
 
 import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.EffectHandle;
@@ -24,6 +24,8 @@ import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.fx.Fx;
+import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,7 +44,7 @@ import net.minecraft.world.phys.Vec3;
  * was cast.
  */
 final class GateFx {
-    private static final Fx.Tracker<Gate> GATES = new Fx.Tracker<>();
+    private static final Fx.Tracker<Gate> GATES = AstralFx.TRACKERS.create();
     private static final ColorRgba ROSE = ColorRgba.rgba(0xFFB8F0FF);
     private static final ColorRgba GOLD = ColorRgba.rgba(0xFFD27AFF);
     /** The gate rings' centres, above the ground. */
@@ -95,7 +97,7 @@ final class GateFx {
         @Override public boolean tick() {
             age++;
             if (flare > 0) flare--;
-            SpellLighting.guarded(this::animate);
+            NebulonGuard.guarded(this::animate);
             for (Vec3 end : single ? new Vec3[] {origin} : new Vec3[] {origin, destination}) {
                 if (age < duration && particlesVisible(end)) inflow(end);
                 if (age % HUM_TICKS == 1 && age < duration - CLOSE_TICKS) {

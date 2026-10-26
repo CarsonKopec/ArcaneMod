@@ -4,6 +4,7 @@ import com.mojang.math.Transformation;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.spell.PlanetfallTerrain;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.fx.Fx;
 import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayList;
 import java.util.Iterator;

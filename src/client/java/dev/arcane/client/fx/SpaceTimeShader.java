@@ -18,6 +18,7 @@ import de.nexusrealms.nebulon.api.render.client.post.NebulonPostProcessing;
 import de.nexusrealms.nebulon.api.render.client.post.PostPassContext;
 import de.nexusrealms.nebulon.api.render.client.post.PostPassHandle;
 import dev.arcane.ArcaneSpells;
+import dev.leyline.client.fx.NebulonGuard;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalInt;
@@ -73,7 +74,7 @@ final class SpaceTimeShader {
 
     /** Whether the pass can run here: as for {@link PlanetfallShader#available}. */
     static boolean available() {
-        if (failed || SpellLighting.disabled() || VULKAN_MOD) return false;
+        if (failed || NebulonGuard.disabled() || VULKAN_MOD) return false;
         try {
             return !NebulonRenderSystem.environment().irisShaderPackActive();
         } catch (RuntimeException | LinkageError e) {
@@ -92,7 +93,7 @@ final class SpaceTimeShader {
         scenes = available() ? requested : List.of();
         requested = new ArrayList<>();
         if (!scenes.isEmpty() && handle == null) {
-            SpellLighting.cleanup(() -> handle = NebulonPostProcessing.register(ID, RenderStage.END_MAIN, 90, SpaceTimeShader::render));
+            NebulonGuard.cleanup(() -> handle = NebulonPostProcessing.register(ID, RenderStage.END_MAIN, 90, SpaceTimeShader::render));
         } else if (scenes.isEmpty() && handle != null) {
             close();
         }
@@ -109,9 +110,9 @@ final class SpaceTimeShader {
     private static void close() {
         PostPassHandle closing = handle;
         handle = null;
-        if (closing != null) SpellLighting.cleanup(closing::close);
+        if (closing != null) NebulonGuard.cleanup(closing::close);
         TextureTarget target = frame;
-        if (target != null) SpellLighting.cleanup(target::destroyBuffers);
+        if (target != null) NebulonGuard.cleanup(target::destroyBuffers);
         frame = null;
     }
 

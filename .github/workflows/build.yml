@@ -29,6 +29,16 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
+      # Leyline, the library mod this one builds on, isn't on a public Maven repository yet: build it from its own
+      # repository into the local one, where this build looks for it.
+      - name: checkout Leyline
+        uses: actions/checkout@v6
+        with:
+          repository: CarsonKopec/Leyline
+          path: leyline
+      - name: publish Leyline to the local Maven repository
+        working-directory: leyline
+        run: chmod +x ./gradlew && ./gradlew publishToMavenLocal
       - name: build
         run: ./gradlew build
       - name: capture build artifacts

@@ -19,6 +19,7 @@ import de.nexusrealms.nebulon.api.render.client.post.PostPassContext;
 import de.nexusrealms.nebulon.api.render.client.post.PostPassHandle;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.client.config.ArcaneClientSettings;
+import dev.leyline.client.fx.NebulonGuard;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.OptionalInt;
@@ -106,7 +107,7 @@ final class PlanetfallShader {
      * VulkanMod, which replaces the OpenGL renderer this pass is drawn through.
      */
     static boolean available() {
-        if (failed || SpellLighting.disabled() || VULKAN_MOD) return false;
+        if (failed || NebulonGuard.disabled() || VULKAN_MOD) return false;
         try {
             return !NebulonRenderSystem.environment().irisShaderPackActive();
         } catch (RuntimeException | LinkageError e) {
@@ -129,7 +130,7 @@ final class PlanetfallShader {
         requested = null;
         requestedPriority = Integer.MIN_VALUE;
         if (scene != null && handle == null) {
-            SpellLighting.cleanup(() -> handle = NebulonPostProcessing.register(ID, RenderStage.END_MAIN, 100, PlanetfallShader::render));
+            NebulonGuard.cleanup(() -> handle = NebulonPostProcessing.register(ID, RenderStage.END_MAIN, 100, PlanetfallShader::render));
         } else if (scene == null && handle != null) {
             close();
         }
@@ -145,9 +146,9 @@ final class PlanetfallShader {
     private static void close() {
         PostPassHandle closing = handle;
         handle = null;
-        if (closing != null) SpellLighting.cleanup(closing::close);
+        if (closing != null) NebulonGuard.cleanup(closing::close);
         for (TextureTarget target : targets()) {
-            if (target != null) SpellLighting.cleanup(target::destroyBuffers);
+            if (target != null) NebulonGuard.cleanup(target::destroyBuffers);
         }
         frame = volumes = hdr = noiseTile = null;
         Arrays.fill(BLOOM, null);
