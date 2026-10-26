@@ -22,7 +22,7 @@ import net.minecraft.world.item.component.TooltipProvider;
  * cooldowns pick it up from there.
  *
  * <p>Casting runs on the server only. Mana and cooldown are checked before {@link #cast} and charged only if it
- * returns true. To show the cast to players, send a {@linkplain dev.arcane.api.effect.SpellEffect spell effect}.
+ * returns true. To show the cast to players, send an effect with Leyline's {@link dev.leyline.effect.Effects#send}.
  *
  * <p>Presentation comes from the spell's id, {@code <namespace>:<path>}:
  * <ul>

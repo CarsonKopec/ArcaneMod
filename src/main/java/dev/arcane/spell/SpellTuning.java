@@ -418,8 +418,6 @@ public final class SpellTuning {
     public static final int MAX_ACTIVE_PLANETFALLS = 2;
 
 
-    /** Players farther than this are not sent effects; also the client's light and rune render distance. */
-    public static final double EFFECT_RANGE = 448;
 
     private SpellTuning() {
     }

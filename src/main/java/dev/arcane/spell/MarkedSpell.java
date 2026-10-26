@@ -2,9 +2,9 @@ package dev.arcane.spell;
 
 import dev.arcane.api.spell.Spell;
 import dev.arcane.api.spell.SpellContext;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -39,7 +39,7 @@ abstract class MarkedSpell extends Spell {
         Aim aim = aim(context.level(), caster);
         Vec3 at = aim.point() != null ? aim.point() : caster.position();
         double radius = aim.problem() == null ? markRadius : -markRadius;
-        SpellEffects.send(context.level(), ModSpellEffects.ASTRAL_CHANNEL, at, new Vec3(0, radius, 0), context.power(), chargedTicks, caster.getId());
+        Effects.send(context.level(), ModSpellEffects.ASTRAL_CHANNEL, at, new Vec3(0, radius, 0), context.power(), chargedTicks, caster.getId());
     }
 
     @Override public final boolean cast(SpellContext context) {

@@ -27,14 +27,14 @@ import de.nexusrealms.nebulon.api.render.light.client.BeamLightHandle;
 import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.ArcaneSpells;
-import dev.arcane.api.client.SpellEffectRenderers;
-import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
+import dev.leyline.effect.Effect;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -101,12 +101,12 @@ final class JudgmentFx {
     }
 
     static void register() {
-        SpellEffectRenderers.register(ModSpellEffects.JUDGMENT_MARK, (effect, level) -> strike(effect, level).mark(effect));
-        SpellEffectRenderers.register(ModSpellEffects.JUDGMENT_BEAM, (effect, level) -> strike(effect, level).beam(effect));
-        SpellEffectRenderers.register(ModSpellEffects.JUDGMENT_BLAST, (effect, level) -> strike(effect, level).blast());
+        EffectRenderers.register(ModSpellEffects.JUDGMENT_MARK, (effect, level) -> strike(effect, level).mark(effect));
+        EffectRenderers.register(ModSpellEffects.JUDGMENT_BEAM, (effect, level) -> strike(effect, level).beam(effect));
+        EffectRenderers.register(ModSpellEffects.JUDGMENT_BLAST, (effect, level) -> strike(effect, level).blast());
     }
 
-    private static Strike strike(SpellEffect effect, ClientLevel level) {
+    private static Strike strike(Effect effect, ClientLevel level) {
         return STRIKES.get(effect.sourceId(), level, id -> new Strike(id, effect));
     }
 
@@ -134,7 +134,7 @@ final class JudgmentFx {
         PointLightHandle groundLight, skyLight, blastLight, emberLight;
         BeamLightHandle beamLight;
 
-        Strike(int id, SpellEffect first) {
+        Strike(int id, Effect first) {
             this.id = id;
             this.impact = first.position();
             // A strike first seen at its detonation has no sky offset; put the fading sky where it would have been.
@@ -142,11 +142,11 @@ final class JudgmentFx {
             this.sky = impact.add(offset);
         }
 
-        void mark(SpellEffect effect) {
+        void mark(Effect effect) {
             gatherTicks = Math.max(1, effect.age());
         }
 
-        void beam(SpellEffect effect) {
+        void beam(Effect effect) {
             if (beamAge >= 0) return;
             beamAge = 0;
             beamTicks = Math.max(1, effect.age());

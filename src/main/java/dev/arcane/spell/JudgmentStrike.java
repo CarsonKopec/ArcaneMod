@@ -1,8 +1,8 @@
 package dev.arcane.spell;
 
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import dev.leyline.terrain.Crater;
 import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayList;
@@ -73,7 +73,7 @@ final class JudgmentStrike {
         this.skyY = Math.min(level.getMaxY() - 1, impact.y + SpellTuning.JUDGMENT_SKY_HEIGHT);
         this.mayBuild = SpellTerrain.mayBreak(level, caster);
         this.random = level.getRandom();
-        SpellEffects.send(level, ModSpellEffects.JUDGMENT_MARK, impact, skyOffset(), 1, SpellTuning.JUDGMENT_GATHER_TICKS, sourceId);
+        Effects.send(level, ModSpellEffects.JUDGMENT_MARK, impact, skyOffset(), 1, SpellTuning.JUDGMENT_GATHER_TICKS, sourceId);
         level.playSound(null, impact.x, impact.y, impact.z, ModSounds.JUDGMENT_GATHER, SoundSource.PLAYERS, 6.0f, 1.0f);
     }
 
@@ -108,7 +108,7 @@ final class JudgmentStrike {
     }
 
     private void startBeam() {
-        SpellEffects.send(level, ModSpellEffects.JUDGMENT_BEAM, impact, skyOffset(), 1, SpellTuning.JUDGMENT_BEAM_TICKS, sourceId);
+        Effects.send(level, ModSpellEffects.JUDGMENT_BEAM, impact, skyOffset(), 1, SpellTuning.JUDGMENT_BEAM_TICKS, sourceId);
         level.playSound(null, impact.x, impact.y, impact.z, ModSounds.JUDGMENT_BEAM, SoundSource.PLAYERS, 8.0f, 1.0f);
         lightning(impact.x, impact.z);
         // The shaft starts at the highest thing in the beam (a tree, a roof) and ends well below the mark.
@@ -149,7 +149,7 @@ final class JudgmentStrike {
 
     private void detonate() {
         carveShaft(Integer.MAX_VALUE);
-        SpellEffects.send(level, ModSpellEffects.JUDGMENT_BLAST, impact, new Vec3(0, 1, 0), 1, 0, sourceId);
+        Effects.send(level, ModSpellEffects.JUDGMENT_BLAST, impact, new Vec3(0, 1, 0), 1, 0, sourceId);
         level.playSound(null, impact.x, impact.y, impact.z, ModSounds.JUDGMENT_BLAST, SoundSource.PLAYERS, 16.0f, 1.0f);
 
         double radius = SpellTuning.JUDGMENT_BLAST_RADIUS;

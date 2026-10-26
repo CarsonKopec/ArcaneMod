@@ -1,9 +1,9 @@
 package dev.arcane.spell;
 
 import dev.arcane.api.spell.SpellContext;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -106,7 +106,7 @@ public final class ChronoField extends MarkedSpell {
             this.caster = caster;
             this.center = center;
             this.id = id;
-            SpellEffects.send(level, ModSpellEffects.CHRONO_FIELD, center, Vec3.ZERO, (float) SpellTuning.CHRONO_RADIUS,
+            Effects.send(level, ModSpellEffects.CHRONO_FIELD, center, Vec3.ZERO, (float) SpellTuning.CHRONO_RADIUS,
                     SpellTuning.CHRONO_DURATION_TICKS, id);
             level.playSound(null, center.x, center.y, center.z, ModSounds.CHRONO_START, SoundSource.PLAYERS, 3.0f, 1.0f);
         }
@@ -129,7 +129,7 @@ public final class ChronoField extends MarkedSpell {
             });
             if (++age < SpellTuning.CHRONO_DURATION_TICKS) return false;
             release();
-            SpellEffects.send(level, ModSpellEffects.CHRONO_END, center, Vec3.ZERO, (float) SpellTuning.CHRONO_RADIUS, 0, id);
+            Effects.send(level, ModSpellEffects.CHRONO_END, center, Vec3.ZERO, (float) SpellTuning.CHRONO_RADIUS, 0, id);
             level.playSound(null, center.x, center.y, center.z, ModSounds.CHRONO_END, SoundSource.PLAYERS, 3.0f, 1.0f);
             return true;
         }

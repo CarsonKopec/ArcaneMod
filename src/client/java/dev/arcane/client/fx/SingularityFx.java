@@ -14,14 +14,14 @@ import static dev.leyline.client.fx.Fx.world;
 
 import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
-import dev.arcane.api.client.SpellEffectRenderers;
-import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
+import dev.leyline.effect.Effect;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -71,12 +71,12 @@ final class SingularityFx {
     }
 
     static void register() {
-        SpellEffectRenderers.register(ModSpellEffects.SINGULARITY,
+        EffectRenderers.register(ModSpellEffects.SINGULARITY,
                 (effect, level) -> HOLES.get(effect.sourceId(), level, id -> Hole.opened(effect)));
         // A hole first heard of as it grows or collapses was opened before this client came in range.
-        SpellEffectRenderers.register(ModSpellEffects.SINGULARITY_GROWTH,
+        EffectRenderers.register(ModSpellEffects.SINGULARITY_GROWTH,
                 (effect, level) -> HOLES.get(effect.sourceId(), level, id -> new Hole(effect, effect.age())).grow(effect.power()));
-        SpellEffectRenderers.register(ModSpellEffects.SINGULARITY_COLLAPSE,
+        EffectRenderers.register(ModSpellEffects.SINGULARITY_COLLAPSE,
                 (effect, level) -> HOLES.get(effect.sourceId(), level, id -> new Hole(effect, SpellTuning.SINGULARITY_DURATION_TICKS))
                         .collapse(effect.power()));
     }
@@ -102,13 +102,13 @@ final class SingularityFx {
         float grown = 1;
 
         /** As it opens. */
-        static Hole opened(SpellEffect effect) {
+        static Hole opened(Effect effect) {
             return new Hole(effect.position(), effect.power() > 0 ? effect.power() : SpellTuning.SINGULARITY_PULL_RADIUS,
                     effect.age() > 0 ? effect.age() : SpellTuning.SINGULARITY_DURATION_TICKS, 0, effect.sourceId());
         }
 
         /** Already {@code age} ticks old, heard of from {@code effect}, which isn't the one it opened with. */
-        Hole(SpellEffect effect, int age) {
+        Hole(Effect effect, int age) {
             this(effect.position(), SpellTuning.SINGULARITY_PULL_RADIUS, SpellTuning.SINGULARITY_DURATION_TICKS, age, effect.sourceId());
         }
 

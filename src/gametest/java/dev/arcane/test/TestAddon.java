@@ -1,12 +1,13 @@
 package dev.arcane.test;
 
-import dev.arcane.api.ArcaneSpellsApi;
 import dev.arcane.api.SpellRegistries;
-import dev.arcane.api.effect.SpellEffect;
-import dev.arcane.api.effect.SpellEffectType;
 import dev.arcane.api.event.SpellEvents;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.api.spell.SpellContext;
+import dev.leyline.LeylineRegistries;
+import dev.leyline.effect.Effect;
+import dev.leyline.effect.EffectType;
+import dev.leyline.effect.Effects;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
@@ -17,7 +18,7 @@ import net.minecraft.resources.Identifier;
  * listener on each cast event. {@link SpellApiGameTest} checks that all of it works.
  */
 public final class TestAddon implements ModInitializer {
-    public static final SpellEffectType PING_EFFECT = Registry.register(SpellRegistries.SPELL_EFFECTS, id("ping"), new SpellEffectType());
+    public static final EffectType PING_EFFECT = Registry.register(LeylineRegistries.EFFECT_TYPES, id("ping"), new EffectType());
     public static final Spell PING = Registry.register(SpellRegistries.SPELLS, id("ping"), new Ping());
     public static final float PING_MANA = 20;
     public static final int PING_COOLDOWN_TICKS = 40;
@@ -54,8 +55,8 @@ public final class TestAddon implements ModInitializer {
 
         @Override public boolean cast(SpellContext context) {
             var caster = context.caster();
-            ArcaneSpellsApi.sendEffect(context.level(),
-                    new SpellEffect(PING_EFFECT, caster.getEyePosition(), caster.getLookAngle(), context.power(), 0, caster.getId()));
+            Effects.send(context.level(),
+                    new Effect(PING_EFFECT, caster.getEyePosition(), caster.getLookAngle(), context.power(), 0, caster.getId()));
             return true;
         }
     }

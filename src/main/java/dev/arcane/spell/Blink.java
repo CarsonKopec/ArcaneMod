@@ -2,9 +2,9 @@ package dev.arcane.spell;
 
 import dev.arcane.api.spell.Spell;
 import dev.arcane.api.spell.SpellContext;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -54,7 +54,7 @@ public final class Blink extends Spell {
         caster.resetFallDistance();
         level.playSound(null, origin.x, origin.y, origin.z, ModSounds.BLINK, SoundSource.PLAYERS, 0.7f, 1.0f);
         level.playSound(null, destination.x, destination.y, destination.z, ModSounds.BLINK_ARRIVE, SoundSource.PLAYERS, 0.7f, 1.0f);
-        SpellEffects.send(level, ModSpellEffects.BLINK, origin, destination.subtract(origin), 1, 0, caster.getId());
+        Effects.send(level, ModSpellEffects.BLINK, origin, destination.subtract(origin), 1, 0, caster.getId());
         AFTERIMAGES.add(new Afterimage(level, caster, origin, context.spellPower()));
         return true;
     }
@@ -113,7 +113,7 @@ public final class Blink extends Spell {
                 victim.push(away.x, 0.3, away.z);
             }
             level.playSound(null, center.x, center.y, center.z, ModSounds.BLINK_AFTERIMAGE, SoundSource.PLAYERS, 0.9f, 1.0f);
-            SpellEffects.send(level, ModSpellEffects.AFTERIMAGE, feet, Vec3.ZERO, 1, 0, caster.getId());
+            Effects.send(level, ModSpellEffects.AFTERIMAGE, feet, Vec3.ZERO, 1, 0, caster.getId());
             return true;
         }
     }

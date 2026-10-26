@@ -1,21 +1,18 @@
 package dev.arcane.api;
 
-import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.api.spell.Spell;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
 import java.util.List;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
  * Everything other mods need besides the registries and events: players' mana and cooldowns, the held staff, casting
- * from code, and sending spell effects. Methods taking a {@link Player} work on either side; the client sees the
- * local player's state as last synced.
+ * from code. Methods taking a {@link Player} work on either side; the client sees the local player's state as last
+ * synced. Spells' visual effects are sent with Leyline's {@code dev.leyline.effect.Effects}.
  */
 public final class ArcaneSpellsApi {
     private ArcaneSpellsApi() {
@@ -109,10 +106,5 @@ public final class ArcaneSpellsApi {
      */
     public static boolean cast(ServerPlayer caster, Spell spell, float power) {
         return SpellCasting.cast(caster.level(), caster, spell, power);
-    }
-
-    /** Sends {@code effect} to every player near its position who has that chunk loaded. */
-    public static void sendEffect(ServerLevel level, SpellEffect effect) {
-        SpellEffects.send(level, effect);
     }
 }

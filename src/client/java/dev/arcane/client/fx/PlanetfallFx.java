@@ -23,8 +23,6 @@ import de.nexusrealms.nebulon.api.render.EffectHandle;
 import de.nexusrealms.nebulon.api.render.NebulonRendering;
 import de.nexusrealms.nebulon.api.render.effect.ArcChain;
 import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
-import dev.arcane.api.client.SpellEffectRenderers;
-import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.item.ArcaneStaffItem;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
@@ -34,9 +32,11 @@ import dev.arcane.spell.Planetfall;
 import dev.arcane.spell.PlanetfallTerrain;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
+import dev.leyline.effect.Effect;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -131,13 +131,13 @@ final class PlanetfallFx {
     }
 
     static void register() {
-        SpellEffectRenderers.register(ModSpellEffects.PLANETFALL_RIFT, (effect, level) -> fall(effect, level).rift(effect));
-        SpellEffectRenderers.register(ModSpellEffects.PLANETFALL_FALL, (effect, level) -> fall(effect, level).fall(effect));
-        SpellEffectRenderers.register(ModSpellEffects.PLANETFALL_IMPACT, (effect, level) -> fall(effect, level).impact());
-        SpellEffectRenderers.register(ModSpellEffects.PLANETFALL_SHARD, (effect, level) -> SHARDS.get(effect.sourceId(), level, id -> new Shard(level, effect)));
+        EffectRenderers.register(ModSpellEffects.PLANETFALL_RIFT, (effect, level) -> fall(effect, level).rift(effect));
+        EffectRenderers.register(ModSpellEffects.PLANETFALL_FALL, (effect, level) -> fall(effect, level).fall(effect));
+        EffectRenderers.register(ModSpellEffects.PLANETFALL_IMPACT, (effect, level) -> fall(effect, level).impact());
+        EffectRenderers.register(ModSpellEffects.PLANETFALL_SHARD, (effect, level) -> SHARDS.get(effect.sourceId(), level, id -> new Shard(level, effect)));
     }
 
-    private static Fall fall(SpellEffect effect, ClientLevel level) {
+    private static Fall fall(Effect effect, ClientLevel level) {
         return FALLS.get(effect.sourceId(), level, id -> new Fall(id, effect));
     }
 
@@ -217,7 +217,7 @@ final class PlanetfallFx {
         float spin, spinBefore;
         EffectHandle<MagicCircle> riftRunes, groundRunes;
 
-        Fall(int id, SpellEffect first) {
+        Fall(int id, Effect first) {
             this.id = id;
             this.seed = (int) first.power();
             this.mark = first.position();
@@ -236,11 +236,11 @@ final class PlanetfallFx {
             this.planetAt = Planetfall.planetAt(mark, riftOffset, 0);
         }
 
-        void rift(SpellEffect effect) {
+        void rift(Effect effect) {
             riftTicks = Math.max(1, effect.age());
         }
 
-        void fall(SpellEffect effect) {
+        void fall(Effect effect) {
             if (fallAge >= 0 || impactAge >= 0) return;
             fallAge = 0;
             fallTicks = Math.max(1, effect.age());
@@ -857,7 +857,7 @@ final class PlanetfallFx {
         Vec3 at;
         int age;
 
-        Shard(ClientLevel level, SpellEffect effect) {
+        Shard(ClientLevel level, Effect effect) {
             this.level = level;
             this.from = effect.position();
             this.to = from.add(effect.direction());

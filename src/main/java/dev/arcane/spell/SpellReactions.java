@@ -1,8 +1,8 @@
 package dev.arcane.spell;
 
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -24,7 +24,7 @@ final class SpellReactions {
         victim.setTicksFrozen(0);
         Vec3 at = victim.getBoundingBox().getCenter();
         level.playSound(null, at.x, at.y, at.z, ModSounds.SHATTER, SoundSource.PLAYERS, 1.0f, 1.0f);
-        SpellEffects.send(level, ModSpellEffects.SHATTER, at, new Vec3(0, 1, 0), victim.getBbWidth(), 0, victim.getId());
+        Effects.send(level, ModSpellEffects.SHATTER, at, new Vec3(0, 1, 0), victim.getBbWidth(), 0, victim.getId());
         return damage * SpellTuning.SHATTER_MULTIPLIER;
     }
 
@@ -38,7 +38,7 @@ final class SpellReactions {
         if (!wet(victim)) return damage;
         Vec3 at = victim.getBoundingBox().getCenter();
         level.playSound(null, at.x, at.y, at.z, ModSounds.CONDUCTION, SoundSource.PLAYERS, 0.8f, 1.0f);
-        SpellEffects.send(level, ModSpellEffects.CONDUCTION, at, new Vec3(0, 1, 0), victim.getBbWidth(), 0, victim.getId());
+        Effects.send(level, ModSpellEffects.CONDUCTION, at, new Vec3(0, 1, 0), victim.getBbWidth(), 0, victim.getId());
         return damage * SpellTuning.CONDUCTION_MULTIPLIER;
     }
 }

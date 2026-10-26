@@ -2,9 +2,9 @@ package dev.arcane.spell;
 
 import dev.arcane.api.spell.Spell;
 import dev.arcane.api.spell.SpellContext;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -46,7 +46,7 @@ public final class ArcaneBolt extends Spell {
         ServerPlayer caster = context.caster();
         Vec3 direction = caster.getLookAngle();
         Vec3 center = caster.getEyePosition().add(direction.scale(1.4));
-        SpellEffects.send(context.level(), ModSpellEffects.CHARGE, center, direction, context.power(), chargedTicks, caster.getId());
+        Effects.send(context.level(), ModSpellEffects.CHARGE, center, direction, context.power(), chargedTicks, caster.getId());
     }
 
     /**

@@ -21,14 +21,14 @@ import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.EffectHandle;
 import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
-import dev.arcane.api.client.SpellEffectRenderers;
-import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
+import dev.leyline.effect.Effect;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ColorParticleOption;
@@ -66,11 +66,11 @@ final class MeteorFx {
     }
 
     static void register() {
-        SpellEffectRenderers.register(ModSpellEffects.METEOR_SWARM,
+        EffectRenderers.register(ModSpellEffects.METEOR_SWARM,
                 (effect, level) -> SWARMS.get(effect.sourceId(), level, id -> new Swarm(id, effect)));
-        SpellEffectRenderers.register(ModSpellEffects.METEOR,
+        EffectRenderers.register(ModSpellEffects.METEOR,
                 (effect, level) -> METEORS.get(effect.sourceId(), level, id -> new Meteor(effect)));
-        SpellEffectRenderers.register(ModSpellEffects.METEOR_IMPACT,
+        EffectRenderers.register(ModSpellEffects.METEOR_IMPACT,
                 (effect, level) -> METEORS.get(effect.sourceId(), level, id -> new Meteor(effect)).impact(effect.position()));
     }
 
@@ -87,7 +87,7 @@ final class MeteorFx {
         PointLightHandle skyLight;
         int age;
 
-        Swarm(int id, SpellEffect effect) {
+        Swarm(int id, Effect effect) {
             this.id = id;
             this.mark = effect.position();
             this.sky = mark.add(effect.direction());
@@ -160,7 +160,7 @@ final class MeteorFx {
         int age;
         int impactAge = -1;
 
-        Meteor(SpellEffect launch) {
+        Meteor(Effect launch) {
             this.start = launch.position();
             this.velocity = launch.direction();
             this.lifetime = Math.max(1, launch.age());

@@ -1,9 +1,9 @@
 package dev.arcane.spell;
 
 import dev.arcane.api.spell.SpellContext;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import dev.leyline.terrain.Carving;
 import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayList;
@@ -106,7 +106,7 @@ public final class Singularity extends MarkedSpell {
             this.id = id;
             this.mayBuild = SpellTerrain.mayBreak(level, caster);
             this.meal = meal(center);
-            SpellEffects.send(level, ModSpellEffects.SINGULARITY, center, Vec3.ZERO, (float) SpellTuning.SINGULARITY_PULL_RADIUS,
+            Effects.send(level, ModSpellEffects.SINGULARITY, center, Vec3.ZERO, (float) SpellTuning.SINGULARITY_PULL_RADIUS,
                     SpellTuning.SINGULARITY_DURATION_TICKS, id);
             level.playSound(null, center.x, center.y, center.z, ModSounds.SINGULARITY_OPEN, SoundSource.PLAYERS, 4.0f, 1.0f);
         }
@@ -148,7 +148,7 @@ public final class Singularity extends MarkedSpell {
         private void tell() {
             if (growth - told < 0.05f && age % 20 != 0) return;
             told = growth;
-            SpellEffects.send(level, ModSpellEffects.SINGULARITY_GROWTH, center, Vec3.ZERO, growth, age, id);
+            Effects.send(level, ModSpellEffects.SINGULARITY_GROWTH, center, Vec3.ZERO, growth, age, id);
         }
 
         /** Creatures it may hurt, loose items, experience and projectiles. Never the caster, nor anyone in creative. */
@@ -265,7 +265,7 @@ public final class Singularity extends MarkedSpell {
             debris.forEach(Entity::discard);
             debris.clear();
             float size = growth, force = (1 + size) / 2;
-            SpellEffects.send(level, ModSpellEffects.SINGULARITY_COLLAPSE, center, Vec3.ZERO, size, 0, id);
+            Effects.send(level, ModSpellEffects.SINGULARITY_COLLAPSE, center, Vec3.ZERO, size, 0, id);
             // Bigger sounds deeper, and carries further.
             level.playSound(null, center.x, center.y, center.z, ModSounds.SINGULARITY_COLLAPSE, SoundSource.PLAYERS, 8.0f * size,
                     1 / (float) Math.sqrt(size));

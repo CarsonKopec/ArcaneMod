@@ -18,15 +18,15 @@ import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.EffectHandle;
 import de.nexusrealms.nebulon.api.render.effect.BillboardSprite;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
-import dev.arcane.api.client.SpellEffectRenderers;
-import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
+import dev.leyline.effect.Effect;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -63,9 +63,9 @@ final class GateFx {
     }
 
     static void register() {
-        SpellEffectRenderers.register(ModSpellEffects.ASTRAL_GATE,
+        EffectRenderers.register(ModSpellEffects.ASTRAL_GATE,
                 (effect, level) -> GATES.get(effect.sourceId(), level, id -> new Gate(effect)));
-        SpellEffectRenderers.register(ModSpellEffects.GATE_CROSSING,
+        EffectRenderers.register(ModSpellEffects.GATE_CROSSING,
                 (effect, level) -> GATES.get(effect.sourceId(), level, id -> new Gate(effect)).cross(effect));
     }
 
@@ -85,7 +85,7 @@ final class GateFx {
         int age;
         int flare;
 
-        Gate(SpellEffect effect) {
+        Gate(Effect effect) {
             this.origin = effect.position();
             this.single = effect.power() < 0.5f;
             this.destination = single ? origin : origin.add(effect.direction());
@@ -181,7 +181,7 @@ final class GateFx {
         }
 
         /** Something crossed: a streak along the way, a burst at each end, and a flash for whoever is near. */
-        void cross(SpellEffect effect) {
+        void cross(Effect effect) {
             Vec3 from = effect.position(), to = from.add(effect.direction());
             float weight = Mth.clamp(effect.power(), 0, 1);
             ScreenEffects.flash(0.35f * weight * Math.max(proximity(from) * 0.3f, proximity(to)));

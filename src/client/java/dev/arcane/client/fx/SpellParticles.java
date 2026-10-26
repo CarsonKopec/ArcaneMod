@@ -1,12 +1,12 @@
 package dev.arcane.client.fx;
 
-import dev.arcane.api.client.SpellEffectRenderers;
-import dev.arcane.api.effect.SpellEffect;
-import dev.arcane.api.effect.SpellEffectType;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.screen.ScreenEffects;
+import dev.leyline.effect.Effect;
+import dev.leyline.effect.EffectType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -58,7 +58,7 @@ public final class SpellParticles {
         on(ModSpellEffects.WARD, SpellParticles::ward);
         on(ModSpellEffects.WARD_HIT, SpellParticles::wardHit);
         // A ward's end must stop its shimmer even when the ward itself is out of particle range.
-        SpellEffectRenderers.register(ModSpellEffects.WARD_END, (effect, level) -> stopShimmer(effect.sourceId()));
+        EffectRenderers.register(ModSpellEffects.WARD_END, (effect, level) -> stopShimmer(effect.sourceId()));
         on(ModSpellEffects.WARD_END, SpellParticles::wardEnd);
         on(ModSpellEffects.NOVA, SpellParticles::nova);
         on(ModSpellEffects.BACKLASH, SpellParticles::backlash);
@@ -67,8 +67,8 @@ public final class SpellParticles {
     }
 
     /** Plays {@code type}'s particles when the effect is close enough to the camera, and particles are on. */
-    private static void on(SpellEffectType type, Consumer<SpellEffect> play) {
-        SpellEffectRenderers.register(type, (effect, level) -> {
+    private static void on(EffectType type, Consumer<Effect> play) {
+        EffectRenderers.register(type, (effect, level) -> {
             if (visible(effect.position())) play.accept(effect);
         });
     }
@@ -82,7 +82,7 @@ public final class SpellParticles {
         ANIMATIONS.clear();
     }
 
-    private static void charge(SpellEffect effect) {
+    private static void charge(Effect effect) {
         Vec3 n = effect.direction().normalize(), u = perpendicular(n), v = n.cross(u);
         double rotation = effect.age() * 0.10;
         double radius = 0.35 + effect.power() * 0.30;
@@ -111,7 +111,7 @@ public final class SpellParticles {
         }
     }
 
-    private static void bolt(SpellEffect effect) {
+    private static void bolt(Effect effect) {
         Vec3 n = effect.direction().normalize(), u = perpendicular(n), v = n.cross(u);
         double radius = 0.20 + effect.power() * 0.18;
         // A cyan/violet double helix around a pink core, sampled along this tick's travel.
@@ -130,7 +130,7 @@ public final class SpellParticles {
         particle(ParticleTypes.ELECTRIC_SPARK, effect.position().add(effect.direction()), Vec3.ZERO);
     }
 
-    private static void impact(SpellEffect effect) {
+    private static void impact(Effect effect) {
         start(new Shockwave(Minecraft.getInstance().level, effect.position(), effect.direction(), effect.power()));
         int count = scaled(150);
         for (int i = 0; i < count; i++) {
@@ -151,7 +151,7 @@ public final class SpellParticles {
     }
 
     /** A shard streaking from the blast into a creature, and a spray of sparks where it strikes. */
-    private static void shard(SpellEffect effect) {
+    private static void shard(Effect effect) {
         Vec3 from = effect.position(), path = effect.direction();
         if (path.lengthSqr() < 1.0e-6) return;
         int steps = scaled((int) Math.ceil(path.length() * 4));
@@ -162,7 +162,7 @@ public final class SpellParticles {
     }
 
     /** A jagged line of sparks along one leap, a crackle where it lands, and static left clinging to what it struck. */
-    private static void chain(SpellEffect effect) {
+    private static void chain(Effect effect) {
         Vec3 from = effect.position(), path = effect.direction();
         double length = path.length();
         if (length < 1.0e-3) return;
@@ -179,7 +179,7 @@ public final class SpellParticles {
     }
 
     /** The chain's leftover leaps discharging: a crackling cage around the last creature struck, bursting outwards. */
-    private static void overload(SpellEffect effect) {
+    private static void overload(Effect effect) {
         double radius = 0.8 + 1.2 * effect.power();
         ring(effect.position(), X, Z, radius, 0, 24, CYAN);
         ring(effect.position(), X, Y, radius, 0.4, 24, PINK);
@@ -205,7 +205,7 @@ public final class SpellParticles {
     }
 
     /** A streak along the path at chest height, and a swirl of portal motes at each end. */
-    private static void blink(SpellEffect effect) {
+    private static void blink(Effect effect) {
         Vec3 from = effect.position().add(0, 1, 0), path = effect.direction();
         if (path.lengthSqr() < 1.0e-6) return;
         Vec3 drift = path.normalize().scale(0.02);
@@ -232,7 +232,7 @@ public final class SpellParticles {
     }
 
     /** A blink's afterimage bursting where the caster stood. */
-    private static void afterimage(SpellEffect effect) {
+    private static void afterimage(Effect effect) {
         Vec3 center = effect.position().add(0, 1, 0);
         int count = scaled(50);
         for (int i = 0; i < count; i++) particle(i % 2 == 0 ? PINK : VIOLET, center, sphere(i, count).scale(0.35));
@@ -240,13 +240,13 @@ public final class SpellParticles {
         start(new Ripple(Minecraft.getInstance().level, effect.position().add(0, 0.1, 0), SpellTuning.BLINK_AFTERIMAGE_RADIUS, 8, VIOLET));
     }
 
-    private static void ward(SpellEffect effect) {
+    private static void ward(Effect effect) {
         stopShimmer(effect.sourceId());
         start(new WardShimmer(Minecraft.getInstance().level, effect.sourceId(), effect.age()));
     }
 
     /** A small ripple on the shell where it was struck, with sparks thrown back outwards. */
-    private static void wardHit(SpellEffect effect) {
+    private static void wardHit(Effect effect) {
         Vec3 n = effect.direction().lengthSqr() > 1.0e-6 ? effect.direction().normalize() : Y;
         Vec3 u = perpendicular(n), v = n.cross(u);
         ring(effect.position(), u, v, 0.35, 0, 12, PINK);
@@ -270,7 +270,7 @@ public final class SpellParticles {
     }
 
     /** A shattered ward bursts outwards in shards; one that simply ran out collapses gently inwards. */
-    private static void wardEnd(SpellEffect effect) {
+    private static void wardEnd(Effect effect) {
         boolean shattered = effect.power() >= 1;
         int count = scaled(shattered ? 90 : 30);
         for (int i = 0; i < count; i++) {
@@ -290,7 +290,7 @@ public final class SpellParticles {
      * A ring of frost racing across the ground. Nothing is spawned around the caster's body: the caster's camera is
      * there, and snowflakes that close fill the whole screen.
      */
-    private static void nova(SpellEffect effect) {
+    private static void nova(Effect effect) {
         ClientLevel level = Minecraft.getInstance().level;
         start(new FrostRing(level, effect.position()));
         // Glints of ice flung outwards, low, starting well clear of the caster's camera: block particles that close
@@ -307,7 +307,7 @@ public final class SpellParticles {
     }
 
     /** Corruption tearing out of its caster: violet sparks and dark wisps burst from them, and a ring scorches their feet. */
-    private static void backlash(SpellEffect effect) {
+    private static void backlash(Effect effect) {
         Vec3 center = effect.position();
         Vec3 feet = center.subtract(0, 0.8, 0);
         ring(feet, X, Z, 1.3, 0, 32, VIOLET);
@@ -325,7 +325,7 @@ public final class SpellParticles {
     }
 
     /** A frozen target's ice bursting off it in shards. */
-    private static void shatter(SpellEffect effect) {
+    private static void shatter(Effect effect) {
         BlockParticleOption ice = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.PACKED_ICE.defaultBlockState());
         double size = Math.max(0.5, effect.power());
         int count = scaled(30);
@@ -339,7 +339,7 @@ public final class SpellParticles {
     }
 
     /** Lightning surging over a wet target: a crackling cage of arcs around it. */
-    private static void conduction(SpellEffect effect) {
+    private static void conduction(Effect effect) {
         double radius = Math.max(0.5, effect.power()) * 0.8;
         ring(effect.position(), X, Z, radius, 0, 20, CYAN);
         ring(effect.position(), X, Y, radius, 0.5, 20, CYAN);

@@ -1,9 +1,9 @@
 package dev.arcane.spell;
 
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModDamageTypes;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -100,7 +100,7 @@ final class PlanetfallStrike {
         this.planet = Planetfall.planetAt(mark, rift, 0);
         this.crater = mayBuild ? new PlanetfallCrater(level, caster, mark, seed) : null;
         this.terrainComplete = !mayBuild;
-        SpellEffects.send(level, ModSpellEffects.PLANETFALL_RIFT, mark, rift, seed, SpellTuning.PLANETFALL_RIFT_TICKS, sourceId);
+        Effects.send(level, ModSpellEffects.PLANETFALL_RIFT, mark, rift, seed, SpellTuning.PLANETFALL_RIFT_TICKS, sourceId);
         level.playSound(null, mark.x, mark.y, mark.z, ModSounds.PLANETFALL_RIFT, SoundSource.PLAYERS, 12.0f, 1.0f);
     }
 
@@ -189,7 +189,7 @@ final class PlanetfallStrike {
     }
 
     private void startFall() {
-        SpellEffects.send(level, ModSpellEffects.PLANETFALL_FALL, mark, rift, seed, SpellTuning.PLANETFALL_FALL_TICKS, sourceId);
+        Effects.send(level, ModSpellEffects.PLANETFALL_FALL, mark, rift, seed, SpellTuning.PLANETFALL_FALL_TICKS, sourceId);
         level.playSound(null, mark.x, mark.y, mark.z, ModSounds.PLANETFALL_DESCENT, SoundSource.PLAYERS, 16.0f, 1.0f);
     }
 
@@ -219,7 +219,7 @@ final class PlanetfallStrike {
         // Played where it will strike, so its shriek grows as it comes.
         level.playSound(null, target.x, target.y, target.z, ModSounds.PLANETFALL_SHARD, SoundSource.PLAYERS, 3.0f,
                 0.85f + random.nextFloat() * 0.3f);
-        SpellEffects.send(level, ModSpellEffects.PLANETFALL_SHARD, from, target.subtract(from), 0.7f + random.nextFloat() * 0.6f,
+        Effects.send(level, ModSpellEffects.PLANETFALL_SHARD, from, target.subtract(from), 0.7f + random.nextFloat() * 0.6f,
                 flight, nextShardId--);
     }
 
@@ -267,7 +267,7 @@ final class PlanetfallStrike {
 
     private void impact() {
         // No sound here: each client plays the boom itself when the shock front reaches it, after the flash.
-        SpellEffects.send(level, ModSpellEffects.PLANETFALL_IMPACT, mark, rift, seed, 0, sourceId);
+        Effects.send(level, ModSpellEffects.PLANETFALL_IMPACT, mark, rift, seed, 0, sourceId);
         // Gravity returns: our own levitation (ambient and hidden) lapses at once.
         for (LivingEntity living : lifted) {
             MobEffectInstance levitation = living.getEffect(MobEffects.LEVITATION);

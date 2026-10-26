@@ -2,9 +2,9 @@ package dev.arcane.spell;
 
 import dev.arcane.api.spell.Spell;
 import dev.arcane.api.spell.SpellContext;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -55,7 +55,7 @@ public final class ArcaneWard extends Spell {
         ACTIVE.put(caster.getUUID(), new Ward(level, caster, context.spellPower()));
         Vec3 center = caster.getBoundingBox().getCenter();
         level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_RAISE, SoundSource.PLAYERS, 0.8f, 1.0f);
-        SpellEffects.send(level, ModSpellEffects.WARD, center, new Vec3(0, 1, 0), 1, SpellTuning.WARD_DURATION_TICKS, caster.getId());
+        Effects.send(level, ModSpellEffects.WARD, center, new Vec3(0, 1, 0), 1, SpellTuning.WARD_DURATION_TICKS, caster.getId());
         return true;
     }
 
@@ -106,14 +106,14 @@ public final class ArcaneWard extends Spell {
             Vec3 center = owner.getBoundingBox().getCenter();
             Vec3 outward = from.subtract(center).normalize();
             Vec3 hit = center.add(outward.scale(SpellTuning.WARD_RADIUS));
-            SpellEffects.send(level, ModSpellEffects.WARD_HIT, hit, outward, strength / SpellTuning.WARD_STRENGTH, 0, owner.getId());
+            Effects.send(level, ModSpellEffects.WARD_HIT, hit, outward, strength / SpellTuning.WARD_STRENGTH, 0, owner.getId());
             level.playSound(null, hit.x, hit.y, hit.z, ModSounds.WARD_HIT, SoundSource.PLAYERS, 0.8f, 1.0f);
         }
 
         void end(boolean shattered) {
             strength = 0;
             Vec3 center = owner.getBoundingBox().getCenter();
-            SpellEffects.send(level, ModSpellEffects.WARD_END, center, new Vec3(0, 1, 0), shattered ? 1 : 0, 0, owner.getId());
+            Effects.send(level, ModSpellEffects.WARD_END, center, new Vec3(0, 1, 0), shattered ? 1 : 0, 0, owner.getId());
             if (shattered) {
                 level.playSound(null, center.x, center.y, center.z, ModSounds.WARD_BREAK, SoundSource.PLAYERS, 1.0f, 1.0f);
                 rebound(center);
@@ -149,7 +149,7 @@ public final class ArcaneWard extends Spell {
                 // The ward's owner takes ownership, so the returned shot counts as theirs.
                 projectile.deflect(ProjectileDeflection.REVERSE, owner, EntityReference.of(owner), false);
                 Vec3 hit = center.add(offset.normalize().scale(SpellTuning.WARD_RADIUS));
-                SpellEffects.send(level, ModSpellEffects.WARD_HIT, hit, offset.normalize(), strength / SpellTuning.WARD_STRENGTH, 0, owner.getId());
+                Effects.send(level, ModSpellEffects.WARD_HIT, hit, offset.normalize(), strength / SpellTuning.WARD_STRENGTH, 0, owner.getId());
                 level.playSound(null, hit.x, hit.y, hit.z, ModSounds.WARD_HIT, SoundSource.PLAYERS, 0.8f, 1.35f);
                 strength -= SpellTuning.WARD_DEFLECT_COST;
                 if (strength <= 0) {

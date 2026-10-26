@@ -14,15 +14,15 @@ import static dev.leyline.client.fx.Fx.world;
 
 import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
-import dev.arcane.api.client.SpellEffectRenderers;
-import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.screen.ScreenEffects;
+import dev.leyline.effect.Effect;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -59,9 +59,9 @@ final class ChronoFx {
     }
 
     static void register() {
-        SpellEffectRenderers.register(ModSpellEffects.CHRONO_FIELD,
+        EffectRenderers.register(ModSpellEffects.CHRONO_FIELD,
                 (effect, level) -> FIELDS.get(effect.sourceId(), level, id -> new Field(effect)));
-        SpellEffectRenderers.register(ModSpellEffects.CHRONO_END,
+        EffectRenderers.register(ModSpellEffects.CHRONO_END,
                 (effect, level) -> FIELDS.get(effect.sourceId(), level, id -> new Field(effect)).end());
     }
 
@@ -75,7 +75,7 @@ final class ChronoFx {
         int age;
         int endAge = -1;
 
-        Field(SpellEffect effect) {
+        Field(Effect effect) {
             this.center = effect.position();
             this.radius = effect.power() > 0 ? effect.power() : SpellTuning.CHRONO_RADIUS;
             this.duration = effect.age() > 0 ? effect.age() : SpellTuning.CHRONO_DURATION_TICKS;

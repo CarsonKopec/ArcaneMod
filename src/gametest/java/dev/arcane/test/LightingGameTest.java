@@ -1,9 +1,9 @@
 package dev.arcane.test;
 
 import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.ArcaneBolt;
+import dev.leyline.effect.Effects;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.core.BlockPos;
@@ -31,7 +31,7 @@ public final class LightingGameTest implements FabricClientGameTest {
                 int age = i * 2;
                 server.runOnServer(s -> {
                     var player = s.getPlayerList().getPlayers().getFirst();
-                    SpellEffects.send(s.overworld(), ModSpellEffects.CHARGE, new Vec3(0, -58.4, 1), new Vec3(0, 0, 1), 1, age, player.getId());
+                    Effects.send(s.overworld(), ModSpellEffects.CHARGE, new Vec3(0, -58.4, 1), new Vec3(0, 0, 1), 1, age, player.getId());
                 });
                 context.waitTicks(2);
             }

@@ -1,9 +1,9 @@
 package dev.arcane.spell;
 
 import dev.arcane.api.spell.SpellContext;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -125,13 +125,13 @@ public final class AstralGate extends MarkedSpell {
             this.destination = destination;
             this.id = id;
             if (origin.level == destination.level) {
-                SpellEffects.send(origin.level, ModSpellEffects.ASTRAL_GATE, origin.position,
+                Effects.send(origin.level, ModSpellEffects.ASTRAL_GATE, origin.position,
                         destination.position.subtract(origin.position), 1, SpellTuning.GATE_OPEN_TICKS, id);
             } else {
                 // Its ends are in different worlds: each world sees one gate, facing the way the caster faced.
                 Vec3 facing = caster.getLookAngle().multiply(1, 0, 1);
                 for (End end : List.of(origin, destination)) {
-                    SpellEffects.send(end.level, ModSpellEffects.ASTRAL_GATE, end.position, facing, 0, SpellTuning.GATE_OPEN_TICKS, id);
+                    Effects.send(end.level, ModSpellEffects.ASTRAL_GATE, end.position, facing, 0, SpellTuning.GATE_OPEN_TICKS, id);
                 }
             }
             for (End end : List.of(origin, destination)) sound(end, ModSounds.GATE_OPEN, 2.0f);
@@ -197,10 +197,10 @@ public final class AstralGate extends MarkedSpell {
             }
             arrived.put(traveller.getUUID(), to);
             if (from.level == to.level) {
-                SpellEffects.send(from.level, ModSpellEffects.GATE_CROSSING, start, to.position.subtract(start), weight, 0, id);
+                Effects.send(from.level, ModSpellEffects.GATE_CROSSING, start, to.position.subtract(start), weight, 0, id);
             } else {
-                SpellEffects.send(from.level, ModSpellEffects.GATE_CROSSING, start, Vec3.ZERO, weight, 0, id);
-                SpellEffects.send(to.level, ModSpellEffects.GATE_CROSSING, to.position, Vec3.ZERO, weight, 0, id);
+                Effects.send(from.level, ModSpellEffects.GATE_CROSSING, start, Vec3.ZERO, weight, 0, id);
+                Effects.send(to.level, ModSpellEffects.GATE_CROSSING, to.position, Vec3.ZERO, weight, 0, id);
             }
             sound(from, ModSounds.GATE_CROSS, weight);
             sound(to, ModSounds.GATE_CROSS, weight);

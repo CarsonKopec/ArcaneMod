@@ -2,7 +2,6 @@ package dev.arcane.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.arcane.ArcaneSpells;
-import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.client.animation.StaffCastingAnimations;
 import dev.arcane.client.render.StaffRenderers;
 import dev.arcane.client.render.TrinketRenderers;
@@ -15,7 +14,6 @@ import dev.arcane.client.gui.SpellHud;
 import dev.arcane.client.gui.SpellWheelScreen;
 import dev.arcane.client.particle.ArcaneSpark;
 import dev.arcane.client.particle.PlanetfallCloud;
-import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.network.StaffCastPayload;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.spell.SpellCasting;
@@ -60,9 +58,6 @@ public final class ArcaneClient implements ClientModInitializer {
         SpellParticles.register();
         AstralFx.register();
         CorruptionFx.register();
-        ClientPlayNetworking.registerGlobalReceiver(SpellEffectPayload.TYPE, (payload, context) -> {
-            if (context.client().level != null) SpellEffectRenderers.render(payload.effect(), context.client().level);
-        });
         ClientPlayNetworking.registerGlobalReceiver(StaffCastPayload.TYPE, (payload, context) ->
                 StaffCastingAnimations.playRelease(payload.entityId(), payload.hand(), payload.profile()));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

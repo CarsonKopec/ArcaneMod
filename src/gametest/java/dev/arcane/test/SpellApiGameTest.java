@@ -6,13 +6,13 @@ import com.google.gson.JsonPrimitive;
 import com.mojang.serialization.JsonOps;
 import dev.arcane.api.ArcaneSpellsApi;
 import dev.arcane.api.SpellAttributes;
-import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.registry.ModItems;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.CasterState.Cooldown;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.effect.EffectRenderers;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,10 +35,10 @@ public final class SpellApiGameTest implements FabricClientGameTest {
         AtomicInteger pings = new AtomicInteger();
         context.runOnClient(client -> {
             // The first renderer fails; the second must still run, and the player must stay connected.
-            SpellEffectRenderers.register(TestAddon.PING_EFFECT, (effect, level) -> {
+            EffectRenderers.register(TestAddon.PING_EFFECT, (effect, level) -> {
                 throw new IllegalStateException("Deliberate failure from SpellApiGameTest");
             });
-            SpellEffectRenderers.register(TestAddon.PING_EFFECT, (effect, level) -> pings.incrementAndGet());
+            EffectRenderers.register(TestAddon.PING_EFFECT, (effect, level) -> pings.incrementAndGet());
         });
 
         try (var game = context.worldBuilder().create()) {

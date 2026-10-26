@@ -1,9 +1,9 @@
 package dev.arcane.spell;
 
 import dev.arcane.api.spell.SpellContext;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import dev.leyline.terrain.Carving;
 import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayList;
@@ -102,7 +102,7 @@ public final class MeteorSwarm extends MarkedSpell {
             this.random = level.getRandom();
             double dreadFall = (sky.y - mark.y) / SpellTuning.DREAD_STAR_SPEED;
             int duration = SpellTuning.METEOR_COUNT * SpellTuning.METEOR_INTERVAL_TICKS + DREAD_STAR_PAUSE_TICKS + (int) dreadFall + 10;
-            SpellEffects.send(level, ModSpellEffects.METEOR_SWARM, mark, sky.subtract(mark), (float) SpellTuning.METEOR_AREA_RADIUS, duration, id);
+            Effects.send(level, ModSpellEffects.METEOR_SWARM, mark, sky.subtract(mark), (float) SpellTuning.METEOR_AREA_RADIUS, duration, id);
         }
 
         /** Returns true once every meteor, the Dread Star last, has been launched. */
@@ -179,7 +179,7 @@ public final class MeteorSwarm extends MarkedSpell {
             this.blastRadius = dreadStar ? SpellTuning.DREAD_STAR_BLAST_RADIUS : SpellTuning.METEOR_BLAST_RADIUS;
             this.damage = (dreadStar ? SpellTuning.DREAD_STAR_DAMAGE : SpellTuning.METEOR_DAMAGE) * spellPower;
             this.terrainStrength = dreadStar ? SpellTuning.DREAD_STAR_TERRAIN_STRENGTH : SpellTuning.METEOR_TERRAIN_STRENGTH;
-            SpellEffects.send(level, ModSpellEffects.METEOR, start, velocity, size, SpellTuning.METEOR_LIFETIME_TICKS, id);
+            Effects.send(level, ModSpellEffects.METEOR, start, velocity, size, SpellTuning.METEOR_LIFETIME_TICKS, id);
             // Bigger sounds deeper, and carries further.
             level.playSound(null, start.x, start.y, start.z, ModSounds.METEOR_FALL, SoundSource.PLAYERS, 6.0f * size,
                     (0.85f + level.getRandom().nextFloat() * 0.3f) / (float) Math.sqrt(size));
@@ -213,7 +213,7 @@ public final class MeteorSwarm extends MarkedSpell {
         }
 
         private void detonate() {
-            SpellEffects.send(level, ModSpellEffects.METEOR_IMPACT, position, velocity, size, 0, id);
+            Effects.send(level, ModSpellEffects.METEOR_IMPACT, position, velocity, size, 0, id);
             level.playSound(null, position.x, position.y, position.z, ModSounds.METEOR_IMPACT, SoundSource.PLAYERS, 6.0f * size,
                     (0.7f + level.getRandom().nextFloat() * 0.25f) / (float) Math.sqrt(size));
             double radius = blastRadius;

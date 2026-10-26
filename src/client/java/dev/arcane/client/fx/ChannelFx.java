@@ -17,13 +17,13 @@ import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.EffectHandle;
 import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
-import dev.arcane.api.client.SpellEffectRenderers;
-import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellCasting;
+import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.effect.Effect;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -47,7 +47,7 @@ final class ChannelFx {
     }
 
     static void register() {
-        SpellEffectRenderers.register(ModSpellEffects.ASTRAL_CHANNEL,
+        EffectRenderers.register(ModSpellEffects.ASTRAL_CHANNEL,
                 (effect, level) -> CHANNELS.get(effect.sourceId(), level, Channel::new).update(effect));
     }
 
@@ -66,7 +66,7 @@ final class ChannelFx {
             return ++idle > TIMEOUT_TICKS;
         }
 
-        void update(SpellEffect effect) {
+        void update(Effect effect) {
             idle = 0;
             double radius = Math.abs(effect.direction().y);
             boolean valid = effect.direction().y > 0;

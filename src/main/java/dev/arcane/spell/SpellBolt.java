@@ -1,8 +1,8 @@
 package dev.arcane.spell;
 
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import dev.leyline.terrain.TerrainRules;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -69,7 +69,7 @@ final class SpellBolt {
             }
         }
 
-        SpellEffects.send(level, ModSpellEffects.BOLT, position, nearest.subtract(position), power, age, sourceId);
+        Effects.send(level, ModSpellEffects.BOLT, position, nearest.subtract(position), power, age, sourceId);
         position = nearest;
         if (target == null && blockHit.getType() == HitResult.Type.MISS) return false;
         detonate(target);
@@ -101,7 +101,7 @@ final class SpellBolt {
         level.explode(owner, level.damageSources().indirectMagic(owner, owner), TerrainRules.explosion(level, owner, mayBuild),
                 position, SpellTuning.terrainBlastStrength(power), false, Level.ExplosionInteraction.BLOCK);
         level.playSound(null, position.x, position.y, position.z, ModSounds.BOLT_IMPACT, SoundSource.PLAYERS, 0.8f + 0.6f * power, 1.0f);
-        SpellEffects.send(level, ModSpellEffects.IMPACT, position, direction, power, age, sourceId);
+        Effects.send(level, ModSpellEffects.IMPACT, position, direction, power, age, sourceId);
     }
 
     /**
@@ -122,7 +122,7 @@ final class SpellBolt {
             // The blast may have hit it this very tick: without this, its moment of immunity would shrug the shard off.
             target.invulnerableTime = 0;
             target.hurtServer(level, level.damageSources().indirectMagic(owner, owner), damage);
-            SpellEffects.send(level, ModSpellEffects.BOLT_SHARD, blast, at.subtract(blast), 1, 0, sourceId);
+            Effects.send(level, ModSpellEffects.BOLT_SHARD, blast, at.subtract(blast), 1, 0, sourceId);
         }
     }
 

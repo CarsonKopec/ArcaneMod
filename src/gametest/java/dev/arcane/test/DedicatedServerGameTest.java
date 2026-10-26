@@ -1,8 +1,6 @@
 package dev.arcane.test;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import dev.arcane.api.client.SpellEffectRenderers;
-import dev.arcane.api.effect.SpellEffect;
 import dev.arcane.client.gui.SpellWheelScreen;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.registry.ModSpells;
@@ -10,6 +8,8 @@ import dev.arcane.spell.ArcaneBolt;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.effect.EffectRenderers;
+import dev.leyline.effect.Effect;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -36,8 +36,8 @@ public final class DedicatedServerGameTest implements FabricClientGameTest {
 
     @Override public void runTest(ClientGameTestContext context) {
         // What the client decodes from each bolt impact the server sends.
-        List<SpellEffect> impacts = new CopyOnWriteArrayList<>();
-        context.runOnClient(client -> SpellEffectRenderers.register(ModSpellEffects.IMPACT, (effect, level) -> impacts.add(effect)));
+        List<Effect> impacts = new CopyOnWriteArrayList<>();
+        context.runOnClient(client -> EffectRenderers.register(ModSpellEffects.IMPACT, (effect, level) -> impacts.add(effect)));
 
         try (var server = context.worldBuilder().createServer(); var connection = server.connect()) {
             server.runCommand("gamemode survival @a");

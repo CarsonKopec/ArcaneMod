@@ -1,10 +1,10 @@
 package dev.arcane.client.fx;
 
 import dev.arcane.ArcaneSpells;
-import dev.arcane.api.client.SpellEffectRenderers;
 import dev.arcane.progression.ArcaneProgression;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.screen.ScreenEffects;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -37,7 +37,7 @@ public final class CorruptionFx {
     public static void register() {
         // Under the screen effects' darkening and flashes, over vanilla's own overlays.
         HudElementRegistry.attachElementAfter(VanillaHudElements.MISC_OVERLAYS, OVERLAY, CorruptionFx::render);
-        SpellEffectRenderers.register(ModSpellEffects.BACKLASH, (effect, level) -> {
+        EffectRenderers.register(ModSpellEffects.BACKLASH, (effect, level) -> {
             Player player = Minecraft.getInstance().player;
             if (player == null || player.getId() != effect.sourceId()) return;
             backlash = BACKLASH_TICKS;

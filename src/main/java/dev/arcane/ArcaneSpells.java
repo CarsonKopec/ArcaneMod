@@ -1,7 +1,6 @@
 package dev.arcane;
 
 import dev.arcane.network.SelectSpellPayload;
-import dev.arcane.network.SpellEffectPayload;
 import dev.arcane.network.LearnTalentPayload;
 import dev.arcane.network.StaffCastPayload;
 import dev.arcane.progression.ArcaneProgression;
@@ -60,7 +59,6 @@ public final class ArcaneSpells implements ModInitializer {
         ModEnchantments.register();
         ModTriggers.register();
         ArcaneCommand.register();
-        PayloadTypeRegistry.playS2C().register(SpellEffectPayload.TYPE, SpellEffectPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(StaffCastPayload.TYPE, StaffCastPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(SelectSpellPayload.TYPE, SelectSpellPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(LearnTalentPayload.TYPE, LearnTalentPayload.CODEC);

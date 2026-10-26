@@ -2,9 +2,9 @@ package dev.arcane.spell;
 
 import dev.arcane.api.spell.Spell;
 import dev.arcane.api.spell.SpellContext;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -52,7 +52,7 @@ public final class FrostNova extends Spell {
         }
         rime(level, caster, center);
         level.playSound(null, center.x, center.y, center.z, ModSounds.FROST_NOVA, SoundSource.PLAYERS, 1.0f, 1.0f);
-        SpellEffects.send(level, ModSpellEffects.NOVA, caster.position(), new Vec3(0, 1, 0), 1, 0, caster.getId());
+        Effects.send(level, ModSpellEffects.NOVA, caster.position(), new Vec3(0, 1, 0), 1, 0, caster.getId());
         return true;
     }
 

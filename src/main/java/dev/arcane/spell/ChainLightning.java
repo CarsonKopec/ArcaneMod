@@ -2,9 +2,9 @@ package dev.arcane.spell;
 
 import dev.arcane.api.spell.Spell;
 import dev.arcane.api.spell.SpellContext;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
+import dev.leyline.effect.Effects;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -40,7 +40,7 @@ public final class ChainLightning extends Spell {
         LivingEntity target = aimed(level, caster, eye, reach);
         if (target == null) {
             // Nothing in reach: the arc still crackles out to the aimed point.
-            SpellEffects.send(level, ModSpellEffects.CHAIN, from, reach.subtract(from), 0.5f, 0, caster.getId());
+            Effects.send(level, ModSpellEffects.CHAIN, from, reach.subtract(from), 0.5f, 0, caster.getId());
             return true;
         }
         Set<LivingEntity> struck = new HashSet<>();
@@ -52,7 +52,7 @@ public final class ChainLightning extends Spell {
             Vec3 at = target.getBoundingBox().getCenter();
             // The arc's brightness falls with each leap, whatever the caster's spell power.
             float strength = (float) Math.pow(SpellTuning.CHAIN_DAMAGE_FALLOFF, jump);
-            SpellEffects.send(level, ModSpellEffects.CHAIN, from, at.subtract(from), strength, jump, caster.getId());
+            Effects.send(level, ModSpellEffects.CHAIN, from, at.subtract(from), strength, jump, caster.getId());
             // Each leap weakens from the last one's own damage, so a reaction doesn't carry on down the chain.
             boolean wet = SpellReactions.wet(target);
             float dealt = SpellReactions.conduct(level, target, SpellReactions.shatter(level, target, damage));
@@ -83,7 +83,7 @@ public final class ChainLightning extends Spell {
             victim.hurtServer(level, level.damageSources().indirectMagic(caster, caster), damage);
         }
         level.playSound(null, at.x, at.y, at.z, ModSounds.CHAIN_OVERLOAD, SoundSource.PLAYERS, 0.9f, 1.0f);
-        SpellEffects.send(level, ModSpellEffects.CHAIN_OVERLOAD, at, Vec3.ZERO, leaps / (float) SpellTuning.CHAIN_MAX_TARGETS, 0, caster.getId());
+        Effects.send(level, ModSpellEffects.CHAIN_OVERLOAD, at, Vec3.ZERO, leaps / (float) SpellTuning.CHAIN_MAX_TARGETS, 0, caster.getId());
     }
 
     /** The nearest living entity whose (slightly enlarged) hitbox the aim ray passes through. */

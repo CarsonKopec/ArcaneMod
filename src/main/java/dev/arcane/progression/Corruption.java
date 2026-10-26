@@ -1,13 +1,13 @@
 package dev.arcane.progression;
 
 import dev.arcane.api.event.SpellEvents;
-import dev.arcane.network.SpellEffects;
 import dev.arcane.registry.ModDamageTypes;
 import dev.arcane.registry.ModEffects;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.registry.ModTriggers;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.effect.Effects;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -78,7 +78,7 @@ public final class Corruption {
         progression.setCorruption(corruption - SpellTuning.BACKLASH_VENT);
         Vec3 at = caster.getBoundingBox().getCenter();
         level.playSound(null, at.x, at.y, at.z, ModSounds.BACKLASH, SoundSource.PLAYERS, 1.0f, 1.0f);
-        SpellEffects.send(level, ModSpellEffects.BACKLASH, at, new Vec3(0, 1, 0), corruption / (float) SpellTuning.CORRUPTION_MAX,
+        Effects.send(level, ModSpellEffects.BACKLASH, at, new Vec3(0, 1, 0), corruption / (float) SpellTuning.CORRUPTION_MAX,
                 0, caster.getId());
         caster.displayClientMessage(Component.translatable("message.arcane_spells.backlash").withStyle(ChatFormatting.LIGHT_PURPLE), true);
         caster.addEffect(new MobEffectInstance(MobEffects.DARKNESS, SpellTuning.BACKLASH_DARKNESS_TICKS));

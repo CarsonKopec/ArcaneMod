@@ -183,9 +183,8 @@ src/main/java/dev/arcane/          common code (runs on server and client)
   spell/Planetfall, PlanetfallStrike Planetfall: the strike's phases, lifting and damage
   spell/PlanetfallCrater             its crater, dug a column at a time within a fixed budget per tick
   spell/PlanetfallTerrain            the crater's seeded shape and the impact's fronts, shared with the client
-  network/                           the effect packet, the spell-wheel pick, and the broadcast helper
+  network/                           the spell-wheel pick, talent purchase and staff-cast packets
 src/client/java/dev/arcane/          client-only code
-  api/client/                        client half of the API: effect renderers
   client/ArcaneClient.java           entrypoint: key binding, packet receiver and tick hooks
   client/gui/SpellWheelScreen.java   the radial spell wheel
   client/gui/SpellHud.java           mana bar, corruption bar and active-spell slot
@@ -223,7 +222,7 @@ reference/                           local-only decompiled/library sources (giti
 
 The server owns casting, mana, damage and collision. Mana regeneration and cooldowns are calculated from game time; CCA synchronizes state changes to the owning player. The progression component also checks talent attributes after loading and periodically reduces corruption. The staff's selected spell is an item component, set by the server when the wheel or book sends a pick.
 
-For each visual event the server sends one small `SpellEffectPayload` to players within 448 blocks who have that chunk loaded. Each client then builds its own particles and Nebulon effects from that message, so individual particles never cross the network. Active bolts, shockwaves and lights are capped, and every temporary light, arc and rune circle expires on its own. If Nebulon ever throws, the client logs it once and continues with particles only, rather than letting the error disconnect the player. Your own ward is drawn as rings at your feet in first person, since full-size rings around the camera would fill the screen.
+For each visual event the server sends one small effect message (Leyline's `Effects.send`) to players within 448 blocks who have that chunk loaded. Each client then builds its own particles and Nebulon effects from that message, so individual particles never cross the network. Active bolts, shockwaves and lights are capped, and every temporary light, arc and rune circle expires on its own. If Nebulon ever throws, the client logs it once and continues with particles only, rather than letting the error disconnect the player. Your own ward is drawn as rings at your feet in first person, since full-size rings around the camera would fill the screen.
 
 To rebalance, edit `SpellTuning`. To change the visuals, edit `SpellParticles` (particles) or `SpellLighting` (light and runes), or the Astral spells' own classes in `client/fx` (on the shared tools in `Fx`). To add a spell, write it the way another mod would (below), register it in `ModSpells` and list it in a staff's tag; its visual events go in `ModSpellEffects`.
 
@@ -233,19 +232,17 @@ Terrain work is spread over many ticks, a few hundred blocks at most in any one,
 
 ## API for other mods
 
-Other mods can add spells, react to casting, use mana and send their own effects. Everything public and stable is in `dev.arcane.api` (and `dev.arcane.api.client`); the rest of the code may change between versions. `src/gametest/java/dev/arcane/test/TestAddon.java` is a complete, working example.
+Other mods can add spells, react to casting and use mana. Everything public and stable is in `dev.arcane.api`; the rest of the code may change between versions. A spell's visual effects go through [Leyline](https://github.com/CarsonKopec/Leyline)'s effect messages: register an `EffectType` in `LeylineRegistries.EFFECT_TYPES`, send it with `Effects.send` and draw it with `EffectRenderers` (Arcane Spells' own types are in `ModSpellEffects`, and you can add renderers to them too). `src/gametest/java/dev/arcane/test/TestAddon.java` is a complete, working example.
 
 | Class | What it's for |
 | --- | --- |
-| `SpellRegistries` | `SPELLS` and `SPELL_EFFECTS`: register your spells and effect types here, in your mod initializer. |
+| `SpellRegistries` | `SPELLS`: register your spells here, in your mod initializer. |
 | `SpellTags` | Which spells each staff holds (`ARCANE_STAFF`, `ASTRAL_STAFF`). Add your spell to a staff with a tag file. |
 | `spell.Spell` | Subclass it. `Properties` sets mana cost, cooldown, accent color and whether it's charged (and for how long); override `cast` (and `onChargeStart`/`onChargeTick` for charged spells). |
 | `spell.SpellContext` | What `cast` gets: the level, the caster, the charge power and the spell power. Multiply your spell's damage by `spellPower()` so Potency, corruption and the attribute apply to it. |
 | `event.SpellEvents` | `ALLOW_CAST` (refuse a cast, with a reason), `MODIFY_MANA_COST`, `MODIFY_COOLDOWN`, `MODIFY_SPELL_POWER`, `AFTER_CAST`. |
 | `SpellAttributes` | `MAX_MANA`, `MANA_REGEN` (per second) and `SPELL_POWER` (a damage multiplier): add attribute modifiers to change them. |
-| `ArcaneSpellsApi` | Read and add mana, read max mana, regeneration and a spell's power, read and set cooldowns, find the held staff and its spell, cast a spell from code, and `sendEffect`. |
-| `effect.SpellEffect`, `effect.SpellEffectType` | A visual event, sent once to nearby players and drawn by each client. |
-| `client.SpellEffectRenderers` | Draw your effect types, or add to the built-in ones in `ModSpellEffects`. |
+| `ArcaneSpellsApi` | Read and add mana, read max mana, regeneration and a spell's power, read and set cooldowns, find the held staff and its spell, and cast a spell from code. |
 
 ```java
 public final class Fireball extends Spell {
@@ -272,7 +269,7 @@ Then put it on a staff with `data/arcane_spells/tags/arcane_spells/spell/arcane_
 
 The spell's name is the translation key `spell.mymod.fireball` (plus `spell.mymod.fireball.description` for the wheel), and its icon is the 16×16 sprite `assets/mymod/textures/gui/sprites/spell/fireball.png`. A staff's wheel shows its spells after the built-in ones. Other mods can make staffs of their own with `ArcaneStaffItem` (or a subclass), giving each its own spell tag and glow color; they open the wheel and show the HUD too.
 
-Both registries are synced, so a client without the addon can't join a server that has it. If an addon is removed, staffs holding its spells fall back to Arcane Bolt and its cooldowns are dropped.
+The spell registry is synced, as is Leyline's effect-type registry, so a client without the addon can't join a server that has it. If an addon is removed, staffs holding its spells fall back to Arcane Bolt and its cooldowns are dropped.
 
 To build against the mod, publish it with `gradlew.bat publishToMavenLocal` and add `modImplementation "dev.arcane:arcane-spells:0.7.0"` to the addon (with `mavenLocal()` in its repositories), plus a `"arcane_spells": ">=0.7.0"` dependency in its `fabric.mod.json`.
 
