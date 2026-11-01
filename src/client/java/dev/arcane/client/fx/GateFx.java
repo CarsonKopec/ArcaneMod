@@ -14,9 +14,6 @@ import static dev.leyline.client.fx.Fx.show;
 import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.ColorRgba;
-import de.nexusrealms.nebulon.api.render.EffectHandle;
-import de.nexusrealms.nebulon.api.render.effect.BillboardSprite;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
@@ -25,6 +22,10 @@ import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.Beam;
+import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.Rgba;
+import dev.leyline.client.render.ShapeHandle;
 import dev.leyline.client.screen.ScreenEffects;
 import dev.leyline.effect.Effect;
 import java.util.ArrayList;
@@ -45,8 +46,8 @@ import net.minecraft.world.phys.Vec3;
  */
 final class GateFx {
     private static final Fx.Tracker<Gate> GATES = AstralFx.TRACKERS.create();
-    private static final ColorRgba ROSE = ColorRgba.rgba(0xFFB8F0FF);
-    private static final ColorRgba GOLD = ColorRgba.rgba(0xFFD27AFF);
+    private static final Rgba ROSE = Rgba.rgba(0xFFB8F0FF);
+    private static final Rgba GOLD = Rgba.rgba(0xFFD27AFF);
     /** The gate rings' centres, above the ground. */
     private static final double RING_HEIGHT = 1.3;
     private static final int CLOSE_TICKS = 10;
@@ -77,11 +78,11 @@ final class GateFx {
         /** Its other end is in another world. */
         final boolean single;
         final int duration;
-        final Fx.Planes planes = new Fx.Planes();
+        final Planes planes = new Planes();
         final RandomSource random = RandomSource.create();
         PointLightHandle originLight, destinationLight;
         /** Each gate's shaft of light and the wider glow round it: the origin's pair, then the destination's. */
-        final List<EffectHandle<BillboardSprite>> shafts = new ArrayList<>(Collections.nCopies(4, null));
+        final List<ShapeHandle<Beam>> shafts = new ArrayList<>(Collections.nCopies(4, null));
         int age;
         int flare;
 
@@ -132,7 +133,7 @@ final class GateFx {
             Vec3 center = feet.add(0, RING_HEIGHT, 0);
             float turn = age * 0.08f;
             planes.ring(center, normal, radius, 0.14f, ROSE);
-            planes.ring(center, normal, radius * 0.82, 0.05f, scaled(ColorRgba.WHITE, 0.7f));
+            planes.ring(center, normal, radius * 0.82, 0.05f, scaled(Rgba.WHITE, 0.7f));
             planes.polygon(center, normal, radius * 0.7, 6, turn, 0.06f, scaled(GOLD, 0.9f));
             planes.polygon(center, normal, radius * 0.7, 6, -turn, 0.06f, scaled(GOLD, 0.6f));
             // The vortex: rings shrinking and dimming as they go deeper, arms turning faster the deeper they are, and the
@@ -149,7 +150,7 @@ final class GateFx {
                     planes.arc(at, normal, r * 0.9, 0.09f, from, from + 1.3f, scaled(GOLD, 0.7f * dim));
                 }
             }
-            planes.glow(center.add(into.scale((VORTEX_RINGS + 1) * 0.32)), (float) radius * 0.3f, scaled(ColorRgba.WHITE, 0.6f));
+            planes.glow(center.add(into.scale((VORTEX_RINGS + 1) * 0.32)), (float) radius * 0.3f, scaled(Rgba.WHITE, 0.6f));
             Vec3 ground = feet.add(0, 0.06, 0);
             planes.ring(ground, UP, radius + 0.5, 0.1f, scaled(ROSE, 0.6f));
             planes.polygon(ground, UP, radius + 0.2, 8, age * 0.03f, 0.06f, scaled(GOLD, 0.5f));
@@ -164,7 +165,7 @@ final class GateFx {
                     continue;
                 }
                 Vec3 middle = feet.add(0, SHAFT_HEIGHT / 2 - 0.5, 0);
-                BillboardSprite shaft = i == 0
+                Beam shaft = i == 0
                         ? JudgmentFx.beamSprite(middle, 1.1f * open, SHAFT_HEIGHT, scaled(ROSE, 0.45f * open))
                         : JudgmentFx.beamSprite(middle, 3.4f * open, SHAFT_HEIGHT, scaled(GOLD, 0.16f * open));
                 shafts.set(slot, show(shafts.get(slot), shaft));

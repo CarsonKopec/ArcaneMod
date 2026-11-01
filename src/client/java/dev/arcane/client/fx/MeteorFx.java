@@ -17,9 +17,6 @@ import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.upwards;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.ColorRgba;
-import de.nexusrealms.nebulon.api.render.EffectHandle;
-import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
@@ -27,6 +24,10 @@ import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.Rgba;
+import dev.leyline.client.render.RuneCircle;
+import dev.leyline.client.render.ShapeHandle;
 import dev.leyline.client.screen.ScreenEffects;
 import dev.leyline.effect.Effect;
 import net.minecraft.core.BlockPos;
@@ -51,9 +52,9 @@ import net.minecraft.world.phys.Vec3;
 final class MeteorFx {
     private static final Fx.Tracker<Swarm> SWARMS = AstralFx.TRACKERS.create();
     private static final Fx.Tracker<Meteor> METEORS = AstralFx.TRACKERS.create();
-    private static final ColorRgba FIRE = ColorRgba.rgba(0xFF8A3DFF);
-    private static final ColorRgba BLAZE = ColorRgba.rgba(0xFFE3A0FF);
-    private static final ColorRgba CRIMSON = ColorRgba.rgba(0xFF3B1FFF);
+    private static final Rgba FIRE = Rgba.rgba(0xFF8A3DFF);
+    private static final Rgba BLAZE = Rgba.rgba(0xFFE3A0FF);
+    private static final Rgba CRIMSON = Rgba.rgba(0xFF3B1FFF);
     /** Vanilla's firework flash, tinted: the instant of each impact. */
     private static final ParticleOptions FLARE = ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFC890);
     /** Big, slow motes of brown dust, for the Dread Star's dust wall. */
@@ -81,9 +82,9 @@ final class MeteorFx {
         final Vec3 sky;
         final double area;
         final int duration;
-        final Fx.Planes planes = new Fx.Planes();
+        final Planes planes = new Planes();
         final RandomSource random = RandomSource.create();
-        EffectHandle<MagicCircle> runes;
+        ShapeHandle<RuneCircle> runes;
         PointLightHandle skyLight;
         int age;
 
@@ -153,7 +154,7 @@ final class MeteorFx {
          * a meteor's lands far bigger than its head looks, and the Dread Star's bigger still.
          */
         final float impact;
-        final Fx.Planes planes = new Fx.Planes();
+        final Planes planes = new Planes();
         final RandomSource random = RandomSource.create();
         PointLightHandle light;
         Vec3 position;
@@ -203,7 +204,7 @@ final class MeteorFx {
             if (impactAge < 0) {
                 // A white-hot core in a blazing head, its fire streaming out behind it.
                 planes.glow(position, size * (1.8f + 0.3f * Mth.sin(age * 1.3f)), BLAZE);
-                planes.glow(position, size * 0.55f, ColorRgba.WHITE);
+                planes.glow(position, size * 0.55f, Rgba.WHITE);
                 for (int i = 1; i <= 3; i++) {
                     planes.glow(position.subtract(velocity.scale(0.35 * i * size)), size * (1.6f - 0.3f * i), scaled(i < 3 ? FIRE : CRIMSON, 1 - 0.2f * i));
                 }
@@ -214,7 +215,7 @@ final class MeteorFx {
                 if (impactAge <= glowTicks) {
                     // The fireball, and a white-hot core flaring at its heart for the first instants.
                     planes.glow(position.add(0, impact, 0), impact * (2 + 5 * ease(impactAge / 3f)), scaled(BLAZE, 1 - impactAge / (float) glowTicks));
-                    if (impactAge <= 4) planes.glow(position.add(0, impact, 0), impact * 2.5f, scaled(ColorRgba.WHITE, 1 - impactAge / 5f));
+                    if (impactAge <= 4) planes.glow(position.add(0, impact, 0), impact * 2.5f, scaled(Rgba.WHITE, 1 - impactAge / 5f));
                 }
                 if (impactAge <= ringTicks) {
                     float left = 1 - impactAge / (float) ringTicks;

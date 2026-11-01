@@ -12,7 +12,6 @@ import static dev.leyline.client.fx.Fx.scaled;
 import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
@@ -20,6 +19,8 @@ import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.Rgba;
 import dev.leyline.client.screen.ScreenEffects;
 import dev.leyline.effect.Effect;
 import net.minecraft.core.particles.ColorParticleOption;
@@ -44,11 +45,11 @@ import net.minecraft.world.phys.Vec3;
  */
 final class SingularityFx {
     private static final Fx.Tracker<Hole> HOLES = AstralFx.TRACKERS.create();
-    private static final ColorRgba VIOLET = ColorRgba.rgba(0xA05CFFFF);
-    private static final ColorRgba MAGENTA = ColorRgba.rgba(0xE45CFFFF);
-    private static final ColorRgba PALE = ColorRgba.rgba(0xEBD8FFFF);
+    private static final Rgba VIOLET = Rgba.rgba(0xA05CFFFF);
+    private static final Rgba MAGENTA = Rgba.rgba(0xE45CFFFF);
+    private static final Rgba PALE = Rgba.rgba(0xEBD8FFFF);
     /** The black hole's disc, lighting the ground. */
-    private static final ColorRgba DISC_LIGHT = ColorRgba.rgba(0xFFC48AFF);
+    private static final Rgba DISC_LIGHT = Rgba.rgba(0xFFC48AFF);
     private static final ParticleOptions FLARE = ColorParticleOption.create(ParticleTypes.FLASH, 0xFFD9B8FF);
     private static final int TINT = 0x0E0418;
     /** The heart's radius: the unit its rings are sized in. */
@@ -85,7 +86,7 @@ final class SingularityFx {
         final Vec3 center;
         final double reach;
         final int duration;
-        final Fx.Planes planes = new Fx.Planes();
+        final Planes planes = new Planes();
         final RandomSource random = RandomSource.create();
         /** The way its disc turns round: nearly upright, tipped a little to one side. */
         final Vec3 axis;
@@ -191,7 +192,7 @@ final class SingularityFx {
             planes.begin();
             if (size > 0 && rings > 0) {
                 planes.halo(center, HEART * 0.55 * size * grown, 0.25f * grown, scaled(PALE, pulse * rings));
-                ColorRgba[] colors = {VIOLET, MAGENTA, PALE};
+                Rgba[] colors = {VIOLET, MAGENTA, PALE};
                 for (int i = 0; i < 3; i++) {
                     // Each ring leans 20-35 degrees and precesses at its own speed.
                     double tilt = 0.35 + 0.12 * i, phase = age * (0.05 + 0.03 * i) + i * 2.1;

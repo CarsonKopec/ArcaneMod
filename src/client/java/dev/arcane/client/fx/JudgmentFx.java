@@ -18,10 +18,6 @@ import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.upwards;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.ColorRgba;
-import de.nexusrealms.nebulon.api.render.EffectHandle;
-import de.nexusrealms.nebulon.api.render.effect.BillboardSprite;
-import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import de.nexusrealms.nebulon.api.render.light.BeamLight;
 import de.nexusrealms.nebulon.api.render.light.client.BeamLightHandle;
 import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
@@ -33,6 +29,11 @@ import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.Beam;
+import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.Rgba;
+import dev.leyline.client.render.RuneCircle;
+import dev.leyline.client.render.ShapeHandle;
 import dev.leyline.client.screen.ScreenEffects;
 import dev.leyline.effect.Effect;
 import java.util.ArrayList;
@@ -71,10 +72,10 @@ final class JudgmentFx {
     /** Frames side by side in the beam texture, played at {@link #BEAM_FPS}. */
     private static final int BEAM_FRAMES = 8;
     private static final float BEAM_FPS = 24;
-    private static final ColorRgba GOLD = ColorRgba.rgba(0xFFD27AFF);
-    private static final ColorRgba PALE_GOLD = ColorRgba.rgba(0xFFF0C8FF);
-    private static final ColorRgba ICE = ColorRgba.rgba(0xBDF3FFFF);
-    private static final ColorRgba EMBER = ColorRgba.rgba(0xFF6A1FFF);
+    private static final Rgba GOLD = Rgba.rgba(0xFFD27AFF);
+    private static final Rgba PALE_GOLD = Rgba.rgba(0xFFF0C8FF);
+    private static final Rgba ICE = Rgba.rgba(0xBDF3FFFF);
+    private static final Rgba EMBER = Rgba.rgba(0xFF6A1FFF);
     /** Vanilla's firework flash, tinted: a big, brief, camera-facing burst of light. */
     private static final ParticleOptions FLARE = ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFE8B0);
     /**
@@ -110,10 +111,8 @@ final class JudgmentFx {
         return STRIKES.get(effect.sourceId(), level, id -> new Strike(id, effect));
     }
 
-    static BillboardSprite beamSprite(Vec3 center, float width, float height, ColorRgba color) {
-        return BillboardSprite.builder(BEAM_TEXTURE).at(center).size(Math.max(0.05f, width), height).color(color)
-                .blend(BillboardSprite.Blend.ADDITIVE).facing(BillboardSprite.Facing.Y_AXIS)
-                .flipbook(BEAM_FRAMES, 1, BEAM_FPS).maxRenderDistance(RENDER_DISTANCE).build();
+    static Beam beamSprite(Vec3 center, float width, float height, Rgba color) {
+        return Beam.upright(center, Math.max(0.05f, width), height, color, BEAM_TEXTURE, BEAM_FRAMES, BEAM_FPS);
     }
 
     private static final class Strike implements Fx.Animation {
@@ -121,14 +120,14 @@ final class JudgmentFx {
         final Vec3 impact;
         final Vec3 sky;
         final RandomSource random = RandomSource.create();
-        final Fx.Planes planes = new Fx.Planes();
+        final Planes planes = new Planes();
         int gatherTicks = SpellTuning.JUDGMENT_GATHER_TICKS;
         int beamTicks = SpellTuning.JUDGMENT_BEAM_TICKS;
         int age;
         int beamAge = -1;
         int blastAge = -1;
-        EffectHandle<MagicCircle> groundRunes, skyRunes;
-        EffectHandle<BillboardSprite> beamCore, beamBody, beamHalo;
+        ShapeHandle<RuneCircle> groundRunes, skyRunes;
+        ShapeHandle<Beam> beamCore, beamBody, beamHalo;
         /** Each crack's path over the ground, from the beam's edge out to about the crater's rim, laid when the beam lands. */
         final List<List<Vec3>> cracks = new ArrayList<>();
         PointLightHandle groundLight, skyLight, blastLight, emberLight;
@@ -234,7 +233,7 @@ final class JudgmentFx {
                 groundRunes = show(groundRunes, circle(ground, UP, outer * 0.95, 0.06f, scaled(GOLD, 0.3f * heat), 4, id, 0.35f));
                 planes.seal(ground, UP, outer, 0.4f, 6, age * 0.012f, scaled(GOLD, heat));
                 if (age >= 8) planes.ring(ground, UP, CRATER * 0.62 * ease((age - 8) / 14f), 0.3f, scaled(ICE, heat));
-                if (age >= 16) planes.ring(ground, UP, CRATER * 0.3 * ease((age - 16) / 12f), 0.25f, scaled(ColorRgba.WHITE, heat));
+                if (age >= 16) planes.ring(ground, UP, CRATER * 0.3 * ease((age - 16) / 12f), 0.25f, scaled(Rgba.WHITE, heat));
                 groundLight = light(groundLight, impact.add(0, 2, 0), beaming ? 48 : 10 + 20 * g, beaming ? 6 : 0.6f + 2.4f * g, PALE_GOLD);
             } else {
                 groundRunes = hide(groundRunes);
@@ -249,7 +248,7 @@ final class JudgmentFx {
                 float bright = skyFade * (0.6f + 0.4f * g);
                 skyRunes = show(skyRunes, circle(sky, DOWN, outer * 0.95, 0.2f, scaled(GOLD, 0.3f * bright), 5, id + 3L, 0.12f));
                 planes.seal(sky, DOWN, outer, 0.9f, 6, -age * 0.008f, scaled(GOLD, bright));
-                if (age >= 10) planes.ring(sky.subtract(0, 0.3, 0), DOWN, SKY * 0.45 * ease((age - 10) / 20f), 0.7f, scaled(ColorRgba.WHITE, skyFade));
+                if (age >= 10) planes.ring(sky.subtract(0, 0.3, 0), DOWN, SKY * 0.45 * ease((age - 10) / 20f), 0.7f, scaled(Rgba.WHITE, skyFade));
                 skyLight = light(skyLight, sky.subtract(0, 4, 0), 48, (0.8f + 2.2f * g) * skyFade, PALE_GOLD);
             } else {
                 skyRunes = hide(skyRunes);
@@ -266,10 +265,10 @@ final class JudgmentFx {
                 // The body is the shaft's width; a halo glows far wider, a white-hot core runs down the middle.
                 beamHalo = show(beamHalo, beamSprite(middle, BEAM * 4.4f * slam, height, scaled(GOLD, 0.4f)));
                 beamBody = show(beamBody, beamSprite(middle, BEAM * 2 * slam, height, PALE_GOLD));
-                beamCore = show(beamCore, beamSprite(middle, BEAM * 0.7f * slam, height, ColorRgba.WHITE));
+                beamCore = show(beamCore, beamSprite(middle, BEAM * 0.7f * slam, height, Rgba.WHITE));
                 planes.glow(impact.add(0, 2, 0), BEAM * 1.4f + Mth.sin(age * 2.1f), PALE_GOLD);
                 BeamLight light = NebulonLights.beam(impact.subtract(0, 2, 0), new Vec3(impact.x, Math.min(top, impact.y + 200), impact.z))
-                        .color(PALE_GOLD).radius(BEAM * 2.5f).brightness(6).maxRenderDistance(RENDER_DISTANCE).build();
+                        .color(Fx.nebulon(PALE_GOLD)).radius(BEAM * 2.5f).brightness(6).maxRenderDistance(RENDER_DISTANCE).build();
                 if (beamLight != null && beamLight.isAlive()) beamLight.set(light);
                 else beamLight = NebulonLights.lights().add(world(), light);
             } else {
@@ -291,7 +290,7 @@ final class JudgmentFx {
                 }
                 if (blastAge <= 18) {
                     float fade = 1 - blastAge / 18f;
-                    planes.ring(impact.add(0, 0.2, 0), UP, 4 + SHOCKWAVE * ease(blastAge / 16f), 3f * fade + 0.15f, scaled(ColorRgba.WHITE, fade));
+                    planes.ring(impact.add(0, 0.2, 0), UP, 4 + SHOCKWAVE * ease(blastAge / 16f), 3f * fade + 0.15f, scaled(Rgba.WHITE, fade));
                     planes.ring(impact.add(0, 0.3, 0), UP, 3 + SHOCKWAVE * 0.65 * ease(blastAge / 18f), 1.5f * fade + 0.15f, scaled(GOLD, fade));
                 }
                 float flash = 1 - blastAge / 30f;
@@ -503,7 +502,7 @@ final class JudgmentFx {
 
         @Override public void release() {
             planes.clear();
-            for (EffectHandle<?> handle : new EffectHandle<?>[] {groundRunes, skyRunes, beamCore, beamBody, beamHalo}) {
+            for (ShapeHandle<?> handle : new ShapeHandle<?>[] {groundRunes, skyRunes, beamCore, beamBody, beamHalo}) {
                 if (handle != null) handle.remove();
             }
             for (PointLightHandle light : new PointLightHandle[] {groundLight, skyLight, blastLight, emberLight}) {

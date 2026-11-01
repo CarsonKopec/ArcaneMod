@@ -13,9 +13,6 @@ import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.whiter;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.ColorRgba;
-import de.nexusrealms.nebulon.api.render.EffectHandle;
-import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
@@ -23,6 +20,10 @@ import dev.arcane.spell.SpellCasting;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.Rgba;
+import dev.leyline.client.render.RuneCircle;
+import dev.leyline.client.render.ShapeHandle;
 import dev.leyline.effect.Effect;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -38,8 +39,8 @@ import net.minecraft.world.phys.Vec3;
  */
 final class ChannelFx {
     private static final Fx.Tracker<Channel> CHANNELS = AstralFx.TRACKERS.create();
-    private static final ColorRgba GOLD = ColorRgba.rgba(0xFFD27AFF);
-    private static final ColorRgba RED = ColorRgba.rgba(0xFF4A4AFF);
+    private static final Rgba GOLD = Rgba.rgba(0xFFD27AFF);
+    private static final Rgba RED = Rgba.rgba(0xFF4A4AFF);
     /** A channel not updated for this long has ended: released, or interrupted. */
     private static final int TIMEOUT_TICKS = 4;
 
@@ -53,8 +54,8 @@ final class ChannelFx {
 
     private static final class Channel implements Fx.Animation {
         final int casterId;
-        final Fx.Planes planes = new Fx.Planes();
-        EffectHandle<MagicCircle> feet;
+        final Planes planes = new Planes();
+        ShapeHandle<RuneCircle> feet;
         PointLightHandle light;
         int idle;
 
@@ -73,9 +74,9 @@ final class ChannelFx {
             float power = Mth.clamp(effect.power(), 0, 1);
             boolean complete = power >= 1;
             Entity caster = world().getEntity(casterId);
-            ColorRgba spell = spellColor(caster);
+            Rgba spell = spellColor(caster);
             float pulse = 0.75f + 0.25f * Mth.sin(effect.age() * 0.8f);
-            ColorRgba color = !valid ? RED : complete ? scaled(whiter(spell, 0.6f), pulse) : spell;
+            Rgba color = !valid ? RED : complete ? scaled(whiter(spell, 0.6f), pulse) : spell;
             // Thick enough to read on a wide ring, thin enough not to swamp a small one.
             float line = (float) Mth.clamp(radius * 0.025, 0.06, 0.3);
             Vec3 mark = effect.position().add(0, 0.08, 0);
@@ -105,10 +106,10 @@ final class ChannelFx {
         }
 
         /** The colour of the spell on the caster's staff, so each Astral spell's ring is its own colour. */
-        private static ColorRgba spellColor(Entity caster) {
+        private static Rgba spellColor(Entity caster) {
             if (!(caster instanceof Player player)) return GOLD;
             ItemStack staff = SpellCasting.heldStaff(player);
-            return staff.isEmpty() ? GOLD : ColorRgba.rgb(SpellCasting.selected(staff).color() & 0xFFFFFF);
+            return staff.isEmpty() ? GOLD : Rgba.rgb(SpellCasting.selected(staff).color() & 0xFFFFFF);
         }
 
         @Override public void release() {

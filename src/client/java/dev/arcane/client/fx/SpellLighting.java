@@ -1,10 +1,5 @@
 package dev.arcane.client.fx;
 
-import de.nexusrealms.nebulon.api.render.ColorRgba;
-import de.nexusrealms.nebulon.api.render.EffectHandle;
-import de.nexusrealms.nebulon.api.render.NebulonRendering;
-import de.nexusrealms.nebulon.api.render.effect.ArcChain;
-import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.item.ArcaneStaffItem;
@@ -13,7 +8,13 @@ import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.LeylineRegistries;
 import dev.leyline.client.effect.EffectRenderers;
+import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.Bolt;
+import dev.leyline.client.render.Rgba;
+import dev.leyline.client.render.RuneCircle;
+import dev.leyline.client.render.ShapeHandle;
+import dev.leyline.client.render.Shapes;
 import dev.leyline.effect.Effect;
 import dev.leyline.effect.EffectType;
 import dev.leyline.effect.Effects;
@@ -40,10 +41,10 @@ import net.minecraft.world.phys.Vec3;
  * particles alone.
  */
 public final class SpellLighting {
-    private static final ColorRgba VIOLET = ColorRgba.rgba(0xAD55FFFF);
-    private static final ColorRgba CYAN = ColorRgba.rgba(0x7EE8FFFF);
-    private static final ColorRgba PINK = ColorRgba.rgba(0xF3B5FFFF);
-    private static final ColorRgba ICE = ColorRgba.rgba(0xCFF6FFFF);
+    private static final Rgba VIOLET = Rgba.rgba(0xAD55FFFF);
+    private static final Rgba CYAN = Rgba.rgba(0x7EE8FFFF);
+    private static final Rgba PINK = Rgba.rgba(0xF3B5FFFF);
+    private static final Rgba ICE = Rgba.rgba(0xCFF6FFFF);
     private static final Vec3 UP = new Vec3(0, 1, 0);
     /** Busy scenes evict the oldest glow rather than growing without bound. */
     private static final int MAX_GLOWS = 48;
@@ -100,7 +101,7 @@ public final class SpellLighting {
         ++ticks;
         LocalPlayer player = client.player;
         if (player != null && SpellCasting.heldStaff(player).getItem() instanceof ArcaneStaffItem staff) {
-            ColorRgba color = ColorRgba.rgb(staff.glowColor());
+            Rgba color = Rgba.rgb(staff.glowColor());
             glow(STAFF_GLOW_KEY, player.getEyePosition().add(player.getLookAngle().scale(0.5)), 3.5f, 0.55f, color, 2, false);
         }
         Iterator<Glow> iterator = GLOWS.values().iterator();
@@ -121,9 +122,9 @@ public final class SpellLighting {
 
     private static void charge(ClientLevel level, Effect effect) {
         Glow glow = glow(key(effect), effect.position(), 3 + effect.power() * 4, 0.6f + effect.power() * 1.1f, VIOLET, 5, false);
-        MagicCircle circle = new MagicCircle(effect.position(), effect.direction(), 0.45 + effect.power() * 0.35,
-                0.016f, VIOLET, 3, effect.sourceId(), 0.25f, 128);
-        if (glow.circle == null) glow.circle = NebulonRendering.effects().spawn(level, circle);
+        RuneCircle circle = new RuneCircle(effect.position(), effect.direction(), 0.45 + effect.power() * 0.35,
+                0.016f, VIOLET, 3, effect.sourceId(), 0.25f);
+        if (glow.circle == null) glow.circle = Shapes.add(circle);
         else glow.circle.set(circle);
     }
 
@@ -131,7 +132,7 @@ public final class SpellLighting {
         Vec3 tip = effect.position().add(effect.direction());
         glow(key(effect), tip, 5, 1.5f, CYAN, 4, false);
         if (effect.direction().lengthSqr() > 0.001) {
-            NebulonRendering.effects().spawn(level, ArcChain.between(effect.position(), tip, CYAN), 3);
+            Shapes.spawn(Bolt.between(effect.position(), tip, CYAN), 3);
         }
     }
 
@@ -141,21 +142,20 @@ public final class SpellLighting {
         float power = effect.power();
         Vec3 origin = effect.position().subtract(effect.direction().scale(0.35));
         glow(key(effect), origin.add(0, 0.5, 0), 9 + power * 7, 3.0f, VIOLET, 26, true);
-        NebulonRendering.effects().spawn(level,
-                new MagicCircle(origin, effect.direction(), 2 + power * 3, 0.035f, CYAN, 4, effect.sourceId(), -0.3f, RENDER_DISTANCE), 18);
+        Shapes.spawn(new RuneCircle(origin, effect.direction(), 2 + power * 3, 0.035f, CYAN, 4, effect.sourceId(), -0.3f), 18);
         // Eight radial arcs, alternating heights so they read as a crackling dome.
         double reach = 2 + power * 3;
         for (int i = 0; i < 8; i++) {
             double angle = i * Math.PI / 4;
             Vec3 end = origin.add(Math.cos(angle) * reach, 0.8 + (i % 3), Math.sin(angle) * reach);
-            NebulonRendering.effects().spawn(level, ArcChain.between(origin, end, VIOLET), 8);
+            Shapes.spawn(Bolt.between(origin, end, VIOLET), 8);
         }
     }
 
     /** A pink arc along a shard's flight from the blast, and a flash where it strikes. */
     private static void shard(ClientLevel level, Effect effect) {
         Vec3 to = effect.position().add(effect.direction());
-        if (effect.direction().lengthSqr() > 0.001) NebulonRendering.effects().spawn(level, ArcChain.between(effect.position(), to, PINK), 6);
+        if (effect.direction().lengthSqr() > 0.001) Shapes.spawn(Bolt.between(effect.position(), to, PINK), 6);
         flash(to, 3.5f, 1.6f, PINK, 8);
     }
 
@@ -167,8 +167,8 @@ public final class SpellLighting {
         Vec3 from = effect.position(), path = effect.direction(), to = from.add(path);
         // Nebulon rejects a chain whose ends coincide.
         if (path.lengthSqr() > 0.001) {
-            NebulonRendering.effects().spawn(level, ArcChain.between(from, to, CYAN), 8);
-            NebulonRendering.effects().spawn(level, new ArcChain(List.of(from, to), VIOLET, 0.04f, 0.2f, -0.8f, RENDER_DISTANCE), 6);
+            Shapes.spawn(Bolt.between(from, to, CYAN), 8);
+            Shapes.spawn(new Bolt(List.of(from, to), VIOLET, 0.04f, 0.2f, -0.8f), 6);
             // Every client draws the same forks: they're seeded by the leap.
             RandomSource random = RandomSource.create(effect.sourceId() * 31L + effect.age());
             for (int i = 0; i < 2; i++) {
@@ -176,8 +176,8 @@ public final class SpellLighting {
                 Vec3 out = new Vec3(random.nextGaussian(), random.nextGaussian() * 0.6, random.nextGaussian()).normalize();
                 double length = 1.2 + random.nextDouble() * 1.5;
                 Vec3 bend = root.add(out.scale(length * 0.5)).add(path.normalize().scale(length * 0.3));
-                NebulonRendering.effects().spawn(level, new ArcChain(List.of(root, bend, bend.add(out.scale(length * 0.5))),
-                        CYAN, 0.025f, 0.2f, 0.6f, RENDER_DISTANCE), 5);
+                Shapes.spawn(new Bolt(List.of(root, bend, bend.add(out.scale(length * 0.5))),
+                        CYAN, 0.025f, 0.2f, 0.6f), 5);
             }
         }
         flash(to, 6, 2.2f * Math.max(0.4f, effect.power()), CYAN, 10);
@@ -190,7 +190,7 @@ public final class SpellLighting {
         for (int i = 0; i < 6; i++) {
             double angle = i * Math.PI / 3;
             Vec3 end = at.add(Math.cos(angle) * reach, (i % 3 - 1) * 0.8, Math.sin(angle) * reach);
-            NebulonRendering.effects().spawn(level, ArcChain.between(at, end, i % 2 == 0 ? CYAN : VIOLET), 8);
+            Shapes.spawn(Bolt.between(at, end, i % 2 == 0 ? CYAN : VIOLET), 8);
         }
         flash(at, 7, 1.5f + 2.5f * effect.power(), CYAN, 14);
     }
@@ -198,18 +198,18 @@ public final class SpellLighting {
     /** A blink's afterimage bursting: a pink flash and a rune circle the size of its reach. */
     private static void afterimage(ClientLevel level, Effect effect) {
         Vec3 feet = effect.position();
-        NebulonRendering.effects().spawn(level, new MagicCircle(feet.add(0, 0.05, 0), UP, SpellTuning.BLINK_AFTERIMAGE_RADIUS, 0.035f,
-                PINK, 3, effect.sourceId() + 2L, 1.2f, RENDER_DISTANCE), 12);
+        Shapes.spawn(new RuneCircle(feet.add(0, 0.05, 0), UP, SpellTuning.BLINK_AFTERIMAGE_RADIUS, 0.035f,
+                PINK, 3, effect.sourceId() + 2L, 1.2f), 12);
         flash(feet.add(0, 1, 0), 6, 2.6f, PINK, 12);
     }
 
     /** Rune circles on the ground where the caster left and where they arrived. */
     private static void blink(ClientLevel level, Effect effect) {
         Vec3 from = effect.position(), to = from.add(effect.direction());
-        NebulonRendering.effects().spawn(level, new MagicCircle(from.add(0, 0.05, 0), UP, 1.0, 0.03f, VIOLET, 3,
-                effect.sourceId(), 0.8f, RENDER_DISTANCE), 16);
-        NebulonRendering.effects().spawn(level, new MagicCircle(to.add(0, 0.05, 0), UP, 1.0, 0.03f, PINK, 3,
-                effect.sourceId() + 1L, -0.8f, RENDER_DISTANCE), 16);
+        Shapes.spawn(new RuneCircle(from.add(0, 0.05, 0), UP, 1.0, 0.03f, VIOLET, 3,
+                effect.sourceId(), 0.8f), 16);
+        Shapes.spawn(new RuneCircle(to.add(0, 0.05, 0), UP, 1.0, 0.03f, PINK, 3,
+                effect.sourceId() + 1L, -0.8f), 16);
         flash(from.add(0, 1, 0), 5, 1.8f, VIOLET, 12);
         flash(to.add(0, 1, 0), 6, 2.4f, PINK, 14);
     }
@@ -225,9 +225,9 @@ public final class SpellLighting {
         glow.wardEntity = entityId;
         Entity entity = level.getEntity(entityId);
         double feetY = entity != null ? entity.getY() : effect.position().y - 0.9;
-        List<EffectHandle<MagicCircle>> rings = new ArrayList<>();
+        List<ShapeHandle<RuneCircle>> rings = new ArrayList<>();
         for (int i = 0; i < WARD_RINGS; i++) {
-            rings.add(NebulonRendering.effects().spawn(level, wardRing(effect.position(), feetY, i, entityId, inside)));
+            rings.add(Shapes.add(wardRing(effect.position(), feetY, i, entityId, inside)));
         }
         glow.wardRings = rings;
     }
@@ -240,8 +240,8 @@ public final class SpellLighting {
             flash(effect.position(), 8, 3.4f, PINK, 14);
             Entity entity = world.getEntity(effect.sourceId());
             double feetY = entity != null ? entity.getY() : effect.position().y - 0.9;
-            NebulonRendering.effects().spawn(world, new MagicCircle(new Vec3(effect.position().x, feetY + 0.05, effect.position().z), UP,
-                    SpellTuning.WARD_REBOUND_RADIUS, 0.04f, VIOLET, 3, effect.sourceId() * 5L, -1.4f, RENDER_DISTANCE), 12);
+            Shapes.spawn(new RuneCircle(new Vec3(effect.position().x, feetY + 0.05, effect.position().z), UP,
+                    SpellTuning.WARD_REBOUND_RADIUS, 0.04f, VIOLET, 3, effect.sourceId() * 5L, -1.4f), 12);
         }
     }
 
@@ -266,16 +266,16 @@ public final class SpellLighting {
      * gyroscope. Seen from the caster's own eyes, full-size rings would sweep across the whole screen, so they lie
      * flat at the caster's feet instead: visible when looking down, never in the way.
      */
-    private static MagicCircle wardRing(Vec3 center, double feetY, int i, int entityId, boolean inside) {
-        ColorRgba color = i == 1 ? CYAN : VIOLET;
+    private static RuneCircle wardRing(Vec3 center, double feetY, int i, int entityId, boolean inside) {
+        Rgba color = i == 1 ? CYAN : VIOLET;
         long seed = entityId * 3L + i;
         if (inside) {
             Vec3 feet = new Vec3(center.x, feetY + 0.05 + i * 0.02, center.z);
-            return new MagicCircle(feet, UP, 0.8 + i * 0.45, 0.025f, color, 2, seed, i % 2 == 0 ? 0.5f : -0.5f, RENDER_DISTANCE);
+            return new RuneCircle(feet, UP, 0.8 + i * 0.45, 0.025f, color, 2, seed, i % 2 == 0 ? 0.5f : -0.5f);
         }
         double angle = ticks * 0.06 + i * Math.PI * 2 / WARD_RINGS;
         Vec3 normal = new Vec3(Math.cos(angle) * 0.87, 0.5, Math.sin(angle) * 0.87);
-        return new MagicCircle(center, normal, SpellTuning.WARD_RADIUS * 0.92, 0.025f, color, 2, seed, 0.5f, RENDER_DISTANCE);
+        return new RuneCircle(center, normal, SpellTuning.WARD_RADIUS * 0.92, 0.025f, color, 2, seed, 0.5f);
     }
 
     /** The local player's own ward, viewed in first person. */
@@ -290,19 +290,19 @@ public final class SpellLighting {
      */
     private static void nova(ClientLevel level, Effect effect) {
         Vec3 feet = effect.position();
-        NebulonRendering.effects().spawn(level, new MagicCircle(feet.add(0, 0.05, 0), UP, SpellTuning.NOVA_RADIUS, 0.05f, ICE, 4,
-                effect.sourceId(), 0.6f, RENDER_DISTANCE), 20);
+        Shapes.spawn(new RuneCircle(feet.add(0, 0.05, 0), UP, SpellTuning.NOVA_RADIUS, 0.05f, ICE, 4,
+                effect.sourceId(), 0.6f), 20);
         flash(feet.add(0, 1, 0), 10, 3.0f, ICE, 22);
     }
 
     /** A one-off light that fades out over {@code lifetime} ticks. */
-    private static void flash(Vec3 position, float radius, float brightness, ColorRgba color, int lifetime) {
+    private static void flash(Vec3 position, float radius, float brightness, Rgba color, int lifetime) {
         glow(nextFlashKey--, position, radius, brightness, color, lifetime, true);
     }
 
     /** Creates or refreshes the light for {@code key}; it lives {@code lifetime} ticks unless refreshed again. */
-    private static Glow glow(long key, Vec3 position, float radius, float brightness, ColorRgba color, int lifetime, boolean fade) {
-        var description = NebulonLights.point(position).color(color).radius(radius).brightness(brightness)
+    private static Glow glow(long key, Vec3 position, float radius, float brightness, Rgba color, int lifetime, boolean fade) {
+        var description = NebulonLights.point(position).color(Fx.nebulon(color)).radius(radius).brightness(brightness)
                 .maxRenderDistance(RENDER_DISTANCE).build();
         Glow glow = GLOWS.get(key);
         if (glow == null) {
@@ -357,9 +357,9 @@ public final class SpellLighting {
 
     private static final class Glow {
         final PointLightHandle light;
-        EffectHandle<MagicCircle> circle;
+        ShapeHandle<RuneCircle> circle;
         /** A ward's rune rings, re-aimed every tick around entity {@link #wardEntity}. Empty for other glows. */
-        List<EffectHandle<MagicCircle>> wardRings = List.of();
+        List<ShapeHandle<RuneCircle>> wardRings = List.of();
         int wardEntity;
         long expires;
         int fadeTicks;
@@ -372,7 +372,7 @@ public final class SpellLighting {
         void close() {
             light.close();
             if (circle != null) circle.remove();
-            wardRings.forEach(EffectHandle::remove);
+            wardRings.forEach(ShapeHandle::remove);
         }
     }
 }

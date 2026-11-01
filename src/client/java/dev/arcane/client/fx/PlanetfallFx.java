@@ -1,6 +1,5 @@
 package dev.arcane.client.fx;
 
-import static dev.leyline.client.fx.Fx.RENDER_DISTANCE;
 import static dev.leyline.client.fx.Fx.UP;
 import static dev.leyline.client.fx.Fx.anyDirection;
 import static dev.leyline.client.fx.Fx.camera;
@@ -18,11 +17,6 @@ import static dev.leyline.client.fx.Fx.whiter;
 import static dev.leyline.client.fx.Fx.world;
 
 import com.mojang.math.Transformation;
-import de.nexusrealms.nebulon.api.render.ColorRgba;
-import de.nexusrealms.nebulon.api.render.EffectHandle;
-import de.nexusrealms.nebulon.api.render.NebulonRendering;
-import de.nexusrealms.nebulon.api.render.effect.ArcChain;
-import de.nexusrealms.nebulon.api.render.effect.MagicCircle;
 import dev.arcane.item.ArcaneStaffItem;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
@@ -35,6 +29,12 @@ import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.Bolt;
+import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.Rgba;
+import dev.leyline.client.render.RuneCircle;
+import dev.leyline.client.render.ShapeHandle;
+import dev.leyline.client.render.Shapes;
 import dev.leyline.client.screen.ScreenEffects;
 import dev.leyline.effect.Effect;
 import java.util.List;
@@ -90,12 +90,12 @@ import org.joml.Vector3fc;
  * accessibility settings.
  */
 final class PlanetfallFx {
-    private static final ColorRgba VIOLET = ColorRgba.rgba(0x9B4DFFFF);
-    private static final ColorRgba MAGENTA = ColorRgba.rgba(0xFF4FD8FF);
-    private static final ColorRgba CYAN = ColorRgba.rgba(0x6CF5FFFF);
-    private static final ColorRgba FIRE = ColorRgba.rgba(0xFF7A1FFF);
-    private static final ColorRgba MOLTEN = ColorRgba.rgba(0xFFC060FF);
-    private static final ColorRgba EMBER = ColorRgba.rgba(0xFF4A12FF);
+    private static final Rgba VIOLET = Rgba.rgba(0x9B4DFFFF);
+    private static final Rgba MAGENTA = Rgba.rgba(0xFF4FD8FF);
+    private static final Rgba CYAN = Rgba.rgba(0x6CF5FFFF);
+    private static final Rgba FIRE = Rgba.rgba(0xFF7A1FFF);
+    private static final Rgba MOLTEN = Rgba.rgba(0xFFC060FF);
+    private static final Rgba EMBER = Rgba.rgba(0xFF4A12FF);
     private static final ParticleOptions FLARE = ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFE0B8);
     private static final float R = (float) SpellTuning.PLANETFALL_PLANET_RADIUS;
     private static final double CRATER = SpellTuning.PLANETFALL_CRATER_RADIUS;
@@ -202,7 +202,7 @@ final class PlanetfallFx {
         final RandomSource random;
         final PlanetfallTerrain terrain;
         final BlockState debrisMaterial;
-        final Fx.Planes planes = new Fx.Planes();
+        final Planes planes = new Planes();
         int riftTicks = SpellTuning.PLANETFALL_RIFT_TICKS;
         int fallTicks = SpellTuning.PLANETFALL_FALL_TICKS;
         int age;
@@ -215,7 +215,7 @@ final class PlanetfallFx {
         PlanetfallDebris groundDebris;
         Vec3 planetAt;
         float spin, spinBefore;
-        EffectHandle<MagicCircle> riftRunes, groundRunes;
+        ShapeHandle<RuneCircle> riftRunes, groundRunes;
 
         Fall(int id, Effect first) {
             this.id = id;
@@ -342,7 +342,7 @@ final class PlanetfallFx {
             planes.seal(rift, facing, outer, 1.4f, 8, age * 0.01f, scaled(VIOLET, pulse));
             planes.polygon(rift, facing, outer * 0.78, 7, -age * 0.016f, 0.9f, scaled(MAGENTA, 0.9f * pulse));
             planes.ring(rift, facing, outer * 0.62, 0.7f, scaled(CYAN, 0.8f));
-            planes.ring(rift, facing, (R + 4) * open, 2.4f, scaled(ColorRgba.WHITE, pulse));
+            planes.ring(rift, facing, (R + 4) * open, 2.4f, scaled(Rgba.WHITE, pulse));
             planes.ring(rift, facing, (R + 7) * open, 0.8f, scaled(MAGENTA, pulse));
             // A throat behind the seal gives the portal depth as the planet emerges.
             for (int i = 1; i <= 3; i++) {
@@ -368,8 +368,8 @@ final class PlanetfallFx {
             double ra = outer * (0.6 + random.nextDouble() * 0.4), rb = (R + 4) + random.nextDouble() * outer * 0.4;
             Vec3 from = rift.add(u.scale(Math.cos(a) * ra)).add(v.scale(Math.sin(a) * ra));
             Vec3 to = rift.add(u.scale(Math.cos(b) * rb)).add(v.scale(Math.sin(b) * rb));
-            ColorRgba color = random.nextBoolean() ? CYAN : MAGENTA;
-            NebulonRendering.effects().spawn(world(), new ArcChain(List.of(from, to), color, 0.45f, 2.2f, 1.5f, RENDER_DISTANCE), 6);
+            Rgba color = random.nextBoolean() ? CYAN : MAGENTA;
+            Shapes.spawn(new Bolt(List.of(from, to), color, 0.45f, 2.2f, 1.5f), 6);
         }
 
         /** The warning seal on the ground, and the edge of the zone where gravity fails, until the impact. */
@@ -415,7 +415,7 @@ final class PlanetfallFx {
                     float fade = 1 - t / 18f;
                     float radius = 12 + 22 * ease(t / 12f);
                     planes.glow(mark.add(0, 6 + t * 0.3, 0), radius, scaled(MOLTEN, fade * 0.55f));
-                    if (t < 7) planes.glow(mark.add(0, 3, 0), radius * 0.65f, scaled(ColorRgba.WHITE, (1 - t / 7f) * 0.8f));
+                    if (t < 7) planes.glow(mark.add(0, 3, 0), radius * 0.65f, scaled(Rgba.WHITE, (1 - t / 7f) * 0.8f));
                 }
                 if (t <= SpellTuning.PLANETFALL_PRESSURE_TICKS) {
                     float fade = 1 - t / (float) SpellTuning.PLANETFALL_PRESSURE_TICKS;
@@ -833,7 +833,7 @@ final class PlanetfallFx {
 
         @Override public void release() {
             planes.clear();
-            for (EffectHandle<?> handle : new EffectHandle<?>[] {riftRunes, groundRunes}) {
+            for (ShapeHandle<?> handle : new ShapeHandle<?>[] {riftRunes, groundRunes}) {
                 if (handle != null) NebulonGuard.cleanup(handle::remove);
             }
         }
@@ -853,7 +853,7 @@ final class PlanetfallFx {
         final RandomSource random;
         final Vector3f tumbleAxis;
         final Display.BlockDisplay display;
-        final Fx.Planes planes = new Fx.Planes();
+        final Planes planes = new Planes();
         Vec3 at;
         int age;
 

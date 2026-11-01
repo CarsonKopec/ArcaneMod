@@ -12,7 +12,6 @@ import static dev.leyline.client.fx.Fx.scaled;
 import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.ColorRgba;
 import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
@@ -21,6 +20,8 @@ import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.Rgba;
 import dev.leyline.client.screen.ScreenEffects;
 import dev.leyline.effect.Effect;
 import net.minecraft.core.particles.ParticleTypes;
@@ -43,8 +44,8 @@ import net.minecraft.world.phys.Vec3;
  */
 final class ChronoFx {
     private static final Fx.Tracker<Field> FIELDS = AstralFx.TRACKERS.create();
-    private static final ColorRgba TEAL = ColorRgba.rgba(0x7FFFE6FF);
-    private static final ColorRgba PALE = ColorRgba.rgba(0xDFFFF8FF);
+    private static final Rgba TEAL = Rgba.rgba(0x7FFFE6FF);
+    private static final Rgba PALE = Rgba.rgba(0xDFFFF8FF);
     private static final int TINT = 0x08201C;
     /** Rings of latitude, in degrees above the ground. */
     private static final float[] LATITUDES = {0, 25, 50, 72};
@@ -69,7 +70,7 @@ final class ChronoFx {
         final Vec3 center;
         final double radius;
         final int duration;
-        final Fx.Planes planes = new Fx.Planes();
+        final Planes planes = new Planes();
         final RandomSource random = RandomSource.create();
         PointLightHandle glow;
         int age;
