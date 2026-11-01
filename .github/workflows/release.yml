@@ -1,0 +1,60 @@
+# Uploads a release to Modrinth and CurseForge. Run it by hand from the Actions tab once the version, CHANGELOG.md
+# and the project IDs in gradle.properties are ready, with the MODRINTH_TOKEN and CURSEFORGE_TOKEN repository secrets
+# set. See docs/releasing.md.
+
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      leyline_ref:
+        description: 'Leyline branch or tag to build against'
+        default: 'main'
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: check tokens
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        # Without both, publishMods only does a dry run, which would look like a release that went nowhere.
+        run: |
+          if [ -z "$MODRINTH_TOKEN" ] || [ -z "$CURSEFORGE_TOKEN" ]; then
+            echo "::error::Set the MODRINTH_TOKEN and CURSEFORGE_TOKEN repository secrets first."
+            exit 1
+          fi
+      - name: checkout repository
+        uses: actions/checkout@v6
+      - name: validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+      - name: setup gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+      # Leyline isn't on a public Maven repository yet: build it from its own repository into the local one, where
+      # this build looks for it.
+      - name: checkout Leyline
+        uses: actions/checkout@v6
+        with:
+          repository: CarsonKopec/Leyline
+          ref: ${{ inputs.leyline_ref }}
+          path: leyline
+      - name: publish Leyline to the local Maven repository
+        working-directory: leyline
+        run: chmod +x ./gradlew && ./gradlew publishToMavenLocal
+      - name: build and upload
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: ./gradlew build publishMods
+      - name: capture build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: Artifacts
+          path: build/libs/

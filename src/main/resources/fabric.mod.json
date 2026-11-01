@@ -3,10 +3,15 @@
 	"id": "arcane_spells",
 	"version": "${version}",
 	"name": "Arcane Spells",
-	"description": "Charge an arcane staff and unleash violet bolts, spiraling sparks, rune circles and colored dynamic light.",
+	"description": "Two spell staffs, a radial spell wheel and a mana bar: five quick Arcane spells and six world-shaking Astral ones, with mastery, talents, affinities and corruption.",
 	"authors": [
 		"1mag1n33"
 	],
+	"contact": {
+		"homepage": "https://github.com/CarsonKopec/ArcaneMod",
+		"sources": "https://github.com/CarsonKopec/ArcaneMod",
+		"issues": "https://github.com/CarsonKopec/ArcaneMod/issues"
+	},
 	"license": "CC0-1.0",
 	"icon": "assets/arcane_spells/icon.png",
 	"environment": "*",

@@ -6,7 +6,7 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
 
 1. Install Fabric Loader **0.19.5 or later** for Minecraft **1.21.11** (https://fabricmc.net/use/installer/). Minecraft needs Java 21 or newer.
 2. Put these nine JARs in the instance's `mods` folder. Choose the **Fabric / Minecraft 1.21.11** files:
-   - `arcane-spells-0.7.0.jar` (from `build/libs/`, not the `-sources` JAR)
+   - `arcane-spells-0.8.0.jar` (from `build/libs/`, not the `-sources` JAR)
    - `leyline-0.1.0.jar`, the library mod Arcane Spells is built on (from the Leyline repository's `build/libs/`)
    - [Fabric API 0.141.6+1.21.11](https://modrinth.com/mod/fabric-api/versions?g=1.21.11)
    - [Nebulon 0.1.2-beta+mc1.21.11.20260928.19](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/0.1.2-beta+mc1.21.11.20260928.19/nebulon-0.1.2-beta+mc1.21.11.20260928.19.jar)
@@ -15,7 +15,7 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
    - [Cardinal Components API 7.3.2](https://modrinth.com/mod/cardinal-components-api/version/HZMLTuxY) (the complete release JAR)
    - [owo-lib 0.13.0+1.21.11](https://modrinth.com/mod/owo-lib/version/33Ei8Thm)
    - [Trinkets Updated 3.11.0-beta.2+1.21.11](https://modrinth.com/mod/trinkets-updated/version/3.11.0-beta.2+1.21.11)
-3. For multiplayer, install all nine on the server **and** every client, with the same Arcane Spells version on both. 0.7 is not network-compatible with 0.6.
+3. For multiplayer, install all nine on the server **and** every client, with the same Arcane Spells version on both. 0.8 is not network-compatible with 0.7.
 
 These libraries power player casting poses, animated 3D staffs, saved player progression, the spell book and settings screens, and the trinket slots.
 
@@ -128,6 +128,7 @@ Arcane Spells builds against [Leyline](https://github.com/CarsonKopec/Leyline), 
 | Launch a dev client | `gradlew.bat runClient` |
 | In-game integration tests | `gradlew.bat runClientGameTest` |
 | Regenerate spell icons, textures and sounds | `python tools/generate_assets.py` (needs `pip install numpy scipy pillow soundfile`) |
+| Upload a release to Modrinth and CurseForge | `gradlew.bat publishMods`: see [docs/releasing.md](docs/releasing.md). Without tokens it's a dry run into `build/publishMods/` |
 
 The spell icons (`textures/gui/sprites/spell/`), the Astral Staff and beam textures and the sounds (`sounds/`) are drawn and synthesized by `tools/generate_assets.py`, so there are no third-party assets to license. (The Arcane Staff's texture predates it.) Edit a function there and rerun it to change one; add `--preview DIR` to also get upscaled icons and waveform/spectrogram plots for checking sounds by eye. A resource pack can replace any icon or sound by path.
 
@@ -272,7 +273,7 @@ The spell's name is the translation key `spell.mymod.fireball` (plus `spell.mymo
 
 The spell registry is synced, as is Leyline's effect-type registry, so a client without the addon can't join a server that has it. If an addon is removed, staffs holding its spells fall back to Arcane Bolt and its cooldowns are dropped.
 
-To build against the mod, publish it with `gradlew.bat publishToMavenLocal` and add `modImplementation "dev.arcane:arcane-spells:0.7.0"` to the addon (with `mavenLocal()` in its repositories), plus a `"arcane_spells": ">=0.7.0"` dependency in its `fabric.mod.json`.
+To build against the mod, publish it with `gradlew.bat publishToMavenLocal` and add `modImplementation "dev.arcane:arcane-spells:0.8.0"` to the addon (with `mavenLocal()` in its repositories), plus a `"arcane_spells": ">=0.8.0"` dependency in its `fabric.mod.json`.
 
 ## Status
 
