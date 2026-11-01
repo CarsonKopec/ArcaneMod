@@ -2,15 +2,15 @@ package dev.arcane.client.fx;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import de.nexusrealms.nebulon.api.render.client.DynamicUniformBlock;
-import de.nexusrealms.nebulon.api.render.client.ShaderMaterial;
-import de.nexusrealms.nebulon.api.render.client.post.PostPassContext;
 import dev.arcane.ArcaneSpells;
-import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.AfterWorld;
+import dev.leyline.client.render.UniformBlock;
 import dev.leyline.client.screen.ScreenPass;
 import dev.leyline.client.screen.ScreenPasses;
 import java.util.ArrayList;
@@ -40,10 +40,10 @@ final class SpaceTimeShader {
     private static final ScreenPass PASS = new ScreenPass(ArcaneSpells.id("spacetime"), 90, SpaceTimeShader::render,
             SpaceTimeShader::release, "The black hole and Chrono Field screen pass");
 
-    private static ShaderMaterial effect;
+    private static RenderPipeline effect;
     /** The frame as the world drew it. */
     private static TextureTarget frame;
-    private static DynamicUniformBlock<View> uniforms;
+    private static UniformBlock<View> uniforms;
     private static List<Scene> requested = new ArrayList<>(), scenes = List.of();
     private static final View VIEW = new View();
 
@@ -81,18 +81,17 @@ final class SpaceTimeShader {
 
     private static void release() {
         TextureTarget target = frame;
-        if (target != null) NebulonGuard.cleanup(target::destroyBuffers);
+        if (target != null) target.destroyBuffers();
         frame = null;
     }
 
     /** Runs inside world rendering, drawing over the whole frame. */
-    private static void render(PostPassContext context) {
+    private static void render(AfterWorld.Frame context) {
         if (effect == null) build();
         RenderTarget main = context.main();
         frame = ScreenPasses.sized(frame, "Space-time frame", main.width, main.height);
-        Minecraft client = Minecraft.getInstance();
-        float partialTick = client.getDeltaTracker().getGameTimeDeltaPartialTick(true);
-        VIEW.reset(client.gameRenderer.getMainCamera(), partialTick);
+        float partialTick = context.partialTick();
+        VIEW.reset(context.camera(), partialTick);
         for (Scene scene : scenes) scene.write(VIEW, partialTick);
         uniforms.beginFrame();
         GpuBufferSlice view = uniforms.upload(VIEW);
@@ -109,10 +108,10 @@ final class SpaceTimeShader {
     }
 
     private static void build() {
-        ShaderMaterial built = ScreenPasses.fullScreen(ArcaneSpells.id("spacetime"), ArcaneSpells.id("core/spacetime"))
-                .sampler("InputColor").sampler("SceneDepth").uniformBlock("SpaceTimeView").build();
+        RenderPipeline built = ScreenPasses.fullScreen(ArcaneSpells.id("spacetime"), ArcaneSpells.id("core/spacetime"))
+                .withSampler("InputColor").withSampler("SceneDepth").withUniform("SpaceTimeView", UniformType.UNIFORM_BUFFER).build();
         ScreenPasses.precompile("The space-time shader", built);
-        uniforms = new DynamicUniformBlock<>("Space-time view", View.BYTES, 4, View::encode);
+        uniforms = new UniformBlock<>("Space-time view", View.BYTES, 4, View::encode);
         effect = built;
     }
 

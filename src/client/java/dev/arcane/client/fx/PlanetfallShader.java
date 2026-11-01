@@ -2,17 +2,18 @@ package dev.arcane.client.fx;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import de.nexusrealms.nebulon.api.render.client.DynamicUniformBlock;
-import de.nexusrealms.nebulon.api.render.client.ShaderMaterial;
-import de.nexusrealms.nebulon.api.render.client.post.PostPassContext;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.client.config.ArcaneClientSettings;
-import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.AfterWorld;
+import dev.leyline.client.render.UniformBlock;
 import dev.leyline.client.screen.ScreenPass;
 import dev.leyline.client.screen.ScreenPasses;
 import java.util.Arrays;
@@ -60,8 +61,9 @@ final class PlanetfallShader {
     private static final int BLOOM_LEVELS = 5;
     /** Spreads, in texels, of the lens streak's passes: each blurs the last further. */
     private static final float[] STREAK_SPREADS = {1, 4, 12};
+    private static final UniformType BLOCK = UniformType.UNIFORM_BUFFER;
 
-    private static ShaderMaterial noise, volume, effect, extract, down, up, streak, composite;
+    private static RenderPipeline noise, volume, effect, extract, down, up, streak, composite;
     /** The frame as the world drew it; the volumes, at half size; and the frame drawn over, in high dynamic range. */
     private static TextureTarget frame, volumes, hdr;
     /** Random values the shaders' noise is read from, drawn once whenever it is made. */
@@ -69,8 +71,8 @@ final class PlanetfallShader {
     /** The bloom's chain, each level half the size of the last, and the streak's two buffers. */
     private static final TextureTarget[] BLOOM = new TextureTarget[BLOOM_LEVELS];
     private static final TextureTarget[] STREAK = new TextureTarget[2];
-    private static DynamicUniformBlock<View> uniforms;
-    private static DynamicUniformBlock<Vector4f> steps;
+    private static UniformBlock<View> uniforms;
+    private static UniformBlock<Vector4f> steps;
     private static Scene requested, scene;
     private static int requestedPriority;
     private static final View VIEW = new View();
@@ -114,7 +116,7 @@ final class PlanetfallShader {
 
     private static void release() {
         for (TextureTarget target : targets()) {
-            if (target != null) NebulonGuard.cleanup(target::destroyBuffers);
+            if (target != null) target.destroyBuffers();
         }
         frame = volumes = hdr = noiseTile = null;
         Arrays.fill(BLOOM, null);
@@ -126,7 +128,7 @@ final class PlanetfallShader {
     }
 
     /** Runs inside world rendering, drawing over the whole frame. */
-    private static void render(PostPassContext context) {
+    private static void render(AfterWorld.Frame context) {
         if (effect == null) build();
         RenderTarget main = context.main();
         int width = main.width, height = main.height;
@@ -139,9 +141,8 @@ final class PlanetfallShader {
             for (int i = 0; i < STREAK.length; i++) STREAK[i] = sized(STREAK[i], "streak " + i, width >> 2, height >> 2);
         }
 
-        Minecraft client = Minecraft.getInstance();
-        float partialTick = client.getDeltaTracker().getGameTimeDeltaPartialTick(true);
-        VIEW.reset(client.gameRenderer.getMainCamera());
+        float partialTick = context.partialTick();
+        VIEW.reset(context.camera());
         Scene current = scene;
         if (current != null) current.write(VIEW, partialTick);
         if (!glowing) VIEW.post.set(0, 0, VIEW.post.z, VIEW.post.w);
@@ -230,21 +231,22 @@ final class PlanetfallShader {
 
     private static void build() {
         noise = fullScreen("noise").build();
-        volume = fullScreen("volume").sampler("SceneDepth").sampler("NoiseTile").uniformBlock("PlanetfallView").build();
-        effect = fullScreen(null).sampler("InputColor").sampler("SceneDepth").sampler("Volume").sampler("NoiseTile")
-                .uniformBlock("PlanetfallView").build();
-        extract = fullScreen("bloom_extract").sampler("InSampler").build();
-        down = fullScreen("bloom_down").sampler("InSampler").build();
-        up = fullScreen("bloom_up").sampler("InSampler").transparency(ShaderMaterial.Transparency.ADDITIVE).build();
-        streak = fullScreen("streak").sampler("InSampler").uniformBlock("PlanetfallStep").build();
-        composite = fullScreen("composite").sampler("InSampler").sampler("Bloom").sampler("Streak").uniformBlock("PlanetfallView").build();
+        volume = fullScreen("volume").withSampler("SceneDepth").withSampler("NoiseTile").withUniform("PlanetfallView", BLOCK).build();
+        effect = fullScreen(null).withSampler("InputColor").withSampler("SceneDepth").withSampler("Volume").withSampler("NoiseTile")
+                .withUniform("PlanetfallView", BLOCK).build();
+        extract = fullScreen("bloom_extract").withSampler("InSampler").build();
+        down = fullScreen("bloom_down").withSampler("InSampler").build();
+        up = fullScreen("bloom_up").withSampler("InSampler").withBlend(BlendFunction.ADDITIVE).build();
+        streak = fullScreen("streak").withSampler("InSampler").withUniform("PlanetfallStep", BLOCK).build();
+        composite = fullScreen("composite").withSampler("InSampler").withSampler("Bloom").withSampler("Streak")
+                .withUniform("PlanetfallView", BLOCK).build();
         ScreenPasses.precompile("A Planetfall shader", noise, volume, effect, extract, down, up, streak, composite);
-        uniforms = new DynamicUniformBlock<>("Planetfall view", VIEW_BYTES, 4, View::encode);
-        steps = new DynamicUniformBlock<>("Planetfall step", 16, 4, (out, step) -> out.putVec4(step));
+        uniforms = new UniformBlock<>("Planetfall view", VIEW_BYTES, 4, View::encode);
+        steps = new UniformBlock<>("Planetfall step", 16, 4, (out, step) -> out.putVec4(step));
     }
 
     /** A pass over the whole screen; its shader is {@code planetfall_<stage>}. */
-    private static ShaderMaterial.Builder fullScreen(String stage) {
+    private static RenderPipeline.Builder fullScreen(String stage) {
         String name = stage == null ? "planetfall" : "planetfall_" + stage;
         return ScreenPasses.fullScreen(ArcaneSpells.id(name), ArcaneSpells.id("core/" + name));
     }
@@ -254,8 +256,8 @@ final class PlanetfallShader {
         return ScreenPasses.sized(target, "Planetfall " + label, width, height);
     }
 
-    private static void draw(RenderTarget target, ShaderMaterial material, GpuBufferSlice transforms, Consumer<RenderPass> inputs) {
-        ScreenPasses.draw(target, "Planetfall", material, transforms, inputs);
+    private static void draw(RenderTarget target, RenderPipeline pipeline, GpuBufferSlice transforms, Consumer<RenderPass> inputs) {
+        ScreenPasses.draw(target, "Planetfall", pipeline, transforms, inputs);
     }
 
     /**

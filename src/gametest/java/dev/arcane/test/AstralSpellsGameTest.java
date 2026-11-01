@@ -1,7 +1,6 @@
 package dev.arcane.test;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import de.nexusrealms.nebulon.api.render.client.post.NebulonPostProcessing;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.api.spell.Spell;
 import dev.arcane.client.gui.SpellWheelScreen;
@@ -12,6 +11,7 @@ import dev.arcane.spell.CasterState;
 import dev.arcane.spell.ChronoField;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.screen.ScreenPass;
 import java.util.List;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -210,7 +210,7 @@ public final class AstralSpellsGameTest implements FabricClientGameTest {
 
     /** Whether the space-time pass, which draws black holes and stopped time, is running. */
     private static boolean spaceTimePass() {
-        return NebulonPostProcessing.registeredPasses().contains(ArcaneSpells.id("spacetime"));
+        return ScreenPass.running(ArcaneSpells.id("spacetime"));
     }
 
     private static void chronoField(ClientGameTestContext context, TestServerContext server) {

@@ -1,11 +1,11 @@
 package dev.arcane.test;
 
-import de.nexusrealms.nebulon.api.render.client.post.NebulonPostProcessing;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.registry.ModSpells;
 import dev.arcane.spell.CasterState;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
+import dev.leyline.client.screen.ScreenPass;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
@@ -274,7 +274,7 @@ public final class PlanetfallGameTest implements FabricClientGameTest {
     }
 
     private static boolean screenPass() {
-        return NebulonPostProcessing.registeredPasses().contains(ArcaneSpells.id("planetfall"));
+        return ScreenPass.running(ArcaneSpells.id("planetfall"));
     }
 
     private static int planetDisplays(ClientLevel level) {
