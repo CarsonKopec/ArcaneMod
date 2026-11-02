@@ -52,7 +52,28 @@ jobs:
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
-        run: ./gradlew build publishMods
+        run: |
+          set -o pipefail
+          ./gradlew build publishMods --stacktrace 2>&1 | tee gradle-output.txt
+      # Only admins can download a run's log, so put Gradle's own explanation where anyone can read it: an annotation
+      # on the run (also readable through the API) and the run's summary.
+      - name: report what went wrong
+        if: failure()
+        run: |
+          [ -f gradle-output.txt ] || exit 0
+          sed -n '/^\* What went wrong:/,/^\* Try:/p' gradle-output.txt | grep -v '^\* Try:' | head -40 > wrong.txt
+          grep -iE 'modrinth|curseforge|http|status|unauthori|forbidden|invalid|exception:' gradle-output.txt \
+            | grep -v '^\s*at ' | head -20 > clues.txt || true
+          {
+            echo '### What went wrong'
+            echo '```'
+            cat wrong.txt
+            echo
+            cat clues.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          message=$( (cat wrong.txt; echo; cat clues.txt) | sed 's/%/%25/g; s/\r//g' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=What went wrong::${message}"
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
         with:
