@@ -1,8 +1,8 @@
 package dev.arcane.test;
 
-import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.ArcaneBolt;
+import dev.leyline.client.render.Lights;
 import dev.leyline.effect.Effects;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -36,7 +36,7 @@ public final class LightingGameTest implements FabricClientGameTest {
                 context.waitTicks(2);
             }
             context.runOnClient(client -> {
-                if (NebulonLights.lights().stats().rendered() < 1) throw new AssertionError("Charging light did not render");
+                if (Lights.drawn() < 1) throw new AssertionError("Charging light did not render");
             });
             context.takeScreenshot("arcane-charge-lighting");
 
@@ -64,7 +64,7 @@ public final class LightingGameTest implements FabricClientGameTest {
 
             context.waitTicks(45);
             context.runOnClient(client -> {
-                if (NebulonLights.lights().size() != 0) throw new AssertionError("Expired spell lights leaked");
+                if (Lights.count() != 0) throw new AssertionError("Expired spell lights leaked");
             });
             context.takeScreenshot("arcane-after-blast");
         }

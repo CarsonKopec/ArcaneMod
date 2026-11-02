@@ -1,23 +1,22 @@
 package dev.arcane.client.fx;
 
-import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
-import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.item.ArcaneStaffItem;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.LeylineRegistries;
 import dev.leyline.client.effect.EffectRenderers;
-import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.render.Bolt;
+import dev.leyline.client.render.LightHandle;
+import dev.leyline.client.render.Lights;
+import dev.leyline.client.render.PointLight;
 import dev.leyline.client.render.Rgba;
 import dev.leyline.client.render.RuneCircle;
 import dev.leyline.client.render.ShapeHandle;
 import dev.leyline.client.render.Shapes;
 import dev.leyline.effect.Effect;
 import dev.leyline.effect.EffectType;
-import dev.leyline.effect.Effects;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -50,8 +49,6 @@ public final class SpellLighting {
     private static final int MAX_GLOWS = 48;
     private static final long STAFF_GLOW_KEY = Long.MIN_VALUE;
     private static final int WARD_RINGS = 3;
-    /** As far as effects are sent. */
-    private static final double RENDER_DISTANCE = Effects.RANGE;
 
     private static final Map<Long, Glow> GLOWS = new LinkedHashMap<>();
     private static ClientLevel world;
@@ -115,7 +112,7 @@ public final class SpellLighting {
             if (!glow.wardRings.isEmpty()) followWard(glow);
             if (glow.fadeTicks > 0) {
                 float fade = (glow.expires - ticks) / (float) glow.fadeTicks;
-                glow.light.update(value -> value.brightness(glow.brightness * fade * fade));
+                glow.light.update(value -> value.withBrightness(glow.brightness * fade * fade));
             }
         }
     }
@@ -255,7 +252,7 @@ public final class SpellLighting {
         Vec3 center = entity.getBoundingBox().getCenter();
         // Re-checked every tick, so toggling the camera (F5) switches between the two looks.
         boolean inside = seenFromInside(glow.wardEntity);
-        glow.light.update(light -> light.at(center).radius(inside ? 3 : 5).brightness(inside ? 0.35f : 1.1f));
+        glow.light.update(light -> new PointLight(center, light.color(), inside ? 3 : 5, inside ? 0.35f : 1.1f));
         for (int i = 0; i < glow.wardRings.size(); i++) {
             glow.wardRings.get(i).set(wardRing(center, entity.getY(), i, glow.wardEntity, inside));
         }
@@ -302,8 +299,7 @@ public final class SpellLighting {
 
     /** Creates or refreshes the light for {@code key}; it lives {@code lifetime} ticks unless refreshed again. */
     private static Glow glow(long key, Vec3 position, float radius, float brightness, Rgba color, int lifetime, boolean fade) {
-        var description = NebulonLights.point(position).color(Fx.nebulon(color)).radius(radius).brightness(brightness)
-                .maxRenderDistance(RENDER_DISTANCE).build();
+        PointLight description = new PointLight(position, color, radius, brightness);
         Glow glow = GLOWS.get(key);
         if (glow == null) {
             if (GLOWS.size() >= MAX_GLOWS) {
@@ -311,7 +307,7 @@ public final class SpellLighting {
                 oldest.next().close();
                 oldest.remove();
             }
-            glow = new Glow(NebulonLights.lights().add(world, description));
+            glow = new Glow(Lights.add(description));
             GLOWS.put(key, glow);
         } else {
             glow.light.set(description);
@@ -356,7 +352,7 @@ public final class SpellLighting {
     }
 
     private static final class Glow {
-        final PointLightHandle light;
+        final LightHandle<PointLight> light;
         ShapeHandle<RuneCircle> circle;
         /** A ward's rune rings, re-aimed every tick around entity {@link #wardEntity}. Empty for other glows. */
         List<ShapeHandle<RuneCircle>> wardRings = List.of();
@@ -365,7 +361,7 @@ public final class SpellLighting {
         int fadeTicks;
         float brightness;
 
-        Glow(PointLightHandle light) {
+        Glow(LightHandle<PointLight> light) {
             this.light = light;
         }
 

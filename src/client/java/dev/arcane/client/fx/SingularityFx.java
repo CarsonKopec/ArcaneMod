@@ -12,14 +12,15 @@ import static dev.leyline.client.fx.Fx.scaled;
 import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.PointLight;
 import dev.leyline.client.render.Rgba;
 import dev.leyline.client.screen.ScreenEffects;
 import dev.leyline.effect.Effect;
@@ -92,7 +93,7 @@ final class SingularityFx {
         final Vec3 axis;
         /** Varies the disc's streaks from one black hole to the next. */
         final float seed;
-        PointLightHandle glow;
+        LightHandle<PointLight> glow;
         int age;
         int collapseAge = -1;
         /** Whether the black hole is being drawn by the screen pass, rather than not at all. */

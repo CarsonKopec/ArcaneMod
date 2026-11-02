@@ -13,14 +13,15 @@ import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.whiter;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellCasting;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.PointLight;
 import dev.leyline.client.render.Rgba;
 import dev.leyline.client.render.RuneCircle;
 import dev.leyline.client.render.ShapeHandle;
@@ -56,7 +57,7 @@ final class ChannelFx {
         final int casterId;
         final Planes planes = new Planes();
         ShapeHandle<RuneCircle> feet;
-        PointLightHandle light;
+        LightHandle<PointLight> light;
         int idle;
 
         Channel(int casterId) {

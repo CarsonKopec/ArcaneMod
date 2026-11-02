@@ -1,7 +1,6 @@
 package dev.arcane.client.fx;
 
 import static dev.leyline.client.fx.Fx.DOWN;
-import static dev.leyline.client.fx.Fx.RENDER_DISTANCE;
 import static dev.leyline.client.fx.Fx.UP;
 import static dev.leyline.client.fx.Fx.circle;
 import static dev.leyline.client.fx.Fx.ease;
@@ -18,10 +17,6 @@ import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.upwards;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.light.BeamLight;
-import de.nexusrealms.nebulon.api.render.light.client.BeamLightHandle;
-import de.nexusrealms.nebulon.api.render.light.client.NebulonLights;
-import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.ArcaneSpells;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
@@ -30,13 +25,18 @@ import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.render.Beam;
+import dev.leyline.client.render.BeamLight;
+import dev.leyline.client.render.LightHandle;
+import dev.leyline.client.render.Lights;
 import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.PointLight;
 import dev.leyline.client.render.Rgba;
 import dev.leyline.client.render.RuneCircle;
 import dev.leyline.client.render.ShapeHandle;
 import dev.leyline.client.screen.ScreenEffects;
 import dev.leyline.effect.Effect;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
@@ -130,8 +130,8 @@ final class JudgmentFx {
         ShapeHandle<Beam> beamCore, beamBody, beamHalo;
         /** Each crack's path over the ground, from the beam's edge out to about the crater's rim, laid when the beam lands. */
         final List<List<Vec3>> cracks = new ArrayList<>();
-        PointLightHandle groundLight, skyLight, blastLight, emberLight;
-        BeamLightHandle beamLight;
+        LightHandle<PointLight> groundLight, skyLight, blastLight, emberLight;
+        LightHandle<BeamLight> beamLight;
 
         Strike(int id, Effect first) {
             this.id = id;
@@ -267,10 +267,10 @@ final class JudgmentFx {
                 beamBody = show(beamBody, beamSprite(middle, BEAM * 2 * slam, height, PALE_GOLD));
                 beamCore = show(beamCore, beamSprite(middle, BEAM * 0.7f * slam, height, Rgba.WHITE));
                 planes.glow(impact.add(0, 2, 0), BEAM * 1.4f + Mth.sin(age * 2.1f), PALE_GOLD);
-                BeamLight light = NebulonLights.beam(impact.subtract(0, 2, 0), new Vec3(impact.x, Math.min(top, impact.y + 200), impact.z))
-                        .color(Fx.nebulon(PALE_GOLD)).radius(BEAM * 2.5f).brightness(6).maxRenderDistance(RENDER_DISTANCE).build();
+                BeamLight light = new BeamLight(impact.subtract(0, 2, 0), new Vec3(impact.x, Math.min(top, impact.y + 200), impact.z),
+                        PALE_GOLD, BEAM * 2.5f, 6);
                 if (beamLight != null && beamLight.isAlive()) beamLight.set(light);
-                else beamLight = NebulonLights.lights().add(world(), light);
+                else beamLight = Lights.add(light);
             } else {
                 beamCore = hide(beamCore);
                 beamBody = hide(beamBody);
@@ -505,7 +505,7 @@ final class JudgmentFx {
             for (ShapeHandle<?> handle : new ShapeHandle<?>[] {groundRunes, skyRunes, beamCore, beamBody, beamHalo}) {
                 if (handle != null) handle.remove();
             }
-            for (PointLightHandle light : new PointLightHandle[] {groundLight, skyLight, blastLight, emberLight}) {
+            for (LightHandle<PointLight> light : Arrays.asList(groundLight, skyLight, blastLight, emberLight)) {
                 if (light != null) light.close();
             }
             if (beamLight != null) beamLight.close();

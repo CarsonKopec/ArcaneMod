@@ -14,7 +14,6 @@ import static dev.leyline.client.fx.Fx.show;
 import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
@@ -23,7 +22,9 @@ import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.render.Beam;
+import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.PointLight;
 import dev.leyline.client.render.Rgba;
 import dev.leyline.client.render.ShapeHandle;
 import dev.leyline.client.screen.ScreenEffects;
@@ -80,7 +81,7 @@ final class GateFx {
         final int duration;
         final Planes planes = new Planes();
         final RandomSource random = RandomSource.create();
-        PointLightHandle originLight, destinationLight;
+        LightHandle<PointLight> originLight, destinationLight;
         /** Each gate's shaft of light and the wider glow round it: the origin's pair, then the destination's. */
         final List<ShapeHandle<Beam>> shafts = new ArrayList<>(Collections.nCopies(4, null));
         int age;

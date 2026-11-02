@@ -17,14 +17,15 @@ import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.upwards;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.PointLight;
 import dev.leyline.client.render.Rgba;
 import dev.leyline.client.render.RuneCircle;
 import dev.leyline.client.render.ShapeHandle;
@@ -85,7 +86,7 @@ final class MeteorFx {
         final Planes planes = new Planes();
         final RandomSource random = RandomSource.create();
         ShapeHandle<RuneCircle> runes;
-        PointLightHandle skyLight;
+        LightHandle<PointLight> skyLight;
         int age;
 
         Swarm(int id, Effect effect) {
@@ -156,7 +157,7 @@ final class MeteorFx {
         final float impact;
         final Planes planes = new Planes();
         final RandomSource random = RandomSource.create();
-        PointLightHandle light;
+        LightHandle<PointLight> light;
         Vec3 position;
         int age;
         int impactAge = -1;

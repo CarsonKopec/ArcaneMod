@@ -12,7 +12,6 @@ import static dev.leyline.client.fx.Fx.scaled;
 import static dev.leyline.client.fx.Fx.unlight;
 import static dev.leyline.client.fx.Fx.world;
 
-import de.nexusrealms.nebulon.api.render.light.client.PointLightHandle;
 import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
@@ -20,7 +19,9 @@ import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
 import dev.leyline.client.fx.Fx;
 import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Planes;
+import dev.leyline.client.render.PointLight;
 import dev.leyline.client.render.Rgba;
 import dev.leyline.client.screen.ScreenEffects;
 import dev.leyline.effect.Effect;
@@ -72,7 +73,7 @@ final class ChronoFx {
         final int duration;
         final Planes planes = new Planes();
         final RandomSource random = RandomSource.create();
-        PointLightHandle glow;
+        LightHandle<PointLight> glow;
         int age;
         int endAge = -1;
 
