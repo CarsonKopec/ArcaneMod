@@ -168,9 +168,9 @@ publishMods {
 		section.substring(section.indexOf('\n') + 1).trim()
 	}
 
-	// Every required mod. Slugs are the same on both sites.
-	def required = ['fabric-api', 'leyline', 'player-animation-library', 'geckolib', 'cardinal-components-api',
-			'owo-lib', 'trinkets-updated']
+	// Every other required mod. Slugs are the same on both sites.
+	def required = ['fabric-api', 'player-animation-library', 'geckolib', 'cardinal-components-api', 'owo-lib',
+			'trinkets-updated']
 
 	modrinth {
 		projectId = project.modrinth_project_id
@@ -180,6 +180,9 @@ publishMods {
 			type = SOURCES_JAR
 		}
 		required.each { requires(it) }
+		requires {
+			id = project.leyline_modrinth_project_id
+		}
 	}
 
 	curseforge {
@@ -190,6 +193,7 @@ publishMods {
 		client = true
 		server = true
 		required.each { requires(it) }
+		requires('leyline')
 	}
 }
 
