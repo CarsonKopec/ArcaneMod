@@ -38,7 +38,7 @@ public final class SpellParticles {
     private static final Vec3 X = new Vec3(1, 0, 0), Y = new Vec3(0, 1, 0), Z = new Vec3(0, 0, 1);
     /** Golden angle in radians: successive points never line up, giving even spreads without randomness. */
     private static final double GOLDEN_ANGLE = 2.3999632297;
-    /** Effects farther than this from the camera spawn no particles; their Nebulon light and arcs still show. */
+    /** Effects farther than this from the camera spawn no particles; their light and shapes still show. */
     private static final double PARTICLE_RANGE = 64;
     private static final int MAX_ANIMATIONS = 64;
     private static final List<Animation> ANIMATIONS = new ArrayList<>();

@@ -27,8 +27,8 @@ import dev.arcane.spell.PlanetfallTerrain;
 import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
+import dev.leyline.client.fx.EffectGuard;
 import dev.leyline.client.fx.Fx;
-import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.render.Bolt;
 import dev.leyline.client.render.Planes;
 import dev.leyline.client.render.Rgba;
@@ -292,7 +292,7 @@ final class PlanetfallFx {
             }
             // Once the sky has cleared there is nothing left for the screen pass to draw.
             if (drawn && impactAge < CLOUD_TICKS) PlanetfallShader.show(this, -Math.round((float) camera().distanceTo(mark)));
-            NebulonGuard.guarded(this::animate);
+            EffectGuard.guarded(this::animate);
             if (particlesVisible(mark) || particlesVisible(planetAt)) particles();
             screen();
             if (impactAge >= 0) {
@@ -824,17 +824,14 @@ final class PlanetfallFx {
             }
         }
 
-        @Override public void releaseLocal() {
+        @Override public void release() {
             if (planet != null) planet.remove();
             planet = null;
             if (groundDebris != null) groundDebris.remove();
             groundDebris = null;
-        }
-
-        @Override public void release() {
             planes.clear();
             for (ShapeHandle<?> handle : new ShapeHandle<?>[] {riftRunes, groundRunes}) {
-                if (handle != null) NebulonGuard.cleanup(handle::remove);
+                if (handle != null) handle.remove();
             }
         }
     }
@@ -883,7 +880,7 @@ final class PlanetfallFx {
             float t = Math.min(1, age / (float) flight);
             at = from.lerp(to, t * (0.55f + 0.45f * t));
             pose();
-            NebulonGuard.guarded(this::animate);
+            EffectGuard.guarded(this::animate);
             if (particlesVisible(at)) trail(last);
             if (age < flight) return false;
             if (particlesVisible(to)) strike();
@@ -929,11 +926,8 @@ final class PlanetfallFx {
             }
         }
 
-        @Override public void releaseLocal() {
-            level.removeEntity(display.getId(), Entity.RemovalReason.DISCARDED);
-        }
-
         @Override public void release() {
+            level.removeEntity(display.getId(), Entity.RemovalReason.DISCARDED);
             planes.clear();
         }
     }

@@ -21,8 +21,8 @@ import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
+import dev.leyline.client.fx.EffectGuard;
 import dev.leyline.client.fx.Fx;
-import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Planes;
 import dev.leyline.client.render.PointLight;
@@ -99,7 +99,7 @@ final class MeteorFx {
 
         @Override public boolean tick() {
             age++;
-            NebulonGuard.guarded(this::animate);
+            EffectGuard.guarded(this::animate);
             if (particlesVisible(sky) && age < duration) particles();
             float near = proximity(mark);
             if (near > 0 && age < duration) {
@@ -196,7 +196,7 @@ final class MeteorFx {
                 position = start.add(velocity.scale(age));
                 if (particlesVisible(position)) trailParticles(previous);
             }
-            NebulonGuard.guarded(this::animate);
+            EffectGuard.guarded(this::animate);
             return impactAge > impactTicks() || impactAge < 0 && age > lifetime + 5;
         }
 

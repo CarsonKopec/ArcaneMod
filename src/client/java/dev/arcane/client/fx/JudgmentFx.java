@@ -22,8 +22,8 @@ import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
+import dev.leyline.client.fx.EffectGuard;
 import dev.leyline.client.fx.Fx;
-import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.render.Beam;
 import dev.leyline.client.render.BeamLight;
 import dev.leyline.client.render.LightHandle;
@@ -208,7 +208,7 @@ final class JudgmentFx {
             age++;
             if (blastAge >= 0) blastAge++;
             else if (beamAge >= 0) beamAge++;
-            NebulonGuard.guarded(this::animate);
+            EffectGuard.guarded(this::animate);
             if (particlesVisible(impact)) particles();
             screen(proximity(impact));
             if (blastAge >= 0) return blastAge > AFTERMATH_TICKS;

@@ -45,8 +45,8 @@ Press **K** to open the spell book. It lists every spell, your mastery and affin
 ### Before you install
 
 - **Install it on the server and on every client.** Every player needs the same version.
-- **It needs these mods:** Leyline, Fabric API, Nebulon, Player Animation Library, GeckoLib, Cardinal Components API, owo-lib and Trinkets Updated. Nebulon 0.1.2-beta+mc1.21.11.20260928.19 is published by NexusRealms.
+- **It needs these mods:** Leyline, Fabric API, Player Animation Library, GeckoLib, Cardinal Components API, owo-lib and Trinkets Updated.
 - **Astral spells break a lot of terrain.** Blocks only break where the caster could break them by hand, and never in Adventure mode. To stop spells breaking terrain at all, run `/gamerule arcane_spells:terrain_damage false`.
-- **Shader packs (Iris) and VulkanMod** haven't been tested. Without the shader passes, the biggest spells fall back to simpler visuals.
+- **Shader packs (Iris) and VulkanMod:** the spells' lights, shapes and shader effects switch off under them, and spells fall back to particles.
 
 Other mods can add their own spells and staffs through the API, documented on [GitHub](https://github.com/CarsonKopec/ArcaneMod).

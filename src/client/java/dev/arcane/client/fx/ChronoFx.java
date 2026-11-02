@@ -17,8 +17,8 @@ import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
+import dev.leyline.client.fx.EffectGuard;
 import dev.leyline.client.fx.Fx;
-import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Planes;
 import dev.leyline.client.render.PointLight;
@@ -95,7 +95,7 @@ final class ChronoFx {
             age++;
             if (endAge >= 0) endAge++;
             boolean drained = SpaceTimeShader.available();
-            NebulonGuard.guarded(this::animate);
+            EffectGuard.guarded(this::animate);
             if (endAge < 0 && particlesVisible(center)) particles(drained);
             // Tick, tock: once a second, as the second hand steps.
             if (endAge < 0 && age % TICK == 0 && age < duration) {

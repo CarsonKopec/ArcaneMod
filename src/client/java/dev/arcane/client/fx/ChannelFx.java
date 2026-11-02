@@ -17,8 +17,8 @@ import dev.arcane.registry.ModParticles;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellCasting;
 import dev.leyline.client.effect.EffectRenderers;
+import dev.leyline.client.fx.EffectGuard;
 import dev.leyline.client.fx.Fx;
-import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Planes;
 import dev.leyline.client.render.PointLight;
@@ -81,7 +81,7 @@ final class ChannelFx {
             // Thick enough to read on a wide ring, thin enough not to swamp a small one.
             float line = (float) Mth.clamp(radius * 0.025, 0.06, 0.3);
             Vec3 mark = effect.position().add(0, 0.08, 0);
-            NebulonGuard.guarded(() -> {
+            EffectGuard.guarded(() -> {
                 if (caster != null) {
                     // Dim: a magic circle adds most of its colour across its whole disc.
                     feet = show(feet, circle(caster.position().add(0, 0.05, 0), UP, 1.2 + 0.6 * power, 0.04f,

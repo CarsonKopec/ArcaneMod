@@ -6,7 +6,7 @@ import dev.arcane.spell.SpellCasting;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.LeylineRegistries;
 import dev.leyline.client.effect.EffectRenderers;
-import dev.leyline.client.fx.NebulonGuard;
+import dev.leyline.client.fx.EffectGuard;
 import dev.leyline.client.render.Bolt;
 import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Lights;
@@ -31,13 +31,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Nebulon lights, rune circles and arcs for each spell phase.
+ * Leyline lights, rune circles and lightning for each spell phase.
  *
- * <p>Owns and expires every library handle: no permanent lights are left behind by a spell.
- *
- * <p>Nebulon is a beta library driving the GPU directly, so every call into it goes through Leyline's
- * {@link NebulonGuard}: the first failure switches Nebulon off, these lights are let go, and spells carry on with
- * particles alone.
+ * <p>Owns and expires every handle: no permanent lights are left behind by a spell. Each phase runs inside
+ * {@link EffectGuard}, so a failure costs that one effect, not the game.
  */
 public final class SpellLighting {
     private static final Rgba VIOLET = Rgba.rgba(0xAD55FFFF);
@@ -60,7 +57,6 @@ public final class SpellLighting {
     }
 
     public static void register() {
-        NebulonGuard.onFailure(SpellLighting::release);
         on(ModSpellEffects.CHARGE, SpellLighting::charge);
         on(ModSpellEffects.BOLT, SpellLighting::bolt);
         on(ModSpellEffects.IMPACT, SpellLighting::impact);
@@ -76,18 +72,18 @@ public final class SpellLighting {
     }
 
     private static void on(EffectType type, BiConsumer<ClientLevel, Effect> play) {
-        EffectRenderers.register(type, (effect, level) -> NebulonGuard.guarded(() -> {
+        EffectRenderers.register(type, (effect, level) -> EffectGuard.guarded(() -> {
             ensureWorld(level);
             play.accept(level, effect);
         }));
     }
 
     public static void tick(Minecraft client) {
-        NebulonGuard.guarded(() -> tickGlows(client));
+        EffectGuard.guarded(() -> tickGlows(client));
     }
 
     public static void clear() {
-        NebulonGuard.guarded(SpellLighting::closeAll);
+        EffectGuard.guarded(SpellLighting::closeAll);
         GLOWS.clear();
         world = null;
         ticks = 0;
@@ -162,7 +158,7 @@ public final class SpellLighting {
      */
     private static void chain(ClientLevel level, Effect effect) {
         Vec3 from = effect.position(), path = effect.direction(), to = from.add(path);
-        // Nebulon rejects a chain whose ends coincide.
+        // A leap with no length has nothing to draw.
         if (path.lengthSqr() > 0.001) {
             Shapes.spawn(Bolt.between(from, to, CYAN), 8);
             Shapes.spawn(new Bolt(List.of(from, to), VIOLET, 0.04f, 0.2f, -0.8f), 6);
@@ -282,8 +278,8 @@ public final class SpellLighting {
     }
 
     /**
-     * A rune circle across the ground and a cold flash. (Nebulon's SnowStorm was tried here: from inside it the
-     * caster sees a white-out, so the snow is left to particles.)
+     * A rune circle across the ground and a cold flash. (A snowstorm effect was tried here: from inside it the caster
+     * sees a white-out, so the snow is left to particles.)
      */
     private static void nova(ClientLevel level, Effect effect) {
         Vec3 feet = effect.position();
@@ -339,17 +335,6 @@ public final class SpellLighting {
         GLOWS.clear();
     }
 
-    /** Nebulon has failed: lets go of every light and rune it still can. */
-    private static void release() {
-        for (Glow glow : GLOWS.values()) {
-            try {
-                glow.close();
-            } catch (RuntimeException | LinkageError ignored) {
-                // Nebulon is already failing: release what still can be released.
-            }
-        }
-        GLOWS.clear();
-    }
 
     private static final class Glow {
         final LightHandle<PointLight> light;

@@ -19,8 +19,8 @@ import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
+import dev.leyline.client.fx.EffectGuard;
 import dev.leyline.client.fx.Fx;
-import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.render.Beam;
 import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Planes;
@@ -99,7 +99,7 @@ final class GateFx {
         @Override public boolean tick() {
             age++;
             if (flare > 0) flare--;
-            NebulonGuard.guarded(this::animate);
+            EffectGuard.guarded(this::animate);
             for (Vec3 end : single ? new Vec3[] {origin} : new Vec3[] {origin, destination}) {
                 if (age < duration && particlesVisible(end)) inflow(end);
                 if (age % HUM_TICKS == 1 && age < duration - CLOSE_TICKS) {

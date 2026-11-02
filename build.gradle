@@ -10,8 +10,6 @@ repositories {
 	mavenLocal() {
 		content { includeGroup 'dev.leyline' }
 	}
-	// Nebulon (dynamic lights, rune circles, arcs)
-	maven { url = 'https://maven.riftrealms.de/releases' }
 	mavenCentral()
 	maven {
 		name = 'PlayerAnimationLibrary'
@@ -73,11 +71,11 @@ dependencies {
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	modImplementation "de.nexusrealms:nebulon:${project.nebulon_version}"
-	// Terrain rules, craters and screen effects, shared with other mods. A separate mod, not bundled in this one.
+	// Lights, shapes, screen passes, terrain rules and craters, shared with other mods. A separate mod, not bundled
+	// in this one.
 	modImplementation "dev.leyline:leyline:${project.leyline_version}"
 
-	// These are external runtime mods, matching the existing Fabric API/Nebulon install model.
+	// These are external runtime mods, matching the existing Fabric API install model.
 	// Keep Fabric modules on the explicitly selected fabric_api_version rather than mixing older builds.
 	modImplementation("com.zigythebird.playeranim:PlayerAnimationLibFabric:${project.player_animation_version}") {
 		exclude group: 'net.fabricmc.fabric-api'
@@ -101,10 +99,9 @@ processResources {
 	def props = [
 		version           : project.version,
 		loader_version    : project.loader_version,
-		// Minimum versions are the ones we build against. Nebulon is a 0.x beta, so `~` also
-		// rejects its next minor release, which may break the API.
+		// Minimum versions are the ones we build against. Leyline is 0.x, so `~` also rejects its next minor
+		// release, which may break the API.
 		fabric_api_version: project.fabric_api_version,
-		nebulon_version   : project.nebulon_version,
 		leyline_version   : project.leyline_version,
 		player_animation_version: project.player_animation_version,
 		geckolib_version  : project.geckolib_version,
@@ -158,7 +155,7 @@ publishMods {
 
 	file = remapJar.archiveFile
 	displayName = "Arcane Spells ${project.version}"
-	// 0.x, on a beta Nebulon.
+	// 0.x: the API may still change.
 	type = BETA
 	modLoaders.add('fabric')
 	// This version's section of CHANGELOG.md, without its heading. Publishing fails if there isn't one.
@@ -171,7 +168,7 @@ publishMods {
 		section.substring(section.indexOf('\n') + 1).trim()
 	}
 
-	// Every required mod but Nebulon, which is on neither site (see docs/releasing.md). Slugs are the same on both.
+	// Every required mod. Slugs are the same on both sites.
 	def required = ['fabric-api', 'leyline', 'player-animation-library', 'geckolib', 'cardinal-components-api',
 			'owo-lib', 'trinkets-updated']
 

@@ -2,19 +2,6 @@
 
 `gradlew publishMods` uploads the built JAR, with this version's section of `CHANGELOG.md` as its release notes, to both sites. It runs on [mod-publish-plugin](https://modmuss50.github.io/mod-publish-plugin/), configured at the end of `build.gradle`. Without both tokens it's a dry run: nothing is uploaded, and what would be is written to `build/publishMods/`.
 
-## Blocker: Nebulon
-
-Arcane Spells and Leyline both require [Nebulon](https://maven.riftrealms.de/releases/de/nexusrealms/nebulon/), which is on neither Modrinth nor CurseForge, only on NexusRealms' Maven repository, and is All Rights Reserved. That conflicts with both sites' rules:
-
-- **Modrinth** requires every dependency to be listed in each version's Dependencies section, and only Modrinth projects can be listed there.
-- **CurseForge** doesn't allow external download links for files.
-
-The licence also rules out bundling Nebulon in our JAR (jar-in-jar) or uploading it ourselves without NexusRealms' written permission. Until one of these is settled, neither mod can be listed with all its requirements:
-
-1. NexusRealms publishes Nebulon on Modrinth and CurseForge. This is the cleanest option: add `nebulon` to the required mods in both `build.gradle` files.
-2. NexusRealms gives written permission to bundle it. Include it with Loom's `include`, and credit them on the page.
-3. Make Nebulon optional, so both mods run without it and only use it when it's installed. This is a code change in both mods: every Nebulon call must sit behind a check that Nebulon is loaded, and the screen passes need a hook of their own instead of Nebulon's post-processing.
-
 ## The first time
 
 1. **Release Leyline first.** Arcane Spells lists it as a required mod by its slug, `leyline`, which must exist on both sites before Arcane Spells can be uploaded. Its own steps are in [Leyline's docs/releasing.md](https://github.com/CarsonKopec/Leyline/blob/main/docs/releasing.md).

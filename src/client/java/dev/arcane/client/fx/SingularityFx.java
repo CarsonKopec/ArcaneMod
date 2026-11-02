@@ -16,8 +16,8 @@ import dev.arcane.registry.ModSounds;
 import dev.arcane.registry.ModSpellEffects;
 import dev.arcane.spell.SpellTuning;
 import dev.leyline.client.effect.EffectRenderers;
+import dev.leyline.client.fx.EffectGuard;
 import dev.leyline.client.fx.Fx;
-import dev.leyline.client.fx.NebulonGuard;
 import dev.leyline.client.render.LightHandle;
 import dev.leyline.client.render.Planes;
 import dev.leyline.client.render.PointLight;
@@ -33,7 +33,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Singularity as the client sees it. Nebulon draws light, not darkness, so at first the hole is a knot of ink and
+ * Singularity as the client sees it. Glows add light, not darkness, so at first the hole is a knot of ink and
  * smoke; around it, a bright photon ring always faces the viewer, and three tilted accretion rings precess at
  * different speeds. Purple streams pour in from all sides, and its reach is marked on the ground.
  *
@@ -146,7 +146,7 @@ final class SingularityFx {
             if (collapseAge == IMPLODE_TICKS) burst();
             drawn = SpaceTimeShader.available();
             if (drawn && age >= duration - FORM_BEFORE && collapseAge <= IMPLODE_TICKS) SpaceTimeShader.show(this::write);
-            NebulonGuard.guarded(this::animate);
+            EffectGuard.guarded(this::animate);
             if (particlesVisible(center)) particles();
             screen(proximity(center));
             return collapseAge > COLLAPSE_TICKS || collapseAge < 0 && age > duration + 40;
