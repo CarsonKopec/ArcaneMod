@@ -6,6 +6,11 @@ name: release
 on:
   workflow_dispatch:
     inputs:
+      upload_to:
+        description: 'Where to upload: both sites, or just one (to retry one that failed without uploading twice to the other)'
+        type: choice
+        options: [both, modrinth, curseforge]
+        default: both
       leyline_ref:
         description: 'Leyline branch or tag to build against'
         default: 'main'
@@ -24,6 +29,10 @@ jobs:
             echo "::error::Set the MODRINTH_TOKEN and CURSEFORGE_TOKEN repository secrets first."
             exit 1
           fi
+          case "$MODRINTH_TOKEN" in
+            mrp_*) ;;
+            *) echo "::warning::MODRINTH_TOKEN doesn't start with mrp_, as Modrinth's personal access tokens do: check the secret holds the token itself, with no quotes or spaces." ;;
+          esac
       - name: checkout repository
         uses: actions/checkout@v6
       - name: validate gradle wrapper
@@ -54,7 +63,12 @@ jobs:
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
         run: |
           set -o pipefail
-          ./gradlew build publishMods --stacktrace 2>&1 | tee gradle-output.txt
+          case "${{ inputs.upload_to }}" in
+            modrinth) task=publishModrinth ;;
+            curseforge) task=publishCurseforge ;;
+            *) task=publishMods ;;
+          esac
+          ./gradlew build "$task" --stacktrace 2>&1 | tee gradle-output.txt
       # Only admins can download a run's log, so put Gradle's own explanation where anyone can read it: an annotation
       # on the run (also readable through the API) and the run's summary.
       - name: report what went wrong
