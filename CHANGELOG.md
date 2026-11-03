@@ -6,7 +6,7 @@ Each version's section is also its release notes on Modrinth and CurseForge: `gr
 
 The first public release. What changed since 0.7.0:
 
-**Now needs Leyline, and no longer needs Nebulon.** The effects, terrain and screen-shader code that Arcane Spells' spells are drawn with is now Leyline, a separate library mod: install Leyline 0.1.0 alongside Arcane Spells, on the server and every client. Leyline draws the lights, rune circles, lightning and beams itself, so Nebulon is no longer needed. 0.8 is not network-compatible with 0.7.
+**Now needs Leyline, and no longer needs Nebulon.** The effects, terrain and screen-shader code that Arcane Spells' spells are drawn with is now Leyline, a separate library mod: install Leyline 0.1.1 alongside Arcane Spells, on the server and every client. Leyline draws the lights, rune circles, lightning and beams itself, so Nebulon is no longer needed. 0.8 is not network-compatible with 0.7.
 
 - **Crisper, clearer spell visuals.** Rune circles, seals and rings stay sharp at any distance and read in daylight instead of washing out, and thin rings still show from a spell's casting range. Lights are smooth, without the coloured speckle they used to leave, and light each surface by its own colour.
 

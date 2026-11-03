@@ -7,7 +7,7 @@ A Fabric mod for **Minecraft Java 1.21.11**. It adds two staffs whose spells are
 1. Install Fabric Loader **0.19.5 or later** for Minecraft **1.21.11** (https://fabricmc.net/use/installer/). Minecraft needs Java 21 or newer.
 2. Put these eight JARs in the instance's `mods` folder. Choose the **Fabric / Minecraft 1.21.11** files:
    - `arcane-spells-0.8.0.jar` (from `build/libs/`, not the `-sources` JAR)
-   - `leyline-0.1.0.jar`, the library mod Arcane Spells is built on (from the Leyline repository's `build/libs/`)
+   - `leyline-0.1.1.jar`, the library mod Arcane Spells is built on (from the Leyline repository's `build/libs/`)
    - [Fabric API 0.141.6+1.21.11](https://modrinth.com/mod/fabric-api/versions?g=1.21.11)
    - [Player Animation Library 1.1.10+mc.1.21.11](https://modrinth.com/mod/player-animation-library/version/wJLdv4ZQ)
    - [GeckoLib 5.4.5](https://modrinth.com/mod/geckolib/version/G1BvHQDL)
